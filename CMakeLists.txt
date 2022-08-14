@@ -1,22 +1,42 @@
-﻿# CMakeList.txt : CMake project for vulkan_guide, include source and define
-# project specific logic here.
-#
-cmake_minimum_required (VERSION 3.8)
-
+﻿cmake_minimum_required (VERSION 3.8)
 project ("vulkan_guide")
 
+IF(APPLE)
+  set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+  set(CMAKE_HAVE_THREADS_LIBRARY 1)
+  set(CMAKE_USE_WIN32_THREADS_INIT 0)
+  set(CMAKE_USE_PTHREADS_INIT 1)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+ENDIF()
+
 set(CMAKE_CXX_STANDARD 17)
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 find_package(Vulkan REQUIRED)
 
 add_subdirectory(third_party)
-
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
-
 add_subdirectory(src)
 
+add_executable(vulkan src/main.cpp)
 
-find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
+include_directories(/usr/local/include/ src/core/include/)
+include_directories(SDL2_HEADER /Library/Frameworks/SDL2.framework/Headers)
+
+find_library(LIBVULKAN13 libvulkan.1.3.204.dylib ~/VulkanSDK/1.3.204.1/macOS/lib/)
+find_library(LIBVULKAN1 libvulkan.1.dylib ~/VulkanSDK/1.3.204.1/macOS/lib/)
+find_library(LIBGLFW3 libglfw.3.3.dylib /usr/local/Cellar/glfw/3.3.6/lib/)
+find_library(LIBSDL2 SDL2 /Library/Frameworks/SDL2.framework/SDL2)
+
+target_link_libraries(vulkan PRIVATE ${LIBVULKAN13})
+target_link_libraries(vulkan PRIVATE ${LIBVULKAN1})
+target_link_libraries(vulkan PRIVATE ${LIBGLFW3})
+target_link_libraries(vulkan PRIVATE ${SDL2_LIBRARIES})
+
+set(VK_ICD_FILENAMES ~/VulkanSDK/1.3.204.1/macOS/share/vulkan/icd.d/MoltenVK_icd.json)
+set(VK_LAYER_PATH ~/VulkanSDK/1.3.204.1/macOS/share/vulkan/explicit_layer.d)
+
+# find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
 
 ## find all the shader files under the shaders folder
 file(GLOB_RECURSE GLSL_SOURCE_FILES
