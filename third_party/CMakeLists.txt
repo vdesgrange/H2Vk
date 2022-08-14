@@ -1,18 +1,21 @@
 find_package(Vulkan REQUIRED)
+FIND_PACKAGE(SDL2 REQUIRED)
 
 add_library(vkbootstrap STATIC)
 add_library(glm INTERFACE)
 add_library(vma INTERFACE)
-
 add_library(stb_image INTERFACE)
-
 add_library(tinyobjloader STATIC)
 
+find_library(LIBVULKAN13 libvulkan.1.3.204.dylib ~/VulkanSDK/1.3.204.1/macOS/lib/)
+find_library(LIBVULKAN1 libvulkan.1.dylib ~/VulkanSDK/1.3.204.1/macOS/lib/)
+
+target_link_libraries(vkbootstrap PRIVATE ${LIBVULKAN13})
+target_link_libraries(vkbootstrap PRIVATE ${LIBVULKAN1})
 target_sources(vkbootstrap PRIVATE 
     vkbootstrap/VkBootstrap.h
     vkbootstrap/VkBootstrap.cpp
     )
-
 target_include_directories(vkbootstrap PUBLIC vkbootstrap)
 target_link_libraries(vkbootstrap PUBLIC Vulkan::Vulkan $<$<BOOL:UNIX>:${CMAKE_DL_LIBS}>)
 
@@ -27,9 +30,7 @@ target_sources(tinyobjloader PRIVATE
 
 target_include_directories(tinyobjloader PUBLIC tinyobjloader)
 
-
 add_library(sdl2 INTERFACE)
-set(sdl2_DIR "SDL_PATH" CACHE PATH "Path to SDL2")
 
 if (WIN32)
 target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include ${sdl2_image_DIR}/include)
@@ -39,7 +40,7 @@ target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include/SDL2 ${sdl2_image_
 target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib ${sdl2_image_DIR}/lib)
 endif()
 
-target_link_libraries(sdl2 INTERFACE SDL2 SDL2main)
+target_link_libraries(sdl2 INTERFACE ${SDL2_LIBRARY}) # SDL2 SDL2main
 
 add_library(imgui STATIC)
 
