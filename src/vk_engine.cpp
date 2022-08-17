@@ -50,6 +50,7 @@ void VulkanEngine::init()
     init_commands();
     init_default_renderpass();
     init_framebuffers();
+    init_sync_structures();
 	
 	//everything went fine
 	_isInitialized = true;
@@ -196,6 +197,24 @@ void VulkanEngine::init_framebuffers() {
 
 }
 
+void VulkanEngine::init_sync_structures() {
+    // Used for CPU -> GPU communication
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    fenceInfo.pNext = nullptr;
+    VK_CHECK(vkCreateFence(_device, &fenceInfo, nullptr, &_renderFence));
+
+    //  Used for GPU -> GPU synchronisation
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphoreInfo.pNext = nullptr;
+    semaphoreInfo.flags = 0;
+
+    VK_CHECK(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_renderSemaphore));
+    VK_CHECK(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_presentSemaphore));
+}
+
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
@@ -223,7 +242,74 @@ void VulkanEngine::cleanup()
 
 void VulkanEngine::draw()
 {
-	//nothing yet
+    // Wait GPU to render latest frame
+    VK_CHECK(vkWaitForFences(_device, 1, &_renderFence, VK_TRUE, UINT64_MAX));
+    VK_CHECK(vkResetFences(_device, 1, &_renderFence));
+
+    uint32_t imageIndex;
+    VkResult result = vkAcquireNextImageKHR(_device, _swapchain, UINT64_MAX,
+                                            _presentSemaphore, VK_NULL_HANDLE, &imageIndex);
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR){
+        throw std::runtime_error("failed to acquire swap chain image");
+    }
+
+    VK_CHECK(vkResetCommandBuffer(_mainCommandBuffer, 0));
+    VkCommandBufferBeginInfo cmdBeginInfo{};
+    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmdBeginInfo.pNext = nullptr;
+    cmdBeginInfo.pInheritanceInfo = nullptr; // VkCommandBufferInheritanceInfo for secondary cmd buff. defines states inheriting from primary cmd. buff.
+    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    VK_CHECK(vkBeginCommandBuffer(_mainCommandBuffer, &cmdBeginInfo));
+
+    VkClearValue clearValue; // screen clearing color
+    float flash = abs(sin(_frameNumber / 120.f));
+    clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.pNext = nullptr;
+    renderPassInfo.renderPass = _renderPass;
+    renderPassInfo.framebuffer = _frameBuffers[imageIndex]; // Which image to render from the swapchain
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = _windowExtent;
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearValue;
+
+    vkCmdBeginRenderPass(_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    // todo
+
+    vkCmdEndRenderPass(_mainCommandBuffer);
+    VK_CHECK(vkEndCommandBuffer(_mainCommandBuffer));
+
+    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.pNext = nullptr;
+    submitInfo.pWaitDstStageMask = &waitStage;
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = &_presentSemaphore;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &_renderSemaphore;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &_mainCommandBuffer;
+
+    VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _renderFence));
+
+    VkSwapchainKHR swapchains[] = {_swapchain};
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.pNext = nullptr;
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapchains;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &_renderSemaphore;
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pResults = nullptr;
+    VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
+
+    _frameNumber += 1;
 }
 
 void VulkanEngine::run()

@@ -67,6 +67,9 @@ public:
     std::vector<VkImage> _swapChainImages;
     std::vector<VkImageView> _swapChainImageViews;
 
+    VkSemaphore _presentSemaphore, _renderSemaphore;
+    VkFence _renderFence;
+
 	//initializes everything in the engine
 	void init();
 
@@ -98,6 +101,8 @@ private:
     void init_default_renderpass();
 
     void init_framebuffers();
+
+    void init_sync_structures();
 //
 //    std::vector<const char*> get_required_extensions();
 //
