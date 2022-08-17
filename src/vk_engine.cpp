@@ -42,21 +42,14 @@ void VulkanEngine::init()
 {
 	// We initialize SDL and create a window with it. 
 	SDL_Init(SDL_INIT_VIDEO);
-
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
-
-//    _window = SDL_CreateWindow(
-//		"Vulkan Engine",
-//		SDL_WINDOWPOS_UNDEFINED,
-//		SDL_WINDOWPOS_UNDEFINED,
-//		_windowExtent.width,
-//		_windowExtent.height,
-//		window_flags
-//	);
 
     init_window();
     init_vulkan();
     init_swapchain();
+    init_commands();
+    init_default_renderpass();
+    init_framebuffers();
 	
 	//everything went fine
 	_isInitialized = true;
@@ -101,13 +94,14 @@ void VulkanEngine::init_vulkan() {
 
     //create the final Vulkan device
     vkb::DeviceBuilder deviceBuilder{ physicalDevice };
-
     vkb::Device vkbDevice = deviceBuilder.build().value();
 
     // Get the VkDevice handle used in the rest of a Vulkan application
     _device = vkbDevice.device;
     _physicalDevice = physicalDevice.physical_device;
 
+    _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+    _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 }
 
 void VulkanEngine::init_swapchain() {
@@ -126,9 +120,91 @@ void VulkanEngine::init_swapchain() {
     _swapChainImageFormat = vkbSwapchain.image_format;
 }
 
+void VulkanEngine::init_commands() {
+    init_command_pool();
+    init_command_buffer();
+}
+
+void VulkanEngine::init_command_pool() {
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = _graphicsQueueFamily;
+    poolInfo.pNext = nullptr;
+
+    VK_CHECK(vkCreateCommandPool(_device, &poolInfo, nullptr, &_commandPool));
+}
+
+void VulkanEngine::init_command_buffer() {
+    VkCommandBufferAllocateInfo allocateInfo{};
+    allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocateInfo.commandPool = _commandPool;
+    allocateInfo.commandBufferCount = 1; // why ? Shouldn't be a vector?
+    allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocateInfo.pNext = nullptr;
+
+    VK_CHECK(vkAllocateCommandBuffers(_device, &allocateInfo, &_mainCommandBuffer));
+}
+
+void VulkanEngine::init_default_renderpass() {
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format = _swapChainImageFormat;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+    subpass.pDepthStencilAttachment = nullptr;
+
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+
+    VK_CHECK(vkCreateRenderPass(_device, &renderPassInfo, nullptr, &_renderPass));
+}
+
+void VulkanEngine::init_framebuffers() {
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.pNext = nullptr;
+    framebufferInfo.renderPass = _renderPass;
+    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.width = _windowExtent.width;
+    framebufferInfo.height = _windowExtent.height;
+    framebufferInfo.layers = 1;
+
+    _frameBuffers.resize(_swapChainImages.size());
+
+    for (int i = 0; i < _swapChainImages.size(); i++) {
+        framebufferInfo.pAttachments = &_swapChainImageViews[i];
+        VK_CHECK(vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &_frameBuffers[i]));
+    }
+
+}
+
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
+        for (int i = 0; i < _frameBuffers.size(); i++) {
+            vkDestroyFramebuffer(_device, _frameBuffers[i], nullptr);
+        }
+
+        vkDestroyRenderPass(_device, _renderPass, nullptr);
+        vkDestroyCommandPool(_device, _commandPool, nullptr);
         vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 
         for (int i = 0; i < _swapChainImageViews.size(); i++) {
@@ -152,20 +228,27 @@ void VulkanEngine::draw()
 
 void VulkanEngine::run()
 {
-	SDL_Event e;
-	bool bQuit = false;
+    while(!glfwWindowShouldClose(_window)) {
+        glfwPollEvents();
+        draw();
+    }
 
-	//main loop
-	while (!bQuit)
-	{
-		//Handle events on queue
-		while (SDL_PollEvent(&e) != 0)
-		{
-			//close the window when user alt-f4s or clicks the X button			
-			if (e.type == SDL_QUIT) bQuit = true;
-		}
+    vkDeviceWaitIdle(_device);
 
-		draw();
-	}
+//	SDL_Event e;
+//	bool bQuit = false;
+//
+//	//main loop
+//	while (!bQuit)
+//	{
+//		//Handle events on queue
+//		while (SDL_PollEvent(&e) != 0)
+//		{
+//			//close the window when user alt-f4s or clicks the X button
+//			if (e.type == SDL_QUIT) bQuit = true;
+//		}
+//
+//		draw();
+//	}
 }
 

@@ -12,6 +12,7 @@
 #include <vk_types.h>
 
 const bool enableValidationLayers = true;
+const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
 
 const std::vector<const char*> validationLayers = {
         "VK_LAYER_KHRONOS_validation"
@@ -52,8 +53,14 @@ public:
     VkDevice _device; // Vulkan device for commands
     VkSurfaceKHR _surface; // Vulkan window surface
 
-    VkQueue graphicsQueue;
-    VkQueue presentQueue;
+    VkQueue _graphicsQueue;
+    uint32_t _graphicsQueueFamily;
+
+    VkCommandPool _commandPool;
+    VkCommandBuffer _mainCommandBuffer;;
+
+    VkRenderPass _renderPass;
+    std::vector<VkFramebuffer> _frameBuffers;
 
     VkSwapchainKHR _swapchain;
     VkFormat _swapChainImageFormat;
@@ -80,8 +87,17 @@ private:
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
-    // Initialize swapchain to render on-screen images
     void init_swapchain();
+
+    void init_commands();
+
+    void init_command_pool();
+
+    void init_command_buffer();
+
+    void init_default_renderpass();
+
+    void init_framebuffers();
 //
 //    std::vector<const char*> get_required_extensions();
 //
