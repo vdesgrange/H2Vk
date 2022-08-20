@@ -1,14 +1,17 @@
-﻿#define GLFW_INCLUDE_VULKAN
+﻿#ifndef GLFW_INCLUDE_VULKAN
+#define GLFW_INCLUDE_VULKAN
+#endif
 
 #include <GLFW/glfw3.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 #include <vk_types.h>
-#include <vk_initializers.h>
 #include <iostream>
 
-#include "vk_engine.h"
 #include "VkBootstrap.h"
+#include "vk_engine.h"
+#include "vk_pipeline.h"
+#include "vk_initializers.h"
 
 
 using namespace std;
@@ -51,18 +54,13 @@ void VulkanEngine::init()
     init_default_renderpass();
     init_framebuffers();
     init_sync_structures();
+    init_pipelines();
 	
 	//everything went fine
 	_isInitialized = true;
 }
 
 void VulkanEngine::init_vulkan() {
-//    create_instance();
-//    setup_debug_messenger();
-//
-//    pickPhysicalDevice(deviceExtensions);
-//    createLogicalDevice(deviceExtensions, validationLayers, enableValidationLayers);
-
     vkb::InstanceBuilder builder;
 
     //make the Vulkan instance, with basic debug features
@@ -215,9 +213,110 @@ void VulkanEngine::init_sync_structures() {
     VK_CHECK(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_presentSemaphore));
 }
 
+void VulkanEngine::init_pipelines() {
+
+    // Load shaders
+    VkShaderModule triangleFragShader;
+    if (!load_shader_module("../shaders/shader_base.frag.spv", &triangleFragShader))
+    {
+        std::cout << "Error when building the triangle fragment shader module" << std::endl;
+    }
+    else {
+        std::cout << "Triangle fragment shader successfully loaded" << std::endl;
+    }
+
+    VkShaderModule triangleVertexShader;
+    if (!load_shader_module("../shaders/shader_base.vert.spv", &triangleVertexShader))
+    {
+        std::cout << "Error when building the triangle vertex shader module" << std::endl;
+
+    }
+    else {
+        std::cout << "Triangle vertex shader successfully loaded" << std::endl;
+    }
+
+    // Build pipeline layout
+    VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+    VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_pipelineLayout));
+
+    // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
+    PipelineBuilder pipelineBuilder;
+    pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
+    pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+    pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
+    pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float) _windowExtent.width;
+    viewport.height = (float) _windowExtent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    pipelineBuilder._viewport = viewport;
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = _windowExtent;
+    pipelineBuilder._scissor = scissor;
+
+    pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+    pipelineBuilder._multisampling = vkinit::multisample_state_create_info();
+    pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
+    pipelineBuilder._pipelineLayout = _pipelineLayout;
+
+    // Build graphics pipeline
+    _graphicsPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+}
+
+bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* out) {
+    const std::vector<uint32_t> code = read_file(filePath);
+    return create_shader_module(code, out);
+}
+
+std::vector<uint32_t> VulkanEngine::read_file(const char* filePath) {
+    std::ifstream file(filePath, std::ios::ate | std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("failed to open file.");
+    }
+
+    size_t fileSize = (size_t) file.tellg();
+    std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
+    file.seekg(0);
+    file.read((char*)buffer.data(), fileSize);
+    file.close();
+
+    return buffer;
+}
+
+bool VulkanEngine::create_shader_module(const std::vector<uint32_t>& code, VkShaderModule* out) {
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.pNext = nullptr;
+
+    createInfo.codeSize = code.size() * sizeof(uint32_t);
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+    VkShaderModule shaderModule;
+    if (vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        return false;
+    }
+
+    *out = shaderModule;
+    return true;
+}
+
+
+
+
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
+        vkDeviceWaitIdle(_device);
+
+        vkDestroySemaphore(_device, _renderSemaphore, nullptr);
+        vkDestroySemaphore(_device, _presentSemaphore, nullptr);
+
         for (int i = 0; i < _frameBuffers.size(); i++) {
             vkDestroyFramebuffer(_device, _frameBuffers[i], nullptr);
         }
@@ -277,7 +376,8 @@ void VulkanEngine::draw()
 
     vkCmdBeginRenderPass(_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    // todo
+    vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
+    vkCmdDraw(_mainCommandBuffer, 3, 1, 0, 0);
 
     vkCmdEndRenderPass(_mainCommandBuffer);
     VK_CHECK(vkEndCommandBuffer(_mainCommandBuffer));
@@ -320,21 +420,5 @@ void VulkanEngine::run()
     }
 
     vkDeviceWaitIdle(_device);
-
-//	SDL_Event e;
-//	bool bQuit = false;
-//
-//	//main loop
-//	while (!bQuit)
-//	{
-//		//Handle events on queue
-//		while (SDL_PollEvent(&e) != 0)
-//		{
-//			//close the window when user alt-f4s or clicks the X button
-//			if (e.type == SDL_QUIT) bQuit = true;
-//		}
-//
-//		draw();
-//	}
 }
 

@@ -1,15 +1,13 @@
 ﻿#pragma once
 
-#ifndef GLFW_INCLUDE_VULKAN
-#define GLFW_INCLUDE_VULKAN
-#endif
-
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <set>
 #include <string>
 #include <optional>
-#include <vk_types.h>
+#include <fstream>
+
+#include "vk_types.h"
 
 const bool enableValidationLayers = true;
 const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
@@ -36,6 +34,7 @@ struct QueueFamilyIndices {
         return graphicsFamily.has_value() && presentFamily.has_value();
     }
 };
+
 
 class VulkanEngine {
 public:
@@ -70,6 +69,9 @@ public:
     VkSemaphore _presentSemaphore, _renderSemaphore;
     VkFence _renderFence;
 
+    VkPipelineLayout _pipelineLayout;
+    VkPipeline _graphicsPipeline;
+
 	//initializes everything in the engine
 	void init();
 
@@ -80,7 +82,7 @@ public:
 	void draw();
 
 	//run main loop
-	void run();
+	void run();;
 
 private:
     // Initialize vulkan
@@ -103,6 +105,15 @@ private:
     void init_framebuffers();
 
     void init_sync_structures();
+
+    void init_pipelines();
+
+    std::vector<uint32_t> read_file(const char* filePath);
+
+    bool create_shader_module(const std::vector<uint32_t>& code, VkShaderModule* out);
+
+    bool load_shader_module(const char* filePath, VkShaderModule* out);
+
 //
 //    std::vector<const char*> get_required_extensions();
 //
