@@ -11,6 +11,9 @@
 
 #include "vk_types.h"
 
+const uint32_t WIDTH = 800;
+const uint32_t HEIGHT = 400;
+
 const bool enableValidationLayers = true;
 const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
 
@@ -61,9 +64,8 @@ public:
 	bool _isInitialized{ false };
 	int _frameNumber {0};
 
-    // struct SDL_Window* _window{ nullptr };
     GLFWwindow* _window;
-	VkExtent2D _windowExtent{ 1700 , 900 };
+	VkExtent2D _windowExtent{ WIDTH , HEIGHT };
     bool framebufferResized = false;
 
     VkInstance _instance; // Vulkan library handle
@@ -105,7 +107,7 @@ public:
 	//shuts down the engine
 	void cleanup();
 
-    void recreateSwapChain();
+    void recreate_swap_chain();
 
 	//draw loop
 	void draw();
@@ -120,6 +122,8 @@ private:
     void init_window();
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
+    VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities);
 
     void init_swapchain();
 

@@ -29,11 +29,11 @@ using namespace std;
 void VulkanEngine::init_window() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    //glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-    _window = glfwCreateWindow(_windowExtent.width, _windowExtent.height, "Vulkan", nullptr, nullptr);
+    _window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     glfwSetWindowUserPointer(_window, this);
-    glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
+    //glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
 }
 
 void VulkanEngine::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
@@ -44,8 +44,6 @@ void VulkanEngine::framebufferResizeCallback(GLFWwindow* window, int width, int 
 void VulkanEngine::init()
 {
 	// We initialize SDL and create a window with it. 
-	SDL_Init(SDL_INIT_VIDEO);
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 
     init_window();
     init_vulkan();
@@ -103,15 +101,39 @@ void VulkanEngine::init_vulkan() {
     _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 }
 
+VkExtent2D VulkanEngine::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities) {
+    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+        return capabilities.currentExtent;
+    } else {
+        int width, height;
+        glfwGetFramebufferSize(_window, &width, &height);
+
+        VkExtent2D actualExtent = {
+                static_cast<uint32_t>(width),
+                static_cast<uint32_t>(height)
+        };
+
+        actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+        actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.width);
+
+        return actualExtent;
+    }
+}
+
 void VulkanEngine::init_swapchain() {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface, &capabilities);
+    VkExtent2D  extent2d = choose_swap_extent(capabilities);
+
     vkb::SwapchainBuilder swapchainBuilder{_physicalDevice, _device, _surface };
 
     vkb::Swapchain vkbSwapchain = swapchainBuilder
             .use_default_format_selection()
-            .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-            .set_desired_extent(_windowExtent.width, _windowExtent.height)
+            .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
+            .set_desired_extent(extent2d.width, extent2d.height)
             .build()
             .value();
+
 
     _swapchain = vkbSwapchain.swapchain;
     _swapChainImages = vkbSwapchain.get_images().value();
@@ -287,8 +309,8 @@ void VulkanEngine::init_pipelines() {
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float) _windowExtent.width;
-    viewport.height = (float) _windowExtent.height;
+    viewport.width = (float)_windowExtent.width;
+    viewport.height = (float)_windowExtent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     pipelineBuilder._viewport = viewport;
@@ -353,7 +375,7 @@ bool VulkanEngine::create_shader_module(const std::vector<uint32_t>& code, VkSha
     createInfo.pNext = nullptr;
 
     createInfo.codeSize = code.size() * sizeof(uint32_t);
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+    createInfo.pCode = code.data();
 
     VkShaderModule shaderModule;
     if (vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
@@ -364,7 +386,7 @@ bool VulkanEngine::create_shader_module(const std::vector<uint32_t>& code, VkSha
     return true;
 }
 
-void VulkanEngine::recreateSwapChain() {
+void VulkanEngine::recreate_swap_chain() {
     int width = 0, height = 0;
     glfwGetFramebufferSize(_window, &width, &height);
     while (width == 0 || height == 0) {
@@ -402,15 +424,20 @@ void VulkanEngine::cleanup()
 void VulkanEngine::draw()
 {
     // Wait GPU to render latest frame
-    VK_CHECK(vkWaitForFences(_device, 1, &_renderFence, VK_TRUE, UINT64_MAX));
+    //wait until the GPU has finished rendering the last frame. Timeout of 1 second
+    VK_CHECK(vkWaitForFences(_device, 1, &_renderFence, true, 1000000000));
     VK_CHECK(vkResetFences(_device, 1, &_renderFence));
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_device, _swapchain, UINT64_MAX,
-                                            _presentSemaphore, VK_NULL_HANDLE, &imageIndex);
-    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR){
+    VkResult result = vkAcquireNextImageKHR(_device, _swapchain, 1000000000, _presentSemaphore, nullptr, &imageIndex);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) { // || result == VK_SUBOPTIMAL_KHR
+        recreate_swap_chain();
+        return;
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR){
         throw std::runtime_error("failed to acquire swap chain image");
     }
+
 
     VK_CHECK(vkResetCommandBuffer(_mainCommandBuffer, 0));
     VkCommandBufferBeginInfo cmdBeginInfo{};
@@ -420,7 +447,7 @@ void VulkanEngine::draw()
     cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     VK_CHECK(vkBeginCommandBuffer(_mainCommandBuffer, &cmdBeginInfo));
 
-    VkClearValue clearValue; // screen clearing color
+    VkClearValue clearValue;
     float flash = abs(sin(_frameNumber / 120.f));
     clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
 
@@ -428,9 +455,10 @@ void VulkanEngine::draw()
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.pNext = nullptr;
     renderPassInfo.renderPass = _renderPass;
-    renderPassInfo.framebuffer = _frameBuffers[imageIndex]; // Which image to render from the swapchain
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = _windowExtent;
+    renderPassInfo.renderArea.extent.width = _windowExtent.width;
+    renderPassInfo.renderArea.extent.height = _windowExtent.height;
+    renderPassInfo.framebuffer = _frameBuffers[imageIndex]; // Which image to render from the swapchain
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearValue;
 
@@ -462,12 +490,11 @@ void VulkanEngine::draw()
 
     VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _renderFence));
 
-    VkSwapchainKHR swapchains[] = {_swapchain};
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.pNext = nullptr;
     presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapchains;
+    presentInfo.pSwapchains = &_swapchain;
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = &_renderSemaphore;
     presentInfo.pImageIndices = &imageIndex;
@@ -476,11 +503,12 @@ void VulkanEngine::draw()
     result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = false;
-        recreateSwapChain();
+        recreate_swap_chain();
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swap chain image!");
     }
-    _frameNumber += 1;
+
+    _frameNumber++;
 }
 
 void VulkanEngine::run()
