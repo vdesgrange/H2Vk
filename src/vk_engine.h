@@ -6,6 +6,8 @@
 #include <string>
 #include <optional>
 #include <fstream>
+#include <deque>
+#include <functional>
 
 #include "vk_types.h"
 
@@ -35,6 +37,24 @@ struct QueueFamilyIndices {
     }
 };
 
+
+struct DeletionQueue
+{
+    std::deque<std::function<void()>> deletors;
+
+    void push_function(std::function<void()>&& function) {
+        deletors.push_back(function);
+    }
+
+    void flush() {
+        // reverse iterate the deletion queue to execute all the functions
+        for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
+            (*it)(); //call the function
+        }
+
+        deletors.clear();
+    }
+};
 
 class VulkanEngine {
 public:
@@ -70,9 +90,15 @@ public:
     VkFence _renderFence;
 
     VkPipelineLayout _pipelineLayout;
-    VkPipeline _graphicsPipeline;
 
-	//initializes everything in the engine
+    VkPipeline _graphicsPipeline;
+    VkPipeline _redTrianglePipeline;
+
+    DeletionQueue _mainDeletionQueue;
+
+    int _selectedShader{ 0 };
+
+    //initializes everything in the engine
 	void init();
 
 	//shuts down the engine
