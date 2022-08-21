@@ -118,7 +118,7 @@ void VulkanEngine::init_swapchain() {
     _swapChainImageViews = vkbSwapchain.get_image_views().value();
     _swapChainImageFormat = vkbSwapchain.image_format;
 
-    _mainDeletionQueue.push_function([=]() {
+    _swapChainDeletionQueue.push_function([=]() {
         vkDestroySwapchainKHR(_device, _swapchain, nullptr);
     });
 }
@@ -183,7 +183,7 @@ void VulkanEngine::init_default_renderpass() {
 
     VK_CHECK(vkCreateRenderPass(_device, &renderPassInfo, nullptr, &_renderPass));
 
-    _mainDeletionQueue.push_function([=]() {
+    _swapChainDeletionQueue.push_function([=]() {
         vkDestroyRenderPass(_device, _renderPass, nullptr);
     });
 }
@@ -203,7 +203,7 @@ void VulkanEngine::init_framebuffers() {
     for (int i = 0; i < _swapChainImages.size(); i++) {
         framebufferInfo.pAttachments = &_swapChainImageViews[i];
         VK_CHECK(vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &_frameBuffers[i]));
-        _mainDeletionQueue.push_function([=]() {
+        _swapChainDeletionQueue.push_function([=]() {
             vkDestroyFramebuffer(_device, _frameBuffers[i], nullptr);
             vkDestroyImageView(_device, _swapChainImageViews[i], nullptr);
         });
@@ -317,7 +317,7 @@ void VulkanEngine::init_pipelines() {
     vkDestroyShaderModule(_device, redTriangleFragShader, nullptr);
     vkDestroyShaderModule(_device, redTriangleVertexShader, nullptr);
 
-    _mainDeletionQueue.push_function([=]() {
+    _swapChainDeletionQueue.push_function([=]() {
         //destroy the 2 pipelines we have created
         vkDestroyPipeline(_device, _redTrianglePipeline, nullptr);
         vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
@@ -364,11 +364,29 @@ bool VulkanEngine::create_shader_module(const std::vector<uint32_t>& code, VkSha
     return true;
 }
 
+void VulkanEngine::recreateSwapChain() {
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(_window, &width, &height);
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(_window, &width, &height);
+        glfwWaitEvents();
+    }
+
+    vkDeviceWaitIdle(_device);
+    _swapChainDeletionQueue.flush();
+
+    init_swapchain();
+    init_default_renderpass();
+    init_framebuffers();
+    init_pipelines();
+}
+
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
         vkDeviceWaitIdle(_device);
         vkWaitForFences(_device, 1, &_renderFence, true, 1000000000);
+        _swapChainDeletionQueue.flush();
         _mainDeletionQueue.flush();
 
         vkDestroyDevice(_device, nullptr);
@@ -454,8 +472,14 @@ void VulkanEngine::draw()
     presentInfo.pWaitSemaphores = &_renderSemaphore;
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
-    VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
+    result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
+        framebufferResized = false;
+        recreateSwapChain();
+    } else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
     _frameNumber += 1;
 }
 

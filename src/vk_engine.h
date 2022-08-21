@@ -95,6 +95,7 @@ public:
     VkPipeline _redTrianglePipeline;
 
     DeletionQueue _mainDeletionQueue;
+    DeletionQueue _swapChainDeletionQueue;
 
     int _selectedShader{ 0 };
 
@@ -103,6 +104,8 @@ public:
 
 	//shuts down the engine
 	void cleanup();
+
+    void recreateSwapChain();
 
 	//draw loop
 	void draw();
