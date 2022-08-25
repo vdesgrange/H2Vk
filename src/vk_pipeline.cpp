@@ -9,7 +9,6 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass renderP
     /**
      * Create graphic pipeline
      */
-    // Make single viewport state (multiple viewports and scissors are possible)
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.pNext = nullptr;
@@ -28,13 +27,11 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass renderP
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &_colorBlendAttachment;
 
-
-    // === Build the graphic pipeline ===
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.pNext = nullptr;
 
-    pipelineInfo.stageCount = static_cast<uint32_t>(_shaderStages.size());
+    pipelineInfo.stageCount = _shaderStages.size();
     pipelineInfo.pStages = _shaderStages.data();
     pipelineInfo.pVertexInputState = &_vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &_inputAssembly;

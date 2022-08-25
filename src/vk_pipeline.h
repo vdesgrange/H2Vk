@@ -14,8 +14,8 @@ public:
     VkViewport _viewport;
     VkRect2D _scissor;
     VkPipelineRasterizationStateCreateInfo _rasterizer;
-    VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineColorBlendAttachmentState _colorBlendAttachment;
+    VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineLayout _pipelineLayout;
 
     VkPipeline build_pipeline(VkDevice device, VkRenderPass renderPass);
