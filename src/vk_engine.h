@@ -4,15 +4,16 @@
 #include <vector>
 #include <set>
 #include <string>
-#include <optional>
 #include <fstream>
 #include <deque>
 #include <functional>
+#include <math.h>
 
+#include "vk_mesh.h"
 #include "vk_types.h"
 
-const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 400;
+const uint32_t WIDTH = 1700;
+const uint32_t HEIGHT = 1200;
 
 const bool enableValidationLayers = true;
 const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
@@ -23,21 +24,6 @@ const std::vector<const char*> validationLayers = {
 
 const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
-};
-
-struct SwapChainSupportDetails {
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
-
-struct QueueFamilyIndices {
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
-
-    bool isComplete() {
-        return graphicsFamily.has_value() && presentFamily.has_value();
-    }
 };
 
 
@@ -95,6 +81,10 @@ public:
 
     VkPipeline _graphicsPipeline;
     VkPipeline _redTrianglePipeline;
+    VkPipeline _meshPipeline;
+
+    VmaAllocator _allocator;
+    Mesh _mesh;
 
     DeletionQueue _mainDeletionQueue;
     DeletionQueue _swapChainDeletionQueue;
@@ -146,6 +136,10 @@ private:
     bool create_shader_module(const std::vector<uint32_t>& code, VkShaderModule* out);
 
     bool load_shader_module(const char* filePath, VkShaderModule* out);
+
+    void load_meshes();
+
+    void upload_mesh(Mesh& mesh);
 
 //
 //    std::vector<const char*> get_required_extensions();

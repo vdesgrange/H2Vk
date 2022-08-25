@@ -11,7 +11,6 @@ VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShad
     info.stage = stage;
     info.module = shaderModule;
     info.pName = "main";
-
     return info;
 }
 
@@ -25,7 +24,6 @@ VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
 
     info.vertexBindingDescriptionCount = 0;
     info.vertexAttributeDescriptionCount = 0;
-
     return info;
 }
 
@@ -40,7 +38,6 @@ VkPipelineInputAssemblyStateCreateInfo vkinit::input_assembly_create_info(VkPrim
     info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     info.topology = topology;
     info.primitiveRestartEnable = VK_FALSE;
-
     return info;
 }
 
@@ -57,7 +54,7 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
     info.rasterizerDiscardEnable = VK_FALSE;
     info.polygonMode = polygonMode;
     info.lineWidth = 1.0f;
-    info.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_NONE
+    info.cullMode = VK_CULL_MODE_NONE;
     info.frontFace = VK_FRONT_FACE_CLOCKWISE;
     info.depthBiasEnable = VK_FALSE;
     info.depthBiasConstantFactor = 0.0f;
@@ -67,7 +64,7 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
     return info;
 }
 
-VkPipelineMultisampleStateCreateInfo vkinit::multisample_state_create_info() {
+VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info() {
     /**
      *  Allows to configure multisample anti-aliasing (MSAA) for the pipeline
      *  no multisampling = 1 sample per pixel
@@ -82,9 +79,9 @@ VkPipelineMultisampleStateCreateInfo vkinit::multisample_state_create_info() {
     info.pSampleMask = nullptr;
     info.alphaToCoverageEnable = VK_FALSE;
     info.alphaToOneEnable = VK_FALSE;
-
     return info;
 }
+
 
 VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
     /**
@@ -134,6 +131,20 @@ VkSemaphoreCreateInfo vkinit::semaphore_create_info(VkSemaphoreCreateFlags flags
     info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     info.pNext = nullptr;
     info.flags = flags;
+
+    return info;
+}
+
+VkRenderPassBeginInfo vkinit::renderpass_begin_info(VkRenderPass renderPass, VkExtent2D extent, VkFramebuffer frameBuffer) {
+    VkRenderPassBeginInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    info.pNext = nullptr;
+    info.renderPass = renderPass;
+    info.renderArea.offset = {0, 0};
+    info.renderArea.extent = extent;
+    info.framebuffer = frameBuffer; // Which image to render from the swapchain
+    info.clearValueCount = 1;
+    info.pClearValues = nullptr;
 
     return info;
 }

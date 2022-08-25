@@ -2,13 +2,14 @@
 #define GLFW_INCLUDE_VULKAN
 #endif
 
+#define VMA_IMPLEMENTATION
+
+
 #include <GLFW/glfw3.h>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
-#include <vk_types.h>
 #include <iostream>
 
 #include "VkBootstrap.h"
+#include "vk_mem_alloc.h"
 #include "vk_engine.h"
 #include "vk_pipeline.h"
 #include "vk_initializers.h"
@@ -29,11 +30,11 @@ using namespace std;
 void VulkanEngine::init_window() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    //glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     _window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     glfwSetWindowUserPointer(_window, this);
-    //glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
+    glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
 }
 
 void VulkanEngine::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
@@ -53,8 +54,8 @@ void VulkanEngine::init()
     init_framebuffers();
     init_sync_structures();
     init_pipelines();
-	
-	//everything went fine
+	load_meshes();
+
 	_isInitialized = true;
 }
 
@@ -62,7 +63,7 @@ void VulkanEngine::init_vulkan() {
     vkb::InstanceBuilder builder;
 
     //make the Vulkan instance, with basic debug features
-    auto inst_ret = builder.set_app_name("Example Vulkan Application")
+    auto inst_ret = builder.set_app_name("Vulkan Application")
             .request_validation_layers(true)
             .require_api_version(1, 1, 0)
             .use_default_debug_messenger()
@@ -75,12 +76,12 @@ void VulkanEngine::init_vulkan() {
     //store the debug messenger
     _debug_messenger = vkb_inst.debug_messenger;
 
-    // get the surface of the window we opened with SDL
+    // Get the surface of the window we opened with SDL
     if (glfwCreateWindowSurface(_instance, _window, nullptr, &_surface) != VK_SUCCESS) {
         throw std::runtime_error("failed to create window surface!");
     }
 
-    //use vkbootstrap to select a GPU.
+    // Selecta GPU
     //We want a GPU that can write to the SDL surface and supports Vulkan 1.1
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
     vkb::PhysicalDevice physicalDevice = selector
@@ -99,6 +100,18 @@ void VulkanEngine::init_vulkan() {
 
     _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
     _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+    // Initialize memory allocator
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.physicalDevice = _physicalDevice;
+    allocatorInfo.device = _device;
+    allocatorInfo.instance = _instance;
+    vmaCreateAllocator(&allocatorInfo, &_allocator);
+
+    _mainDeletionQueue.push_function([=]() {
+        vmaDestroyAllocator(_allocator);
+    });
+
 }
 
 VkExtent2D VulkanEngine::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities) {
@@ -126,7 +139,6 @@ void VulkanEngine::init_swapchain() {
     VkExtent2D  extent2d = choose_swap_extent(capabilities);
 
     vkb::SwapchainBuilder swapchainBuilder{_physicalDevice, _device, _surface };
-
     vkb::Swapchain vkbSwapchain = swapchainBuilder
             .use_default_format_selection()
             .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
@@ -134,12 +146,10 @@ void VulkanEngine::init_swapchain() {
             .build()
             .value();
 
-
     _swapchain = vkbSwapchain.swapchain;
     _swapChainImages = vkbSwapchain.get_images().value();
     _swapChainImageViews = vkbSwapchain.get_image_views().value();
     _swapChainImageFormat = vkbSwapchain.image_format;
-
     _swapChainDeletionQueue.push_function([=]() {
         vkDestroySwapchainKHR(_device, _swapchain, nullptr);
     });
@@ -295,6 +305,15 @@ void VulkanEngine::init_pipelines() {
         std::cout << "Red triangle vertex shader successfully loaded" << std::endl;
     }
 
+    VkShaderModule meshVertShader;
+    if (!load_shader_module("../shaders/tri_mesh.vert.spv", &meshVertShader)) {
+        std::cout << "Error when building the green triangle mesh vertex shader module" << std::endl;
+    }
+    else {
+        std::cout << "Green triangle vertex shader successfully loaded" << std::endl;
+    }
+
+
     // Build pipeline layout
     VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
     VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_pipelineLayout));
@@ -321,7 +340,7 @@ void VulkanEngine::init_pipelines() {
     pipelineBuilder._scissor = scissor;
 
     pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-    pipelineBuilder._multisampling = vkinit::multisample_state_create_info();
+    pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
     pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
     pipelineBuilder._pipelineLayout = _pipelineLayout;
 
@@ -334,17 +353,37 @@ void VulkanEngine::init_pipelines() {
     pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
     _redTrianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
+    // === Dynamic ===
+
+    //clear the shader stages for the builder
+    pipelineBuilder._shaderStages.clear();
+    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
+
+    //connect the pipeline builder vertex input info to the one we get from Vertex
+    pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
+    pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+    pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
+    pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+
+    //clear the shader stages for the builder
+    pipelineBuilder._shaderStages.clear();
+
+    pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
+    pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+    _meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+
+    // Deleting shaders
+    vkDestroyShaderModule(_device, redTriangleVertexShader, nullptr);
+    vkDestroyShaderModule(_device, redTriangleFragShader, nullptr);
     vkDestroyShaderModule(_device, triangleFragShader, nullptr);
     vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
-    vkDestroyShaderModule(_device, redTriangleFragShader, nullptr);
-    vkDestroyShaderModule(_device, redTriangleVertexShader, nullptr);
+    vkDestroyShaderModule(_device, meshVertShader, nullptr);
 
-    _swapChainDeletionQueue.push_function([=]() {
-        //destroy the 2 pipelines we have created
+
+    _mainDeletionQueue.push_function([=]() {
         vkDestroyPipeline(_device, _redTrianglePipeline, nullptr);
         vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
-
-        //destroy the pipeline layout
+        vkDestroyPipeline(_device, _meshPipeline, nullptr);
         vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
     });
 }
@@ -384,6 +423,56 @@ bool VulkanEngine::create_shader_module(const std::vector<uint32_t>& code, VkSha
 
     *out = shaderModule;
     return true;
+}
+
+void VulkanEngine::load_meshes()
+{
+    _mesh._vertices.resize(3);
+
+    _mesh._vertices[0].position = { 1.f, 1.f, 0.0f };
+    _mesh._vertices[1].position = {-1.f, 1.f, 0.0f };
+    _mesh._vertices[2].position = { 0.f,-1.f, 0.0f };
+
+    _mesh._vertices[0].color = { 0.f, 1.f, 0.0f }; //pure green
+    _mesh._vertices[1].color = { 0.f, 1.f, 0.0f }; //pure green
+    _mesh._vertices[2].color = { 0.f, 1.f, 0.0f }; //pure green
+
+    upload_mesh(_mesh);
+}
+
+void VulkanEngine::upload_mesh(Mesh& mesh)
+{
+    //allocate vertex buffer
+    VkBufferCreateInfo bufferInfo = {};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    //this is the total size, in bytes, of the buffer we are allocating
+    bufferInfo.size = mesh._vertices.size() * sizeof(Vertex);
+    //this buffer is going to be used as a Vertex Buffer
+    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+
+    //let the VMA library know that this data should be writeable by CPU, but also readable by GPU
+    VmaAllocationCreateInfo vmaallocInfo = {};
+    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+    vmaallocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+    //allocate the buffer
+    VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo,
+                             &mesh._vertexBuffer._buffer,
+                             &mesh._vertexBuffer._allocation,
+                             nullptr);
+    VK_CHECK(result);
+
+    //add the destruction of triangle mesh buffer to the deletion queue
+    _mainDeletionQueue.push_function([=]() {
+
+        vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
+    });
+
+    void* data;
+    vmaMapMemory(_allocator, mesh._vertexBuffer._allocation, &data);
+    memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
+    vmaUnmapMemory(_allocator, mesh._vertexBuffer._allocation);
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -432,7 +521,7 @@ void VulkanEngine::draw()
     VkResult result = vkAcquireNextImageKHR(_device, _swapchain, 1000000000, _presentSemaphore, nullptr, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) { // || result == VK_SUBOPTIMAL_KHR
-        recreate_swap_chain();
+        //recreate_swap_chain();
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR){
         throw std::runtime_error("failed to acquire swap chain image");
@@ -448,33 +537,27 @@ void VulkanEngine::draw()
     VK_CHECK(vkBeginCommandBuffer(_mainCommandBuffer, &cmdBeginInfo));
 
     VkClearValue clearValue;
-    float flash = abs(sin(_frameNumber / 120.f));
-    clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
+    clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.pNext = nullptr;
-    renderPassInfo.renderPass = _renderPass;
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent.width = _windowExtent.width;
-    renderPassInfo.renderArea.extent.height = _windowExtent.height;
-    renderPassInfo.framebuffer = _frameBuffers[imageIndex]; // Which image to render from the swapchain
+    VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass, _windowExtent, _frameBuffers[imageIndex]);
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearValue;
-
     vkCmdBeginRenderPass(_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    if(_selectedShader == 0) {
-        vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
-    } else {
-        vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _redTrianglePipeline);
-    }
+//    if(_selectedShader == 0) {
+//        vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
+//    } else {
+//        vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _redTrianglePipeline);
+//    }
+//    vkCmdDraw(_mainCommandBuffer, 3, 1, 0, 0);
 
-    vkCmdDraw(_mainCommandBuffer, 3, 1, 0, 0);
-
+    vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(_mainCommandBuffer, 0, 1, &_mesh._vertexBuffer._buffer, &offset);
+    vkCmdDraw(_mainCommandBuffer, _mesh._vertices.size(), 1, 0, 0);
     vkCmdEndRenderPass(_mainCommandBuffer);
-    VK_CHECK(vkEndCommandBuffer(_mainCommandBuffer));
 
+    VK_CHECK(vkEndCommandBuffer(_mainCommandBuffer));
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     VkSubmitInfo submitInfo{};
@@ -503,7 +586,7 @@ void VulkanEngine::draw()
     result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = false;
-        recreate_swap_chain();
+        //recreate_swap_chain();
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swap chain image!");
     }
