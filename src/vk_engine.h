@@ -1,8 +1,9 @@
 ﻿#pragma once
 
 #include <GLFW/glfw3.h>
+#include "glm/gtc/matrix_transform.hpp"
+
 #include <vector>
-#include <set>
 #include <string>
 #include <fstream>
 #include <deque>
@@ -18,14 +19,14 @@ const uint32_t HEIGHT = 1200;
 const bool enableValidationLayers = true;
 const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
 
-const std::vector<const char*> validationLayers = {
-        "VK_LAYER_KHRONOS_validation"
-};
-
 const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
+struct MeshPushConstants {
+    glm::vec4 data;
+    glm::mat4 render_matrix;
+};
 
 struct DeletionQueue
 {
@@ -78,6 +79,7 @@ public:
     VkFence _renderFence;
 
     VkPipelineLayout _pipelineLayout;
+    VkPipelineLayout _meshPipelineLayout;
 
     VkPipeline _graphicsPipeline;
     VkPipeline _redTrianglePipeline;

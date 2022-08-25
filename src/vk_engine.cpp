@@ -2,10 +2,16 @@
 #define GLFW_INCLUDE_VULKAN
 #endif
 
+#ifndef VMA_IMPLEMENTATION
 #define VMA_IMPLEMENTATION
+#endif
 
+#ifndef GLM_ENABLE_EXPERIMENTAL
+#define GLM_ENABLE_EXPERIMENTAL
+#endif
 
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 #include <iostream>
 
 #include "VkBootstrap.h"
@@ -353,25 +359,34 @@ void VulkanEngine::init_pipelines() {
     pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
     _redTrianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
-    // === Dynamic ===
+    // === 3 - Build dynamic triangle mesh
+    pipelineBuilder._shaderStages.clear();  // Clear the shader stages for the builder
 
-    //clear the shader stages for the builder
-    pipelineBuilder._shaderStages.clear();
     VertexInputDescription vertexDescription = Vertex::get_vertex_description();
 
-    //connect the pipeline builder vertex input info to the one we get from Vertex
+    // Connect the pipeline builder vertex input info to the one we get from Vertex
     pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
     pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
     pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
     pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
-    //clear the shader stages for the builder
-    pipelineBuilder._shaderStages.clear();
-
     pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
     pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+
+    VkPushConstantRange push_constant;
+    push_constant.offset = 0;
+    push_constant.size = static_cast<uint32_t>(sizeof(MeshPushConstants));
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
+    mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
+    mesh_pipeline_layout_info.pushConstantRangeCount = 1;
+    VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
+
+    pipelineBuilder._pipelineLayout = _meshPipelineLayout;
     _meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
+    // === 4 - Clean
     // Deleting shaders
     vkDestroyShaderModule(_device, redTriangleVertexShader, nullptr);
     vkDestroyShaderModule(_device, redTriangleFragShader, nullptr);
@@ -379,12 +394,12 @@ void VulkanEngine::init_pipelines() {
     vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
     vkDestroyShaderModule(_device, meshVertShader, nullptr);
 
-
     _mainDeletionQueue.push_function([=]() {
         vkDestroyPipeline(_device, _redTrianglePipeline, nullptr);
         vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
         vkDestroyPipeline(_device, _meshPipeline, nullptr);
         vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
+        vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
     });
 }
 
@@ -449,7 +464,6 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
     bufferInfo.size = mesh._vertices.size() * sizeof(Vertex);
     //this buffer is going to be used as a Vertex Buffer
     bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-
 
     //let the VMA library know that this data should be writeable by CPU, but also readable by GPU
     VmaAllocationCreateInfo vmaallocInfo = {};
@@ -554,6 +568,18 @@ void VulkanEngine::draw()
     vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(_mainCommandBuffer, 0, 1, &_mesh._vertexBuffer._buffer, &offset);
+
+    glm::vec3 camPos = { 0.f,0.f,-2.f };
+    glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
+    glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+    projection[1][1] *= -1;
+    glm::mat4 model = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
+    glm::mat4 mesh_matrix = projection * view * model;
+    MeshPushConstants constants;
+    constants.render_matrix = mesh_matrix;
+
+    //upload the matrix to the GPU via push constants
+    vkCmdPushConstants(_mainCommandBuffer, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
     vkCmdDraw(_mainCommandBuffer, _mesh._vertices.size(), 1, 0, 0);
     vkCmdEndRenderPass(_mainCommandBuffer);
 
