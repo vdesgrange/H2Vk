@@ -12,7 +12,8 @@ namespace vkinit {
     VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);
     VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags = 0);
     VkRenderPassBeginInfo renderpass_begin_info(VkRenderPass renderPass, VkExtent2D extent, VkFramebuffer frameBuffer);
-
+    VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags flags, VkExtent3D extent);
+    VkImageViewCreateInfo imageview_create_info(VkFormat format, VkImage image, VkImageAspectFlags flags);
     VkPipelineLayoutCreateInfo pipeline_layout_create_info();
 }
 

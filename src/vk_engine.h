@@ -75,6 +75,10 @@ public:
     std::vector<VkImage> _swapChainImages;
     std::vector<VkImageView> _swapChainImageViews;
 
+    VkFormat _depthFormat;
+    VkImageView _depthImageView; // VkImageView contains details about image. Must go through it before using VkImage.
+    AllocatedImage _depthImage;
+
     VkSemaphore _presentSemaphore, _renderSemaphore;
     VkFence _renderFence;
 

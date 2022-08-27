@@ -82,7 +82,6 @@ VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info() {
     return info;
 }
 
-
 VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
     /**
      * Controls how the pipeline blends into a given attachment
@@ -109,7 +108,6 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 
     return info;
 }
-
 
 VkFenceCreateInfo vkinit::fence_create_info(VkFenceCreateFlags flags) {
     /**
@@ -145,6 +143,42 @@ VkRenderPassBeginInfo vkinit::renderpass_begin_info(VkRenderPass renderPass, VkE
     info.framebuffer = frameBuffer; // Which image to render from the swapchain
     info.clearValueCount = 1;
     info.pClearValues = nullptr;
+
+    return info;
+}
+
+VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags flags, VkExtent3D extent) {
+    VkImageCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    info.pNext = nullptr;
+    info.format = format;
+    info.usage = flags;
+    info.extent = extent;
+    info.imageType = VK_IMAGE_TYPE_2D;  // Hold dimensionality of the texture
+    info.arrayLayers = 1;
+    info.mipLevels = 1;
+    info.samples = VK_SAMPLE_COUNT_1_BIT;
+    info.tiling = VK_IMAGE_TILING_OPTIMAL;
+
+    return info;
+}
+
+VkImageViewCreateInfo vkinit::imageview_create_info(VkFormat format, VkImage image, VkImageAspectFlags flags) {
+    /**
+     * ImageView wraps Image with additional information
+     */
+    VkImageViewCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    info.pNext = nullptr;
+
+    info.viewType = VK_IMAGE_VIEW_TYPE_2D;  // More option than imageType. Ex. cube mapping (different from type 3d)
+    info.format = format; // Must match Image format
+    info.image = image;
+    info.subresourceRange.aspectMask = flags;  // What is the image used for
+    info.subresourceRange.baseArrayLayer = 0;
+    info.subresourceRange.layerCount = 1;
+    info.subresourceRange.baseMipLevel = 0;
+    info.subresourceRange.levelCount = 1;
 
     return info;
 }
