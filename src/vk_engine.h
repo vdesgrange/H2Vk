@@ -13,8 +13,8 @@
 #include "vk_mesh.h"
 #include "vk_types.h"
 
-const uint32_t WIDTH = 1700;
-const uint32_t HEIGHT = 1200;
+const uint32_t CWIDTH = 800;
+const uint32_t CHEIGHT = 600;
 
 const bool enableValidationLayers = true;
 const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
@@ -63,7 +63,7 @@ public:
 	int _frameNumber {0};
 
     GLFWwindow* _window;
-	VkExtent2D _windowExtent{ WIDTH , HEIGHT };
+	VkExtent2D _windowExtent{ CWIDTH , CHEIGHT };
     bool framebufferResized = false;
 
     VkInstance _instance; // Vulkan library handle
@@ -141,6 +141,8 @@ private:
 
     void init_window();
 
+    void init_scene();
+
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
     VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities);
@@ -173,34 +175,4 @@ private:
 
     void upload_mesh(Mesh& mesh);
 
-//
-//    std::vector<const char*> get_required_extensions();
-//
-//    bool check_validation_layer_support(const std::vector<const char*>& validationLayers);
-//
-//    void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-//
-//    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-//            VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-//            VkDebugUtilsMessageTypeFlagsEXT messageType,
-//            const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-//            void *pUserData);
-//
-//    void setup_debug_messenger();
-//
-//    void create_instance();
-
-//    void createLogicalDevice(const std::vector<const char*>& deviceExtensions,
-//                                           const std::vector<const char*> validationLayers,
-//                                           const bool enableValidationLayers);
-//
-//    void pickPhysicalDevice(const std::vector<const char*>& deviceExtensions);
-//
-//    bool isDeviceSuitable(VkPhysicalDevice device, const std::vector<const char*>& deviceExtensions);
-//
-//    bool checkDeviceExtensionSupport(VkPhysicalDevice device, const std::vector<const char*>& deviceExtensions);
-//
-//    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice& device, VkSurfaceKHR& surface);
-//
-//    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 };

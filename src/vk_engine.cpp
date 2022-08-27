@@ -38,7 +38,7 @@ void VulkanEngine::init_window() {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-    _window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+    _window = glfwCreateWindow(CWIDTH, CHEIGHT, "Vulkan", nullptr, nullptr);
     glfwSetWindowUserPointer(_window, this);
     glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
 }
@@ -61,6 +61,7 @@ void VulkanEngine::init()
     init_sync_structures();
     init_pipelines();
 	load_meshes();
+    init_scene();
 
 	_isInitialized = true;
 }
@@ -120,6 +121,27 @@ void VulkanEngine::init_vulkan() {
 
 }
 
+void VulkanEngine::init_scene() {
+    RenderObject monkey;
+    monkey.mesh = get_mesh("monkey");
+    monkey.material = get_material("defaultMesh");
+    monkey.transformMatrix = glm::mat4{ 1.0f };
+
+    _renderables.push_back(monkey);
+
+    for (int x = -20; x <= 20; x++) {
+        for (int y = -20; y <= 20; y++) {
+            RenderObject tri;
+            tri.mesh = get_mesh("triangle");
+            tri.material = get_material("defaultMesh");
+            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
+            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
+            tri.transformMatrix = translation * scale;
+            _renderables.push_back(tri);
+        }
+    }
+}
+
 VkExtent2D VulkanEngine::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities) {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
@@ -133,7 +155,7 @@ VkExtent2D VulkanEngine::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capa
         };
 
         actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-        actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.width);
+        actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
         return actualExtent;
     }
@@ -142,13 +164,15 @@ VkExtent2D VulkanEngine::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capa
 void VulkanEngine::init_swapchain() {
     VkSurfaceCapabilitiesKHR capabilities{};
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface, &capabilities);
-    VkExtent2D  extent2d = choose_swap_extent(capabilities);
+
+    VkExtent2D extent2d = choose_swap_extent(capabilities);
+    _windowExtent = extent2d;
 
     vkb::SwapchainBuilder swapchainBuilder{_physicalDevice, _device, _surface };
     vkb::Swapchain vkbSwapchain = swapchainBuilder
             .use_default_format_selection()
             .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
-            .set_desired_extent(extent2d.width, extent2d.height)
+            .set_desired_extent(_windowExtent.width, _windowExtent.height)
             .build()
             .value();
 
@@ -398,7 +422,7 @@ void VulkanEngine::init_pipelines() {
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)_windowExtent.width;
+    viewport.width = (float) _windowExtent.width;
     viewport.height = (float)_windowExtent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
@@ -449,6 +473,7 @@ void VulkanEngine::init_pipelines() {
 
     pipelineBuilder._pipelineLayout = _meshPipelineLayout;
     _meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+    create_material(_meshPipeline, _meshPipelineLayout, "defaultMesh");
 
     // === 4 - Clean
     // Deleting shaders
@@ -458,7 +483,7 @@ void VulkanEngine::init_pipelines() {
     vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
     vkDestroyShaderModule(_device, meshVertShader, nullptr);
 
-    _mainDeletionQueue.push_function([=]() {
+    _swapChainDeletionQueue.push_function([=]() {
         vkDestroyPipeline(_device, _redTrianglePipeline, nullptr);
         vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
         vkDestroyPipeline(_device, _meshPipeline, nullptr);
@@ -605,7 +630,7 @@ void VulkanEngine::draw()
     VkResult result = vkAcquireNextImageKHR(_device, _swapchain, 1000000000, _presentSemaphore, nullptr, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) { // || result == VK_SUBOPTIMAL_KHR
-        //recreate_swap_chain();
+        recreate_swap_chain();
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR){
         throw std::runtime_error("failed to acquire swap chain image");
@@ -621,7 +646,8 @@ void VulkanEngine::draw()
     VK_CHECK(vkBeginCommandBuffer(_mainCommandBuffer, &cmdBeginInfo));
 
     VkClearValue clearValue;
-    clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+    float flash = abs(sin(_frameNumber / 120.f));
+    clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
     VkClearValue depthValue;
     depthValue.depthStencil.depth = 1.0f;
     std::array<VkClearValue, 2> clearValues = {clearValue, depthValue};
@@ -638,22 +664,24 @@ void VulkanEngine::draw()
 //    }
 //    vkCmdDraw(_mainCommandBuffer, 3, 1, 0, 0);
 
-    vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
-    VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(_mainCommandBuffer, 0, 1, &_objMesh._vertexBuffer._buffer, &offset);
+//    vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
+//    VkDeviceSize offset = 0;
+//    vkCmdBindVertexBuffers(_mainCommandBuffer, 0, 1, &_objMesh._vertexBuffer._buffer, &offset);
+//
+//    glm::vec3 camPos = { 0.f,0.f,-2.f };
+//    glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
+//    glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+//    projection[1][1] *= -1;
+//    glm::mat4 model = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
+//    glm::mat4 mesh_matrix = projection * view * model;
+//    MeshPushConstants constants;
+//    constants.render_matrix = mesh_matrix;
+//
+//    //upload the matrix to the GPU via push constants
+//    vkCmdPushConstants(_mainCommandBuffer, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
+//    vkCmdDraw(_mainCommandBuffer, _objMesh._vertices.size(), 1, 0, 0);
 
-    glm::vec3 camPos = { 0.f,0.f,-2.f };
-    glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
-    glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
-    projection[1][1] *= -1;
-    glm::mat4 model = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
-    glm::mat4 mesh_matrix = projection * view * model;
-    MeshPushConstants constants;
-    constants.render_matrix = mesh_matrix;
-
-    //upload the matrix to the GPU via push constants
-    vkCmdPushConstants(_mainCommandBuffer, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
-    vkCmdDraw(_mainCommandBuffer, _objMesh._vertices.size(), 1, 0, 0);
+    draw_objects(_mainCommandBuffer, _renderables.data(), _renderables.size());
     vkCmdEndRenderPass(_mainCommandBuffer);
 
     VK_CHECK(vkEndCommandBuffer(_mainCommandBuffer));
@@ -685,7 +713,7 @@ void VulkanEngine::draw()
     result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = false;
-        //recreate_swap_chain();
+        recreate_swap_chain();
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swap chain image!");
     }
@@ -742,5 +770,41 @@ Mesh* VulkanEngine::get_mesh(const std::string &name) {
 }
 
 void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
+    glm::vec3 camPos = { 0.f, -6.f, -10.f };
+    glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
 
+    glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+    projection[1][1] *= -1;
+
+    Mesh* lastMesh = nullptr;
+    Material* lastMaterial = nullptr;
+
+    for (int i=0; i < count; i++) {
+        RenderObject& object = first[i];
+        if (object.material != lastMaterial) {
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
+            lastMaterial = object.material;
+        }
+
+        glm::mat4 model = object.transformMatrix;
+        glm::mat4 mesh_matrix = projection * view * model;
+
+        MeshPushConstants constants;
+        constants.render_matrix = mesh_matrix;
+
+        vkCmdPushConstants(commandBuffer,
+                           object.material->pipelineLayout,
+                           VK_SHADER_STAGE_VERTEX_BIT,
+                           0,
+                           static_cast<uint32_t>(sizeof(MeshPushConstants)),
+                           &constants);
+
+        if (object.mesh != lastMesh) {
+            VkDeviceSize offset = 0;
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
+            lastMesh = object.mesh;
+        }
+
+        vkCmdDraw(commandBuffer, static_cast<uint32_t>(object.mesh->_vertices.size()), 1, 0, 0);
+    }
 }
