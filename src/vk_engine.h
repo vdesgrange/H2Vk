@@ -87,6 +87,7 @@ public:
 
     VmaAllocator _allocator;
     Mesh _mesh;
+    Mesh _objMesh;
 
     DeletionQueue _mainDeletionQueue;
     DeletionQueue _swapChainDeletionQueue;
@@ -140,6 +141,8 @@ private:
     bool load_shader_module(const char* filePath, VkShaderModule* out);
 
     void load_meshes();
+
+    bool load_from_obj(const char* filename);
 
     void upload_mesh(Mesh& mesh);
 

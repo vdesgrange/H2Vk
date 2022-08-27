@@ -452,7 +452,10 @@ void VulkanEngine::load_meshes()
     _mesh._vertices[1].color = { 0.f, 1.f, 0.0f }; //pure green
     _mesh._vertices[2].color = { 0.f, 1.f, 0.0f }; //pure green
 
+    _objMesh.load_from_obj("../assets/monkey_smooth.obj");
+
     upload_mesh(_mesh);
+    upload_mesh(_objMesh);
 }
 
 void VulkanEngine::upload_mesh(Mesh& mesh)
@@ -567,7 +570,7 @@ void VulkanEngine::draw()
 
     vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
     VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(_mainCommandBuffer, 0, 1, &_mesh._vertexBuffer._buffer, &offset);
+    vkCmdBindVertexBuffers(_mainCommandBuffer, 0, 1, &_objMesh._vertexBuffer._buffer, &offset);
 
     glm::vec3 camPos = { 0.f,0.f,-2.f };
     glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
@@ -580,7 +583,7 @@ void VulkanEngine::draw()
 
     //upload the matrix to the GPU via push constants
     vkCmdPushConstants(_mainCommandBuffer, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
-    vkCmdDraw(_mainCommandBuffer, _mesh._vertices.size(), 1, 0, 0);
+    vkCmdDraw(_mainCommandBuffer, _objMesh._vertices.size(), 1, 0, 0);
     vkCmdEndRenderPass(_mainCommandBuffer);
 
     VK_CHECK(vkEndCommandBuffer(_mainCommandBuffer));
