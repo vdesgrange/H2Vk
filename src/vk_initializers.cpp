@@ -94,21 +94,6 @@ VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
     return colorBlendAttachment;
 }
 
-VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
-    VkPipelineLayoutCreateInfo info{};
-    info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    info.pNext = nullptr;
-
-    // default
-    info.flags = 0;
-    info.setLayoutCount = 0;
-    info.pSetLayouts = nullptr;
-    info.pushConstantRangeCount = 0;
-    info.pPushConstantRanges = nullptr;
-
-    return info;
-}
-
 VkFenceCreateInfo vkinit::fence_create_info(VkFenceCreateFlags flags) {
     /**
      * Used for CPU -> GPU communication
@@ -179,6 +164,36 @@ VkImageViewCreateInfo vkinit::imageview_create_info(VkFormat format, VkImage ima
     info.subresourceRange.layerCount = 1;
     info.subresourceRange.baseMipLevel = 0;
     info.subresourceRange.levelCount = 1;
+
+    return info;
+}
+
+VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
+    VkPipelineLayoutCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    info.pNext = nullptr;
+
+    // default
+    info.flags = 0;
+    info.setLayoutCount = 0;
+    info.pSetLayouts = nullptr;
+    info.pushConstantRangeCount = 0;
+    info.pPushConstantRanges = nullptr;
+
+    return info;
+}
+
+VkPipelineDepthStencilStateCreateInfo vkinit::pipeline_depth_stencil_state_create_info(bool bDepthTest,
+                                                                                       bool bDepthWrite,
+                                                                                       VkCompareOp compareOp) {
+    VkPipelineDepthStencilStateCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    info.pNext = nullptr;
+    info.depthTestEnable = bDepthTest ? VK_TRUE : VK_FALSE; // z-culling = correct reproduction of depth perception:close object hides one further away
+    info.depthWriteEnable = bDepthWrite ? VK_TRUE : VK_FALSE;
+    info.depthCompareOp = bDepthTest ? compareOp : VK_COMPARE_OP_ALWAYS;
+    info.depthBoundsTestEnable = VK_FALSE;
+    info.stencilTestEnable = VK_FALSE;
 
     return info;
 }
