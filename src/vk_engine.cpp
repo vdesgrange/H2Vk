@@ -520,6 +520,9 @@ void VulkanEngine::load_meshes()
 
     upload_mesh(_mesh);
     upload_mesh(_objMesh);
+
+    _meshes["monkey"] = _objMesh;
+    _meshes["triangle"] = _mesh;
 }
 
 void VulkanEngine::upload_mesh(Mesh& mesh)
@@ -710,4 +713,34 @@ void VulkanEngine::run()
     }
 
     vkDeviceWaitIdle(_device);
+}
+
+Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name) {
+    Material mat;
+    mat.pipeline = pipeline;
+    mat.pipelineLayout = pipelineLayout;
+    _materials[name] = mat;
+    return &_materials[name];
+}
+
+Material* VulkanEngine::get_material(const std::string &name) {
+    auto it = _materials.find(name);
+    if ( it == _materials.end()) {
+        return nullptr;
+    } else {
+        return &(*it).second;
+    }
+}
+
+Mesh* VulkanEngine::get_mesh(const std::string &name) {
+    auto it = _meshes.find(name);
+    if ( it == _meshes.end()) {
+        return nullptr;
+    } else {
+        return &(*it).second;
+    }
+}
+
+void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
+
 }

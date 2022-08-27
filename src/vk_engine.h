@@ -28,6 +28,17 @@ struct MeshPushConstants {
     glm::mat4 render_matrix;
 };
 
+struct Material {
+    VkPipeline pipeline;
+    VkPipelineLayout pipelineLayout;
+};
+
+struct RenderObject {
+    Mesh* mesh;
+    Material* material;
+    glm::mat4 transformMatrix;
+};
+
 struct DeletionQueue
 {
     std::deque<std::function<void()>> deletors;
@@ -89,6 +100,10 @@ public:
     VkPipeline _redTrianglePipeline;
     VkPipeline _meshPipeline;
 
+    std::vector<RenderObject> _renderables;
+    std::unordered_map<std::string, Material> _materials;
+    std::unordered_map<std::string, Mesh> _meshes;
+
     VmaAllocator _allocator;
     Mesh _mesh;
     Mesh _objMesh;
@@ -110,7 +125,15 @@ public:
 	void draw();
 
 	//run main loop
-	void run();;
+	void run();
+
+    Material* create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string& name);
+
+    Material* get_material(const std::string& name);
+
+    Mesh* get_mesh(const std::string& name);
+
+    void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
 
 private:
     // Initialize vulkan
