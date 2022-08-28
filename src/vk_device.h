@@ -3,10 +3,11 @@
 #include <GLFW/glfw3.h>
 #include "VkBootstrap.h"
 #include "vk_mem_alloc.h"
+#include "vk_types.h"
+
+class Window;
 
 class Device final {
-
-    class Window;
 
 public:
     VkInstance _instance; // Vulkan library handle
@@ -17,7 +18,7 @@ public:
 
     VmaAllocator _allocator;
 
-    Device(GLFWwindow* _window);
+    Device(Window& _window, DeletionQueue& mainDeletionQueue);
     ~Device();
 
     VkQueue get_graphics_queue() const;

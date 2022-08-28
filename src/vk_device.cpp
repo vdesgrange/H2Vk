@@ -3,8 +3,9 @@
 #endif
 
 #include "vk_device.h"
+#include "vk_window.h"
 
-Device::Device(GLFWwindow* _window) {
+Device::Device(Window& _window, DeletionQueue& mainDeletionQueue) {
     vkb::InstanceBuilder builder;
 
     //make the Vulkan instance, with basic debug features
@@ -22,7 +23,7 @@ Device::Device(GLFWwindow* _window) {
     _debug_messenger = vkb_inst.debug_messenger;
 
     // Get the surface of the window we opened with SDL
-    if (glfwCreateWindowSurface(_instance, _window, nullptr, &_surface) != VK_SUCCESS) {
+    if (glfwCreateWindowSurface(_instance, _window._window, nullptr, &_surface) != VK_SUCCESS) {
         throw std::runtime_error("failed to create window surface!");
     }
 
@@ -53,18 +54,18 @@ Device::Device(GLFWwindow* _window) {
     allocatorInfo.instance = _instance;
     vmaCreateAllocator(&allocatorInfo, &_allocator);
 
-//    _mainDeletionQueue.push_function([=]() {
-//        vmaDestroyAllocator(_allocator);
-//    });
+    mainDeletionQueue.push_function([=]() {
+        vmaDestroyAllocator(_allocator);
+    });
 }
 
 Device::~Device() {
-    vmaDestroyAllocator(_allocator);
+    // vmaDestroyAllocator(_allocator);
 
-    vkDestroyDevice(_logicalDevice, nullptr);
-    vkDestroySurfaceKHR(_instance, _surface, nullptr);
-    vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
-    vkDestroyInstance(_instance, nullptr);
+//    vkDestroyDevice(_logicalDevice, nullptr);
+//    vkDestroySurfaceKHR(_instance, _surface, nullptr);
+//    vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
+//    vkDestroyInstance(_instance, nullptr);
 }
 
 VkQueue Device::get_graphics_queue() const {

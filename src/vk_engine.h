@@ -9,20 +9,22 @@
 #include <math.h>
 
 #include "glm/gtc/matrix_transform.hpp"
-#include "vk_mesh.h"
 #include "vk_types.h"
+#include "vk_window.h"
 #include "vk_device.h"
+#include "vk_swapchain.h"
+#include "vk_mesh.h"
 #include "vk_camera.h"
 
-const uint32_t CWIDTH = 800;
-const uint32_t CHEIGHT = 600;
+//const uint32_t CWIDTH = 800;
+//const uint32_t CHEIGHT = 600;
 
 const bool enableValidationLayers = true;
 const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
 
-const std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-};
+//const std::vector<const char*> deviceExtensions = {
+//        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+//};
 
 struct MeshPushConstants {
     glm::vec4 data;
@@ -40,31 +42,30 @@ struct RenderObject {
     glm::mat4 transformMatrix;
 };
 
-struct DeletionQueue
-{
-    std::deque<std::function<void()>> deletors;
-
-    void push_function(std::function<void()>&& function) {
-        deletors.push_back(function);
-    }
-
-    void flush() {
-        // reverse iterate the deletion queue to execute all the functions
-        for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
-            (*it)(); //call the function
-        }
-
-        deletors.clear();
-    }
-};
+//struct DeletionQueue
+//{
+//    std::deque<std::function<void()>> deletors;
+//
+//    void push_function(std::function<void()>&& function) {
+//        deletors.push_back(function);
+//    }
+//
+//    void flush() {
+//        // reverse iterate the deletion queue to execute all the functions
+//        for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
+//            (*it)(); //call the function
+//        }
+//
+//        deletors.clear();
+//    }
+//};
 
 class VulkanEngine {
 public:
 	bool _isInitialized{ false };
 	int _frameNumber {0};
 
-    GLFWwindow* _window;
-	VkExtent2D _windowExtent{ CWIDTH , CHEIGHT };
+    Window* _window;
     bool framebufferResized = false;
 
     Device* _device;
@@ -74,14 +75,7 @@ public:
     VkRenderPass _renderPass;
     std::vector<VkFramebuffer> _frameBuffers;
 
-    VkSwapchainKHR _swapchain;
-    VkFormat _swapChainImageFormat;
-    std::vector<VkImage> _swapChainImages;
-    std::vector<VkImageView> _swapChainImageViews;
-
-    VkFormat _depthFormat;
-    VkImageView _depthImageView; // VkImageView contains details about image. Must go through it before using VkImage.
-    AllocatedImage _depthImage;
+    SwapChain* _swapchain;
 
     VkSemaphore _presentSemaphore, _renderSemaphore;
     VkFence _renderFence;
@@ -97,12 +91,10 @@ public:
     std::unordered_map<std::string, Material> _materials;
     std::unordered_map<std::string, Mesh> _meshes;
 
-    // VmaAllocator _allocator;
     Mesh _mesh;
     Mesh _objMesh;
 
     DeletionQueue _mainDeletionQueue;
-    DeletionQueue _swapChainDeletionQueue;
 
     Camera camera;
 
@@ -139,8 +131,6 @@ private:
     void init_scene();
 
     void init_camera();
-
-    static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
     VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities);
 
