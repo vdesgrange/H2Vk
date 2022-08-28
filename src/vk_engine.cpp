@@ -66,58 +66,59 @@ void VulkanEngine::init()
 }
 
 void VulkanEngine::init_vulkan() {
-    vkb::InstanceBuilder builder;
-
-    //make the Vulkan instance, with basic debug features
-    auto inst_ret = builder.set_app_name("Vulkan Application")
-            .request_validation_layers(true)
-            .require_api_version(1, 1, 0)
-            .use_default_debug_messenger()
-            .build();
-
-    vkb::Instance vkb_inst = inst_ret.value();
-
-    //store the instance
-    _instance = vkb_inst.instance;
-    //store the debug messenger
-    _debug_messenger = vkb_inst.debug_messenger;
-
-    // Get the surface of the window we opened with SDL
-    if (glfwCreateWindowSurface(_instance, _window, nullptr, &_surface) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create window surface!");
-    }
-
-    // Selecta GPU
-    //We want a GPU that can write to the SDL surface and supports Vulkan 1.1
-    vkb::PhysicalDeviceSelector selector{ vkb_inst };
-    vkb::PhysicalDevice physicalDevice = selector
-            .set_minimum_version(1, 1)
-            .set_surface(_surface)
-            .select()
-            .value();
-
-    //create the final Vulkan device
-    vkb::DeviceBuilder deviceBuilder{ physicalDevice };
-    vkb::Device vkbDevice = deviceBuilder.build().value();
-
-    // Get the VkDevice handle used in the rest of a Vulkan application
-    _device = vkbDevice.device;
-    _physicalDevice = physicalDevice.physical_device;
-
-    _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
-    _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
-
-    // Initialize memory allocator
-    VmaAllocatorCreateInfo allocatorInfo = {};
-    allocatorInfo.physicalDevice = _physicalDevice;
-    allocatorInfo.device = _device;
-    allocatorInfo.instance = _instance;
-    vmaCreateAllocator(&allocatorInfo, &_allocator);
-
-    _mainDeletionQueue.push_function([=]() {
-        vmaDestroyAllocator(_allocator);
-    });
-
+    _device = new Device(_window);
+//    vkb::InstanceBuilder builder;
+//
+//    //make the Vulkan instance, with basic debug features
+//    auto inst_ret = builder.set_app_name("Vulkan Application")
+//            .request_validation_layers(true)
+//            .require_api_version(1, 1, 0)
+//            .use_default_debug_messenger()
+//            .build();
+//
+//    vkb::Instance vkb_inst = inst_ret.value();
+//
+//    //store the instance
+//    _instance = vkb_inst.instance;
+//    //store the debug messenger
+//    _debug_messenger = vkb_inst.debug_messenger;
+//
+//    // Get the surface of the window we opened with SDL
+//    if (glfwCreateWindowSurface(_instance, _window, nullptr, &_surface) != VK_SUCCESS) {
+//        throw std::runtime_error("failed to create window surface!");
+//    }
+//
+//    // Select a GPU
+//    //We want a GPU that can write to the SDL surface and supports Vulkan 1.1
+//    vkb::PhysicalDeviceSelector selector{ vkb_inst };
+//    vkb::PhysicalDevice physicalDevice = selector
+//            .set_minimum_version(1, 1)
+//            .set_surface(_surface)
+//            .select()
+//            .value();
+//
+//    //create the final Vulkan device
+//    vkb::DeviceBuilder deviceBuilder{ physicalDevice };
+//    vkb::Device vkbDevice = deviceBuilder.build().value();
+//
+//    // Get the VkDevice handle used in the rest of a Vulkan application
+//    _device = vkbDevice.device;
+//    _physicalDevice = physicalDevice.physical_device;
+//
+//    _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+//    _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+//
+//    // Initialize memory allocator
+//    VmaAllocatorCreateInfo allocatorInfo = {};
+//    allocatorInfo.physicalDevice = _physicalDevice;
+//    allocatorInfo.device = _device;
+//    allocatorInfo.instance = _instance;
+//    vmaCreateAllocator(&allocatorInfo, &_allocator);
+//
+//    _mainDeletionQueue.push_function([=]() {
+//        vmaDestroyAllocator(_allocator);
+//    });
+    return;
 }
 
 void VulkanEngine::init_scene() {
@@ -168,12 +169,12 @@ VkExtent2D VulkanEngine::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capa
 
 void VulkanEngine::init_swapchain() {
     VkSurfaceCapabilitiesKHR capabilities{};
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface, &capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_device->_physicalDevice, _device->_surface, &capabilities);
 
     VkExtent2D extent2d = choose_swap_extent(capabilities);
     _windowExtent = extent2d;
 
-    vkb::SwapchainBuilder swapchainBuilder{_physicalDevice, _device, _surface };
+    vkb::SwapchainBuilder swapchainBuilder{_device->_physicalDevice, _device->_logicalDevice, _device->_surface };
     vkb::Swapchain vkbSwapchain = swapchainBuilder
             .use_default_format_selection()
             .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
@@ -197,16 +198,16 @@ void VulkanEngine::init_swapchain() {
     VmaAllocationCreateInfo imageAllocInfo{};
     imageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     imageAllocInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    vmaCreateImage(_allocator, &imageInfo, &imageAllocInfo, &_depthImage._image, &_depthImage._allocation, nullptr);
+    vmaCreateImage(_device->_allocator, &imageInfo, &imageAllocInfo, &_depthImage._image, &_depthImage._allocation, nullptr);
 
     VkImageViewCreateInfo viewInfo = vkinit::imageview_create_info(_depthFormat, _depthImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);
-    VK_CHECK(vkCreateImageView(_device, &viewInfo, nullptr, &_depthImageView));
+    VK_CHECK(vkCreateImageView(_device->_logicalDevice, &viewInfo, nullptr, &_depthImageView));
 
     // Clean up
     _swapChainDeletionQueue.push_function([=]() {
-        vkDestroyImageView(_device, _depthImageView, nullptr);
-        vmaDestroyImage(_allocator, _depthImage._image, _depthImage._allocation);
-        vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+        vkDestroyImageView(_device->_logicalDevice, _depthImageView, nullptr);
+        vmaDestroyImage(_device->_allocator, _depthImage._image, _depthImage._allocation);
+        vkDestroySwapchainKHR(_device->_logicalDevice, _swapchain, nullptr);
     });
 }
 
@@ -219,13 +220,13 @@ void VulkanEngine::init_command_pool() {
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = _graphicsQueueFamily;
+    poolInfo.queueFamilyIndex = _device->get_graphics_queue_family();
     poolInfo.pNext = nullptr;
 
-    VK_CHECK(vkCreateCommandPool(_device, &poolInfo, nullptr, &_commandPool));
+    VK_CHECK(vkCreateCommandPool(_device->_logicalDevice, &poolInfo, nullptr, &_commandPool));
 
     _mainDeletionQueue.push_function([=]() {
-        vkDestroyCommandPool(_device, _commandPool, nullptr);
+        vkDestroyCommandPool(_device->_logicalDevice, _commandPool, nullptr);
     });
 }
 
@@ -237,7 +238,7 @@ void VulkanEngine::init_command_buffer() {
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocateInfo.pNext = nullptr;
 
-    VK_CHECK(vkAllocateCommandBuffers(_device, &allocateInfo, &_mainCommandBuffer));
+    VK_CHECK(vkAllocateCommandBuffers(_device->_logicalDevice, &allocateInfo, &_mainCommandBuffer));
 }
 
 void VulkanEngine::init_default_renderpass() {
@@ -308,10 +309,10 @@ void VulkanEngine::init_default_renderpass() {
     renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
     renderPassInfo.pDependencies = dependencies.data();
 
-    VK_CHECK(vkCreateRenderPass(_device, &renderPassInfo, nullptr, &_renderPass));
+    VK_CHECK(vkCreateRenderPass(_device->_logicalDevice, &renderPassInfo, nullptr, &_renderPass));
 
     _swapChainDeletionQueue.push_function([=]() {
-        vkDestroyRenderPass(_device, _renderPass, nullptr);
+        vkDestroyRenderPass(_device->_logicalDevice, _renderPass, nullptr);
     });
 }
 
@@ -332,10 +333,10 @@ void VulkanEngine::init_framebuffers() {
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments = attachments.data();
 
-        VK_CHECK(vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &_frameBuffers[i]));
+        VK_CHECK(vkCreateFramebuffer(_device->_logicalDevice, &framebufferInfo, nullptr, &_frameBuffers[i]));
         _swapChainDeletionQueue.push_function([=]() {
-            vkDestroyFramebuffer(_device, _frameBuffers[i], nullptr);
-            vkDestroyImageView(_device, _swapChainImageViews[i], nullptr);
+            vkDestroyFramebuffer(_device->_logicalDevice, _frameBuffers[i], nullptr);
+            vkDestroyImageView(_device->_logicalDevice, _swapChainImageViews[i], nullptr);
         });
     }
 }
@@ -344,20 +345,20 @@ void VulkanEngine::init_sync_structures() {
     // Used for CPU -> GPU communication
 
     VkFenceCreateInfo fenceInfo = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
-    VK_CHECK(vkCreateFence(_device, &fenceInfo, nullptr, &_renderFence));
+    VK_CHECK(vkCreateFence(_device->_logicalDevice, &fenceInfo, nullptr, &_renderFence));
 
     _mainDeletionQueue.push_function([=]() { // Destruction of fence
-        vkDestroyFence(_device, _renderFence, nullptr);
+        vkDestroyFence(_device->_logicalDevice, _renderFence, nullptr);
     });
 
     //  Used for GPU -> GPU synchronisation
     VkSemaphoreCreateInfo semaphoreInfo = vkinit::semaphore_create_info();
-    VK_CHECK(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_renderSemaphore));
-    VK_CHECK(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_presentSemaphore));
+    VK_CHECK(vkCreateSemaphore(_device->_logicalDevice, &semaphoreInfo, nullptr, &_renderSemaphore));
+    VK_CHECK(vkCreateSemaphore(_device->_logicalDevice, &semaphoreInfo, nullptr, &_presentSemaphore));
 
     _mainDeletionQueue.push_function([=]() { // Destruction of semaphores
-        vkDestroySemaphore(_device, _presentSemaphore, nullptr);
-        vkDestroySemaphore(_device, _renderSemaphore, nullptr);
+        vkDestroySemaphore(_device->_logicalDevice, _presentSemaphore, nullptr);
+        vkDestroySemaphore(_device->_logicalDevice, _renderSemaphore, nullptr);
     });
 }
 
@@ -414,7 +415,7 @@ void VulkanEngine::init_pipelines() {
 
     // Build pipeline layout
     VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-    VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_pipelineLayout));
+    VK_CHECK(vkCreatePipelineLayout(_device->_logicalDevice, &pipeline_layout_info, nullptr, &_pipelineLayout));
 
     // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
     PipelineBuilder pipelineBuilder;
@@ -444,13 +445,13 @@ void VulkanEngine::init_pipelines() {
     pipelineBuilder._pipelineLayout = _pipelineLayout;
 
     // === 1 - Build graphics pipeline ===
-    _graphicsPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+    _graphicsPipeline = pipelineBuilder.build_pipeline(_device->_logicalDevice, _renderPass);
 
     // === 2 - Build red triangle pipeline ===
     pipelineBuilder._shaderStages.clear();
     pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, redTriangleVertexShader));
     pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
-    _redTrianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+    _redTrianglePipeline = pipelineBuilder.build_pipeline(_device->_logicalDevice, _renderPass);
 
     // === 3 - Build dynamic triangle mesh
     pipelineBuilder._shaderStages.clear();  // Clear the shader stages for the builder
@@ -474,26 +475,26 @@ void VulkanEngine::init_pipelines() {
     VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
     mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
     mesh_pipeline_layout_info.pushConstantRangeCount = 1;
-    VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
+    VK_CHECK(vkCreatePipelineLayout(_device->_logicalDevice, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
 
     pipelineBuilder._pipelineLayout = _meshPipelineLayout;
-    _meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+    _meshPipeline = pipelineBuilder.build_pipeline(_device->_logicalDevice, _renderPass);
     create_material(_meshPipeline, _meshPipelineLayout, "defaultMesh");
 
     // === 4 - Clean
     // Deleting shaders
-    vkDestroyShaderModule(_device, redTriangleVertexShader, nullptr);
-    vkDestroyShaderModule(_device, redTriangleFragShader, nullptr);
-    vkDestroyShaderModule(_device, triangleFragShader, nullptr);
-    vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
-    vkDestroyShaderModule(_device, meshVertShader, nullptr);
+    vkDestroyShaderModule(_device->_logicalDevice, redTriangleVertexShader, nullptr);
+    vkDestroyShaderModule(_device->_logicalDevice, redTriangleFragShader, nullptr);
+    vkDestroyShaderModule(_device->_logicalDevice, triangleFragShader, nullptr);
+    vkDestroyShaderModule(_device->_logicalDevice, triangleVertexShader, nullptr);
+    vkDestroyShaderModule(_device->_logicalDevice, meshVertShader, nullptr);
 
     _swapChainDeletionQueue.push_function([=]() {
-        vkDestroyPipeline(_device, _redTrianglePipeline, nullptr);
-        vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
-        vkDestroyPipeline(_device, _meshPipeline, nullptr);
-        vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
-        vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
+        vkDestroyPipeline(_device->_logicalDevice, _redTrianglePipeline, nullptr);
+        vkDestroyPipeline(_device->_logicalDevice, _graphicsPipeline, nullptr);
+        vkDestroyPipeline(_device->_logicalDevice, _meshPipeline, nullptr);
+        vkDestroyPipelineLayout(_device->_logicalDevice, _pipelineLayout, nullptr);
+        vkDestroyPipelineLayout(_device->_logicalDevice, _meshPipelineLayout, nullptr);
     });
 }
 
@@ -526,7 +527,7 @@ bool VulkanEngine::create_shader_module(const std::vector<uint32_t>& code, VkSha
     createInfo.pCode = code.data();
 
     VkShaderModule shaderModule;
-    if (vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+    if (vkCreateShaderModule(_device->_logicalDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
         return false;
     }
 
@@ -571,7 +572,7 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
     vmaallocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
     //allocate the buffer
-    VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo,
+    VkResult result = vmaCreateBuffer(_device->_allocator, &bufferInfo, &vmaallocInfo,
                              &mesh._vertexBuffer._buffer,
                              &mesh._vertexBuffer._allocation,
                              nullptr);
@@ -580,13 +581,13 @@ void VulkanEngine::upload_mesh(Mesh& mesh)
     //add the destruction of triangle mesh buffer to the deletion queue
     _mainDeletionQueue.push_function([=]() {
 
-        vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
+        vmaDestroyBuffer(_device->_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
     });
 
     void* data;
-    vmaMapMemory(_allocator, mesh._vertexBuffer._allocation, &data);
+    vmaMapMemory(_device->_allocator, mesh._vertexBuffer._allocation, &data);
     memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
-    vmaUnmapMemory(_allocator, mesh._vertexBuffer._allocation);
+    vmaUnmapMemory(_device->_allocator, mesh._vertexBuffer._allocation);
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -597,7 +598,7 @@ void VulkanEngine::recreate_swap_chain() {
         glfwWaitEvents();
     }
 
-    vkDeviceWaitIdle(_device);
+    vkDeviceWaitIdle(_device->_logicalDevice);
     _swapChainDeletionQueue.flush();
 
     init_swapchain();
@@ -609,15 +610,15 @@ void VulkanEngine::recreate_swap_chain() {
 void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
-        vkDeviceWaitIdle(_device);
-        vkWaitForFences(_device, 1, &_renderFence, true, 1000000000);
+        vkDeviceWaitIdle(_device->_logicalDevice);
+        vkWaitForFences(_device->_logicalDevice, 1, &_renderFence, true, 1000000000);
         _swapChainDeletionQueue.flush();
         _mainDeletionQueue.flush();
 
-        vkDestroyDevice(_device, nullptr);
-        vkDestroySurfaceKHR(_instance, _surface, nullptr);
-        vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
-        vkDestroyInstance(_instance, nullptr);
+        vkDestroyDevice(_device->_logicalDevice, nullptr);
+        vkDestroySurfaceKHR(_device->_instance, _device->_surface, nullptr);
+        vkb::destroy_debug_utils_messenger(_device->_instance, _device->_debug_messenger);
+        vkDestroyInstance(_device->_instance, nullptr);
 
         glfwDestroyWindow(_window);
         glfwTerminate();
@@ -628,11 +629,11 @@ void VulkanEngine::draw()
 {
     // Wait GPU to render latest frame
     //wait until the GPU has finished rendering the last frame. Timeout of 1 second
-    VK_CHECK(vkWaitForFences(_device, 1, &_renderFence, true, 1000000000));
-    VK_CHECK(vkResetFences(_device, 1, &_renderFence));
+    VK_CHECK(vkWaitForFences(_device->_logicalDevice, 1, &_renderFence, true, 1000000000));
+    VK_CHECK(vkResetFences(_device->_logicalDevice, 1, &_renderFence));
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_device, _swapchain, 1000000000, _presentSemaphore, nullptr, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain, 1000000000, _presentSemaphore, nullptr, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) { // || result == VK_SUBOPTIMAL_KHR
         recreate_swap_chain();
@@ -703,7 +704,7 @@ void VulkanEngine::draw()
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_mainCommandBuffer;
 
-    VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _renderFence));
+    VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, _renderFence));
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -715,7 +716,7 @@ void VulkanEngine::draw()
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
 
-    result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+    result = vkQueuePresentKHR(_device->get_graphics_queue(), &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = false;
         recreate_swap_chain();
@@ -745,7 +746,7 @@ void VulkanEngine::run()
         draw();
     }
 
-    vkDeviceWaitIdle(_device);
+    vkDeviceWaitIdle(_device->_logicalDevice);
 }
 
 Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name) {

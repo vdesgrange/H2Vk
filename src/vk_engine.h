@@ -11,6 +11,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "vk_mesh.h"
 #include "vk_types.h"
+#include "vk_device.h"
 #include "vk_camera.h"
 
 const uint32_t CWIDTH = 800;
@@ -66,14 +67,15 @@ public:
 	VkExtent2D _windowExtent{ CWIDTH , CHEIGHT };
     bool framebufferResized = false;
 
-    VkInstance _instance; // Vulkan library handle
-    VkDebugUtilsMessengerEXT _debug_messenger; // Vulkan debug output handle
-    VkPhysicalDevice _physicalDevice; // GPU chosen as the default device
-    VkDevice _device; // Vulkan device for commands
-    VkSurfaceKHR _surface; // Vulkan window surface
+    Device* _device;
+//    VkInstance _instance; // Vulkan library handle
+//    VkDebugUtilsMessengerEXT _debug_messenger; // Vulkan debug output handle
+//    VkPhysicalDevice _physicalDevice; // GPU chosen as the default device
+//    VkDevice _device; // Vulkan device for commands
+//    VkSurfaceKHR _surface; // Vulkan window surface
 
-    VkQueue _graphicsQueue;
-    uint32_t _graphicsQueueFamily;
+//    VkQueue _graphicsQueue;
+//    uint32_t _graphicsQueueFamily;
 
     VkCommandPool _commandPool;
     VkCommandBuffer _mainCommandBuffer;;
@@ -104,7 +106,7 @@ public:
     std::unordered_map<std::string, Material> _materials;
     std::unordered_map<std::string, Mesh> _meshes;
 
-    VmaAllocator _allocator;
+    // VmaAllocator _allocator;
     Mesh _mesh;
     Mesh _objMesh;
 
