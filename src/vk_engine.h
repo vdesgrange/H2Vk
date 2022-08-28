@@ -1,8 +1,6 @@
 ﻿#pragma once
 
 #include <GLFW/glfw3.h>
-#include "glm/gtc/matrix_transform.hpp"
-
 #include <vector>
 #include <string>
 #include <fstream>
@@ -10,8 +8,10 @@
 #include <functional>
 #include <math.h>
 
+#include "glm/gtc/matrix_transform.hpp"
 #include "vk_mesh.h"
 #include "vk_types.h"
+#include "vk_camera.h"
 
 const uint32_t CWIDTH = 800;
 const uint32_t CHEIGHT = 600;
@@ -111,6 +111,8 @@ public:
     DeletionQueue _mainDeletionQueue;
     DeletionQueue _swapChainDeletionQueue;
 
+    Camera camera;
+
     int _selectedShader{ 0 };
 
     //initializes everything in the engine
@@ -142,6 +144,8 @@ private:
     void init_window();
 
     void init_scene();
+
+    void init_camera();
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 

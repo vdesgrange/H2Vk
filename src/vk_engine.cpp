@@ -15,11 +15,11 @@
 #include <iostream>
 
 #include "VkBootstrap.h"
+#include "vk_camera.h"
 #include "vk_mem_alloc.h"
 #include "vk_engine.h"
 #include "vk_pipeline.h"
 #include "vk_initializers.h"
-
 
 using namespace std;
 
@@ -50,9 +50,8 @@ void VulkanEngine::framebufferResizeCallback(GLFWwindow* window, int width, int 
 
 void VulkanEngine::init()
 {
-	// We initialize SDL and create a window with it. 
-
     init_window();
+    init_camera();
     init_vulkan();
     init_swapchain();
     init_commands();
@@ -140,6 +139,12 @@ void VulkanEngine::init_scene() {
             _renderables.push_back(tri);
         }
     }
+}
+
+void VulkanEngine::init_camera() {
+    camera.set_flip_y(true);
+    camera.set_position({ 0.f, -6.f, -10.f });
+    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 }
 
 VkExtent2D VulkanEngine::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities) {
@@ -770,12 +775,6 @@ Mesh* VulkanEngine::get_mesh(const std::string &name) {
 }
 
 void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
-    glm::vec3 camPos = { 0.f, -6.f, -10.f };
-    glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
-
-    glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
-    projection[1][1] *= -1;
-
     Mesh* lastMesh = nullptr;
     Material* lastMaterial = nullptr;
 
@@ -787,7 +786,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
         }
 
         glm::mat4 model = object.transformMatrix;
-        glm::mat4 mesh_matrix = projection * view * model;
+        glm::mat4 mesh_matrix = camera.get_mesh_matrix(model);
 
         MeshPushConstants constants;
         constants.render_matrix = mesh_matrix;
