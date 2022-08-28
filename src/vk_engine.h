@@ -68,15 +68,6 @@ public:
     bool framebufferResized = false;
 
     Device* _device;
-//    VkInstance _instance; // Vulkan library handle
-//    VkDebugUtilsMessengerEXT _debug_messenger; // Vulkan debug output handle
-//    VkPhysicalDevice _physicalDevice; // GPU chosen as the default device
-//    VkDevice _device; // Vulkan device for commands
-//    VkSurfaceKHR _surface; // Vulkan window surface
-
-//    VkQueue _graphicsQueue;
-//    uint32_t _graphicsQueueFamily;
-
     VkCommandPool _commandPool;
     VkCommandBuffer _mainCommandBuffer;;
 
