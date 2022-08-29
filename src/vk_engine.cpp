@@ -90,23 +90,8 @@ void VulkanEngine::init_swapchain() {
 }
 
 void VulkanEngine::init_commands() {
-    init_command_pool();
-    init_command_buffer();
-}
-
-void VulkanEngine::init_command_pool() {
     _commandPool = new CommandPool(*_device, _mainDeletionQueue);
-}
-
-void VulkanEngine::init_command_buffer() {
-    VkCommandBufferAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocateInfo.commandPool = _commandPool->_commandPool;
-    allocateInfo.commandBufferCount = 1; // why ? Shouldn't be a vector?
-    allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocateInfo.pNext = nullptr;
-
-    VK_CHECK(vkAllocateCommandBuffers(_device->_logicalDevice, &allocateInfo, &_mainCommandBuffer));
+    _commandBuffer = new CommandBuffer(*_device, *_commandPool);
 }
 
 void VulkanEngine::init_default_renderpass() {
@@ -514,13 +499,13 @@ void VulkanEngine::draw()
     }
 
 
-    VK_CHECK(vkResetCommandBuffer(_mainCommandBuffer, 0));
+    VK_CHECK(vkResetCommandBuffer(_commandBuffer->_mainCommandBuffer, 0));
     VkCommandBufferBeginInfo cmdBeginInfo{};
     cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmdBeginInfo.pNext = nullptr;
     cmdBeginInfo.pInheritanceInfo = nullptr; // VkCommandBufferInheritanceInfo for secondary cmd buff. defines states inheriting from primary cmd. buff.
     cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    VK_CHECK(vkBeginCommandBuffer(_mainCommandBuffer, &cmdBeginInfo));
+    VK_CHECK(vkBeginCommandBuffer(_commandBuffer->_mainCommandBuffer, &cmdBeginInfo));
 
     VkClearValue clearValue;
     float flash = abs(sin(_frameNumber / 120.f));
@@ -532,7 +517,7 @@ void VulkanEngine::draw()
     VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass, _window->_windowExtent, _frameBuffers[imageIndex]);
     renderPassInfo.clearValueCount = 2;
     renderPassInfo.pClearValues = &clearValues[0];
-    vkCmdBeginRenderPass(_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(_commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 //    if(_selectedShader == 0) {
 //        vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
@@ -558,10 +543,10 @@ void VulkanEngine::draw()
 //    vkCmdPushConstants(_mainCommandBuffer, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 //    vkCmdDraw(_mainCommandBuffer, _objMesh._vertices.size(), 1, 0, 0);
 
-    draw_objects(_mainCommandBuffer, _renderables.data(), _renderables.size());
-    vkCmdEndRenderPass(_mainCommandBuffer);
+    draw_objects(_commandBuffer->_mainCommandBuffer, _renderables.data(), _renderables.size());
+    vkCmdEndRenderPass(_commandBuffer->_mainCommandBuffer);
 
-    VK_CHECK(vkEndCommandBuffer(_mainCommandBuffer));
+    VK_CHECK(vkEndCommandBuffer(_commandBuffer->_mainCommandBuffer));
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     VkSubmitInfo submitInfo{};
@@ -573,7 +558,7 @@ void VulkanEngine::draw()
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = &_renderSemaphore;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_mainCommandBuffer;
+    submitInfo.pCommandBuffers = &_commandBuffer->_mainCommandBuffer;
 
     VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, _renderFence));
 

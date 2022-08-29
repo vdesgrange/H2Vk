@@ -14,6 +14,7 @@
 #include "vk_device.h"
 #include "vk_swapchain.h"
 #include "vk_command_pool.h"
+#include "vk_command_buffer.h"
 #include "vk_mesh.h"
 #include "vk_camera.h"
 
@@ -66,8 +67,9 @@ public:
 
     Device* _device;
     CommandPool* _commandPool;
+    CommandBuffer* _commandBuffer;
     // VkCommandPool _commandPool;
-    VkCommandBuffer _mainCommandBuffer;;
+    // VkCommandBuffer _mainCommandBuffer;
 
     VkRenderPass _renderPass;
     std::vector<VkFramebuffer> _frameBuffers;
