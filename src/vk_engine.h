@@ -13,18 +13,14 @@
 #include "vk_window.h"
 #include "vk_device.h"
 #include "vk_swapchain.h"
+#include "vk_command_pool.h"
 #include "vk_mesh.h"
 #include "vk_camera.h"
 
-//const uint32_t CWIDTH = 800;
-//const uint32_t CHEIGHT = 600;
 
 const bool enableValidationLayers = true;
 const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
 
-//const std::vector<const char*> deviceExtensions = {
-//        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-//};
 
 struct MeshPushConstants {
     glm::vec4 data;
@@ -69,7 +65,8 @@ public:
     bool framebufferResized = false;
 
     Device* _device;
-    VkCommandPool _commandPool;
+    CommandPool* _commandPool;
+    // VkCommandPool _commandPool;
     VkCommandBuffer _mainCommandBuffer;;
 
     VkRenderPass _renderPass;

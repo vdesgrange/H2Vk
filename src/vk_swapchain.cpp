@@ -3,20 +3,10 @@
 #endif
 
 #include "vk_swapchain.h"
+#include "vk_helpers.h"
 #include "vk_window.h"
 #include "vk_device.h"
 #include "vk_initializers.h"
-
-#define VK_CHECK(x) \
-    do \
-    { \
-        VkResult err = x; \
-        if (err) { \
-            std::cout <<"Detected Vulkan error: " << err << std::endl; \
-			abort(); \
-        } \
-    } while (0)
-
 
 SwapChain::SwapChain(Window& window, const Device& device) {
     VkSurfaceCapabilitiesKHR capabilities{};

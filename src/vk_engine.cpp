@@ -15,6 +15,7 @@
 #include <iostream>
 
 #include "VkBootstrap.h"
+#include "vk_helpers.h"
 #include "vk_camera.h"
 #include "vk_mem_alloc.h"
 #include "vk_engine.h"
@@ -23,15 +24,6 @@
 
 using namespace std;
 
-#define VK_CHECK(x) \
-    do \
-    { \
-        VkResult err = x; \
-        if (err) { \
-            std::cout <<"Detected Vulkan error: " << err << std::endl; \
-			abort(); \
-        } \
-    } while (0)
 
 void VulkanEngine::init_window() {
     _window = new Window();
@@ -103,23 +95,13 @@ void VulkanEngine::init_commands() {
 }
 
 void VulkanEngine::init_command_pool() {
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = _device->get_graphics_queue_family();
-    poolInfo.pNext = nullptr;
-
-    VK_CHECK(vkCreateCommandPool(_device->_logicalDevice, &poolInfo, nullptr, &_commandPool));
-
-    _mainDeletionQueue.push_function([=]() {
-        vkDestroyCommandPool(_device->_logicalDevice, _commandPool, nullptr);
-    });
+    _commandPool = new CommandPool(*_device, _mainDeletionQueue);
 }
 
 void VulkanEngine::init_command_buffer() {
     VkCommandBufferAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocateInfo.commandPool = _commandPool;
+    allocateInfo.commandPool = _commandPool->_commandPool;
     allocateInfo.commandBufferCount = 1; // why ? Shouldn't be a vector?
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocateInfo.pNext = nullptr;
@@ -497,6 +479,7 @@ void VulkanEngine::cleanup()
 	if (_isInitialized) {
         vkDeviceWaitIdle(_device->_logicalDevice);
         vkWaitForFences(_device->_logicalDevice, 1, &_renderFence, true, 1000000000);
+        delete _commandPool;
         delete _swapchain;
         _mainDeletionQueue.flush();
 
