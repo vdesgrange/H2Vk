@@ -85,7 +85,6 @@ void VulkanEngine::init_camera() {
 
 void VulkanEngine::init_swapchain() {
     _swapchain = new SwapChain(*_window, *_device);
-
 }
 
 void VulkanEngine::init_commands() {
@@ -98,28 +97,7 @@ void VulkanEngine::init_default_renderpass() {
 }
 
 void VulkanEngine::init_framebuffers() {
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = _renderPass->_renderPass;
-    framebufferInfo.attachmentCount = 1;
-    framebufferInfo.width = _window->_windowExtent.width;
-    framebufferInfo.height = _window->_windowExtent.height;
-    framebufferInfo.layers = 1;
-
-    _frameBuffers.resize(_swapchain->_swapChainImages.size());
-
-    for (int i = 0; i < _swapchain->_swapChainImages.size(); i++) {
-        std::array<VkImageView, 2> attachments = {_swapchain->_swapChainImageViews[i], _swapchain->_depthImageView};
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-
-        VK_CHECK(vkCreateFramebuffer(_device->_logicalDevice, &framebufferInfo, nullptr, &_frameBuffers[i]));
-        _swapchain->_swapChainDeletionQueue.push_function([=]() {
-            vkDestroyFramebuffer(_device->_logicalDevice, _frameBuffers[i], nullptr);
-            vkDestroyImageView(_device->_logicalDevice, _swapchain->_swapChainImageViews[i], nullptr);
-        });
-    }
+    _frameBuffers = new FrameBuffers(*_window, *_device, *_swapchain, *_renderPass);
 }
 
 void VulkanEngine::init_sync_structures() {
@@ -392,6 +370,7 @@ void VulkanEngine::cleanup()
 	if (_isInitialized) {
         vkDeviceWaitIdle(_device->_logicalDevice);
         vkWaitForFences(_device->_logicalDevice, 1, &_renderFence, true, 1000000000);
+        delete _frameBuffers;
         delete _renderPass;
         delete _commandPool;
         delete _swapchain;
@@ -443,7 +422,7 @@ void VulkanEngine::draw()
     depthValue.depthStencil.depth = 1.0f;
     std::array<VkClearValue, 2> clearValues = {clearValue, depthValue};
 
-    VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass, _window->_windowExtent, _frameBuffers[imageIndex]);
+    VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass, _window->_windowExtent, _frameBuffers->_frameBuffers[imageIndex]);
     renderPassInfo.clearValueCount = 2;
     renderPassInfo.pClearValues = &clearValues[0];
     vkCmdBeginRenderPass(_commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
