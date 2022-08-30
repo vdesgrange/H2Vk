@@ -4,8 +4,10 @@
 
 #include <GLFW/glfw3.h>
 #include "vk_pipeline.h"
+#include "vk_device.h"
+#include "vk_renderpass.h"
 
-VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass renderPass) {
+VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& renderPass) {
     /**
      * Create graphic pipeline
      */
@@ -40,14 +42,14 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass renderP
     pipelineInfo.pMultisampleState = &_multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.layout = _pipelineLayout;
-    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.renderPass = renderPass._renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.pDepthStencilState = &_depthStencil;
 
     //it's easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK case
     VkPipeline graphicsPipeline;
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(device._logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
         std::cout << "failed to create pipeline\n";
         return VK_NULL_HANDLE;
     } else {

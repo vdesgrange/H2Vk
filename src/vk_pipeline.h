@@ -6,6 +6,9 @@
 
 #include "vk_types.h"
 
+class Device;
+class RenderPass;
+
 class PipelineBuilder {
 public:
     std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
@@ -19,5 +22,5 @@ public:
     VkPipelineLayout _pipelineLayout;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
 
-    VkPipeline build_pipeline(VkDevice device, VkRenderPass renderPass);
+    VkPipeline build_pipeline(const Device& device, RenderPass& renderPass);
 };

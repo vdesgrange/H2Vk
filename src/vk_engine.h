@@ -15,6 +15,7 @@
 #include "vk_swapchain.h"
 #include "vk_command_pool.h"
 #include "vk_command_buffer.h"
+#include "vk_renderpass.h"
 #include "vk_mesh.h"
 #include "vk_camera.h"
 
@@ -39,24 +40,6 @@ struct RenderObject {
     glm::mat4 transformMatrix;
 };
 
-//struct DeletionQueue
-//{
-//    std::deque<std::function<void()>> deletors;
-//
-//    void push_function(std::function<void()>&& function) {
-//        deletors.push_back(function);
-//    }
-//
-//    void flush() {
-//        // reverse iterate the deletion queue to execute all the functions
-//        for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
-//            (*it)(); //call the function
-//        }
-//
-//        deletors.clear();
-//    }
-//};
-
 class VulkanEngine {
 public:
 	bool _isInitialized{ false };
@@ -66,15 +49,17 @@ public:
     bool framebufferResized = false;
 
     Device* _device;
+
+    SwapChain* _swapchain;
+
     CommandPool* _commandPool;
     CommandBuffer* _commandBuffer;
     // VkCommandPool _commandPool;
     // VkCommandBuffer _mainCommandBuffer;
 
-    VkRenderPass _renderPass;
+    RenderPass* _renderPass;
+    //VkRenderPass _renderPass;
     std::vector<VkFramebuffer> _frameBuffers;
-
-    SwapChain* _swapchain;
 
     VkSemaphore _presentSemaphore, _renderSemaphore;
     VkFence _renderFence;

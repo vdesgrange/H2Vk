@@ -1,7 +1,8 @@
 #include "vk_renderpass.h"
 #include "vk_helpers.h"
+#include "vk_device.h"
 
-RenderPass::RenderPass(const Device& device, SwapChain& swapchain) {
+RenderPass::RenderPass(const Device& device, SwapChain& swapchain) : _device(device) {
 
     // === Color ===
     VkAttachmentDescription colorAttachment{};
@@ -71,7 +72,11 @@ RenderPass::RenderPass(const Device& device, SwapChain& swapchain) {
 
     VK_CHECK(vkCreateRenderPass(device._logicalDevice, &renderPassInfo, nullptr, &_renderPass));
 
-    swapchain._swapChainDeletionQueue.push_function([=]() {
-        vkDestroyRenderPass(device._logicalDevice, _renderPass, nullptr);
-    });
+//    swapchain._swapChainDeletionQueue.push_function([=]() {
+//        vkDestroyRenderPass(device._logicalDevice, _renderPass, nullptr);
+//    });
+}
+
+RenderPass::~RenderPass() {
+    vkDestroyRenderPass(_device._logicalDevice, _renderPass, nullptr);
 }

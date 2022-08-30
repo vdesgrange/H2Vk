@@ -8,6 +8,7 @@
 #include "vk_swapchain.h"
 
 class SwapChain;
+class Device;
 
 class RenderPass final {
 public:
@@ -15,4 +16,7 @@ public:
 
     RenderPass(const Device& device, SwapChain& swapChain);
     ~RenderPass();
+
+private:
+    const class Device& _device;
 };
