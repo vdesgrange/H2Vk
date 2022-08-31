@@ -17,6 +17,7 @@
 #include "vk_command_buffer.h"
 #include "vk_renderpass.h"
 #include "vk_framebuffers.h"
+#include "vk_fence.h"
 #include "vk_mesh.h"
 #include "vk_camera.h"
 
@@ -57,14 +58,14 @@ public:
     CommandBuffer* _commandBuffer;
     // VkCommandPool _commandPool;
     // VkCommandBuffer _mainCommandBuffer;
-
-    RenderPass* _renderPass;
     //VkRenderPass _renderPass;
-    FrameBuffers* _frameBuffers;
     //std::vector<VkFramebuffer> _frameBuffers;
+    RenderPass* _renderPass;
+    FrameBuffers* _frameBuffers;
 
     VkSemaphore _presentSemaphore, _renderSemaphore;
-    VkFence _renderFence;
+    Fence* _renderFence;
+    //VkFence _renderFence;
 
     VkPipelineLayout _pipelineLayout;
     VkPipelineLayout _meshPipelineLayout;

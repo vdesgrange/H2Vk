@@ -101,14 +101,15 @@ void VulkanEngine::init_framebuffers() {
 }
 
 void VulkanEngine::init_sync_structures() {
-    // Used for CPU -> GPU communication
-
-    VkFenceCreateInfo fenceInfo = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
-    VK_CHECK(vkCreateFence(_device->_logicalDevice, &fenceInfo, nullptr, &_renderFence));
-
-    _mainDeletionQueue.push_function([=]() { // Destruction of fence
-        vkDestroyFence(_device->_logicalDevice, _renderFence, nullptr);
-    });
+    _renderFence = new Fence(*_device);
+//    // Used for CPU -> GPU communication
+//
+//    VkFenceCreateInfo fenceInfo = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
+//    VK_CHECK(vkCreateFence(_device->_logicalDevice, &fenceInfo, nullptr, &_renderFence));
+//
+//    _mainDeletionQueue.push_function([=]() { // Destruction of fence
+//        vkDestroyFence(_device->_logicalDevice, _renderFence, nullptr);
+//    });
 
     //  Used for GPU -> GPU synchronisation
     VkSemaphoreCreateInfo semaphoreInfo = vkinit::semaphore_create_info();
@@ -369,7 +370,9 @@ void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
         vkDeviceWaitIdle(_device->_logicalDevice);
-        vkWaitForFences(_device->_logicalDevice, 1, &_renderFence, true, 1000000000);
+        _renderFence->wait(1000000000);
+        delete _renderFence;
+        // vkWaitForFences(_device->_logicalDevice, 1, &_renderFence, true, 1000000000);
         delete _frameBuffers;
         delete _renderPass;
         delete _commandPool;
@@ -393,8 +396,10 @@ void VulkanEngine::draw()
 {
     // Wait GPU to render latest frame
     //wait until the GPU has finished rendering the last frame. Timeout of 1 second
-    VK_CHECK(vkWaitForFences(_device->_logicalDevice, 1, &_renderFence, true, 1000000000));
-    VK_CHECK(vkResetFences(_device->_logicalDevice, 1, &_renderFence));
+//    VK_CHECK(vkWaitForFences(_device->_logicalDevice, 1, &_renderFence, true, 1000000000));
+//    VK_CHECK(vkResetFences(_device->_logicalDevice, 1, &_renderFence));
+    VK_CHECK(_renderFence->wait(1000000000));
+    VK_CHECK(_renderFence->reset());
 
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, _presentSemaphore, nullptr, &imageIndex);
@@ -468,7 +473,7 @@ void VulkanEngine::draw()
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_commandBuffer->_mainCommandBuffer;
 
-    VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, _renderFence));
+    VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, _renderFence->_fence));
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
