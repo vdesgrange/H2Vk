@@ -18,6 +18,7 @@
 #include "vk_renderpass.h"
 #include "vk_framebuffers.h"
 #include "vk_fence.h"
+#include "vk_semaphore.h"
 #include "vk_mesh.h"
 #include "vk_camera.h"
 
@@ -63,8 +64,10 @@ public:
     RenderPass* _renderPass;
     FrameBuffers* _frameBuffers;
 
-    VkSemaphore _presentSemaphore, _renderSemaphore;
     Fence* _renderFence;
+    Semaphore*  _presentSemaphore;
+    Semaphore* _renderSemaphore;
+    //VkSemaphore _presentSemaphore, _renderSemaphore;
     //VkFence _renderFence;
 
     VkPipelineLayout _pipelineLayout;
@@ -124,10 +127,6 @@ private:
     void init_swapchain();
 
     void init_commands();
-
-    void init_command_pool();
-
-    void init_command_buffer();
 
     void init_default_renderpass();
 

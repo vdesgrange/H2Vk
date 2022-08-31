@@ -102,23 +102,20 @@ void VulkanEngine::init_framebuffers() {
 
 void VulkanEngine::init_sync_structures() {
     _renderFence = new Fence(*_device);
-//    // Used for CPU -> GPU communication
-//
-//    VkFenceCreateInfo fenceInfo = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
-//    VK_CHECK(vkCreateFence(_device->_logicalDevice, &fenceInfo, nullptr, &_renderFence));
-//
-//    _mainDeletionQueue.push_function([=]() { // Destruction of fence
-//        vkDestroyFence(_device->_logicalDevice, _renderFence, nullptr);
-//    });
 
     //  Used for GPU -> GPU synchronisation
-    VkSemaphoreCreateInfo semaphoreInfo = vkinit::semaphore_create_info();
-    VK_CHECK(vkCreateSemaphore(_device->_logicalDevice, &semaphoreInfo, nullptr, &_renderSemaphore));
-    VK_CHECK(vkCreateSemaphore(_device->_logicalDevice, &semaphoreInfo, nullptr, &_presentSemaphore));
+    _renderSemaphore = new Semaphore(*_device);
+    _presentSemaphore = new Semaphore(*_device);
+//
+//    VkSemaphoreCreateInfo semaphoreInfo = vkinit::semaphore_create_info();
+//    VK_CHECK(vkCreateSemaphore(_device->_logicalDevice, &semaphoreInfo, nullptr, &_renderSemaphore));
+//    VK_CHECK(vkCreateSemaphore(_device->_logicalDevice, &semaphoreInfo, nullptr, &_presentSemaphore));
 
     _mainDeletionQueue.push_function([=]() { // Destruction of semaphores
-        vkDestroySemaphore(_device->_logicalDevice, _presentSemaphore, nullptr);
-        vkDestroySemaphore(_device->_logicalDevice, _renderSemaphore, nullptr);
+        delete _presentSemaphore;
+        delete _renderSemaphore;
+//        vkDestroySemaphore(_device->_logicalDevice, _presentSemaphore, nullptr);
+//        vkDestroySemaphore(_device->_logicalDevice, _renderSemaphore, nullptr);
     });
 }
 
@@ -372,7 +369,7 @@ void VulkanEngine::cleanup()
         vkDeviceWaitIdle(_device->_logicalDevice);
         _renderFence->wait(1000000000);
         delete _renderFence;
-        // vkWaitForFences(_device->_logicalDevice, 1, &_renderFence, true, 1000000000);
+        // Should I handle semaphores here? static queue (shared) maybe?
         delete _frameBuffers;
         delete _renderPass;
         delete _commandPool;
@@ -402,7 +399,7 @@ void VulkanEngine::draw()
     VK_CHECK(_renderFence->reset());
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, _presentSemaphore, nullptr, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, _presentSemaphore->_semaphore, nullptr, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) { // || result == VK_SUBOPTIMAL_KHR
         recreate_swap_chain();
@@ -467,9 +464,9 @@ void VulkanEngine::draw()
     submitInfo.pNext = nullptr;
     submitInfo.pWaitDstStageMask = &waitStage;
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &_presentSemaphore;
+    submitInfo.pWaitSemaphores = &(_presentSemaphore->_semaphore);
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &_renderSemaphore;
+    submitInfo.pSignalSemaphores = &(_renderSemaphore->_semaphore);
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_commandBuffer->_mainCommandBuffer;
 
@@ -481,7 +478,7 @@ void VulkanEngine::draw()
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &(_swapchain->_swapchain);
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &_renderSemaphore;
+    presentInfo.pWaitSemaphores = &(_renderSemaphore->_semaphore);
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
 
