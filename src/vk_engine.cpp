@@ -106,16 +106,10 @@ void VulkanEngine::init_sync_structures() {
     //  Used for GPU -> GPU synchronisation
     _renderSemaphore = new Semaphore(*_device);
     _presentSemaphore = new Semaphore(*_device);
-//
-//    VkSemaphoreCreateInfo semaphoreInfo = vkinit::semaphore_create_info();
-//    VK_CHECK(vkCreateSemaphore(_device->_logicalDevice, &semaphoreInfo, nullptr, &_renderSemaphore));
-//    VK_CHECK(vkCreateSemaphore(_device->_logicalDevice, &semaphoreInfo, nullptr, &_presentSemaphore));
 
     _mainDeletionQueue.push_function([=]() { // Destruction of semaphores
         delete _presentSemaphore;
         delete _renderSemaphore;
-//        vkDestroySemaphore(_device->_logicalDevice, _presentSemaphore, nullptr);
-//        vkDestroySemaphore(_device->_logicalDevice, _renderSemaphore, nullptr);
     });
 }
 

@@ -57,18 +57,12 @@ public:
 
     CommandPool* _commandPool;
     CommandBuffer* _commandBuffer;
-    // VkCommandPool _commandPool;
-    // VkCommandBuffer _mainCommandBuffer;
-    //VkRenderPass _renderPass;
-    //std::vector<VkFramebuffer> _frameBuffers;
     RenderPass* _renderPass;
     FrameBuffers* _frameBuffers;
 
     Fence* _renderFence;
     Semaphore*  _presentSemaphore;
     Semaphore* _renderSemaphore;
-    //VkSemaphore _presentSemaphore, _renderSemaphore;
-    //VkFence _renderFence;
 
     VkPipelineLayout _pipelineLayout;
     VkPipelineLayout _meshPipelineLayout;
