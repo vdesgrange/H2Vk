@@ -3,10 +3,14 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <iostream>
+#include <unordered_map>
 
 #include "vk_types.h"
+#include "vk_material.h"
 
+class Window;
 class Device;
+class SwapChain;
 class RenderPass;
 
 class PipelineBuilder {
@@ -19,8 +23,33 @@ public:
     VkPipelineRasterizationStateCreateInfo _rasterizer;
     VkPipelineColorBlendAttachmentState _colorBlendAttachment;
     VkPipelineMultisampleStateCreateInfo _multisampling;
-    VkPipelineLayout _pipelineLayout;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
 
+    VkPipelineLayout _pipelineLayout;
+
+    VkPipeline _graphicsPipeline;
+    VkPipeline _redTrianglePipeline;
+    VkPipeline _meshPipeline;
+
+    std::unordered_map<std::string, Material> _materials;
+
+    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, SwapChain& swapChain);
+    ~PipelineBuilder();
+
+    bool load_shader_module(const char* filePath, VkShaderModule* out);
+
+    bool create_shader_module(const std::vector<uint32_t>& code, VkShaderModule* out);
+
     VkPipeline build_pipeline(const Device& device, RenderPass& renderPass);
+
+    Material* create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name);
+
+    Material* get_material(const std::string &name);
+
+private:
+    const class Window& _window;
+    const class Device& _device;
+    class RenderPass& _renderPass;
+    class SwapChain& _swapChain;
+
 };

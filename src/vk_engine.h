@@ -20,22 +20,13 @@
 #include "vk_fence.h"
 #include "vk_semaphore.h"
 #include "vk_mesh.h"
+#include "vk_material.h"
 #include "vk_camera.h"
+#include "vk_pipeline.h"
 
 
 const bool enableValidationLayers = true;
 const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
-
-
-struct MeshPushConstants {
-    glm::vec4 data;
-    glm::mat4 render_matrix;
-};
-
-struct Material {
-    VkPipeline pipeline;
-    VkPipelineLayout pipelineLayout;
-};
 
 struct RenderObject {
     Mesh* mesh;
@@ -50,9 +41,7 @@ public:
 
     Window* _window;
     bool framebufferResized = false;
-
     Device* _device;
-
     SwapChain* _swapchain;
 
     CommandPool* _commandPool;
@@ -64,12 +53,7 @@ public:
     Semaphore*  _presentSemaphore;
     Semaphore* _renderSemaphore;
 
-    VkPipelineLayout _pipelineLayout;
-    VkPipelineLayout _meshPipelineLayout;
-
-    VkPipeline _graphicsPipeline;
-    VkPipeline _redTrianglePipeline;
-    VkPipeline _meshPipeline;
+    PipelineBuilder* _pipelineBuilder;
 
     std::vector<RenderObject> _renderables;
     std::unordered_map<std::string, Material> _materials;
@@ -97,10 +81,6 @@ public:
 
 	//run main loop
 	void run();
-
-    Material* create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string& name);
-
-    Material* get_material(const std::string& name);
 
     Mesh* get_mesh(const std::string& name);
 
@@ -134,7 +114,7 @@ private:
 
     bool create_shader_module(const std::vector<uint32_t>& code, VkShaderModule* out);
 
-    bool load_shader_module(const char* filePath, VkShaderModule* out);
+    // bool load_shader_module(const char* filePath, VkShaderModule* out);
 
     void load_meshes();
 

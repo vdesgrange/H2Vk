@@ -45,3 +45,8 @@ struct Mesh {
 
     bool load_from_obj(const char* filename);
 };
+
+struct MeshPushConstants {
+    glm::vec4 data;
+    glm::mat4 render_matrix;
+};
