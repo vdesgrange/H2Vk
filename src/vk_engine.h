@@ -10,6 +10,8 @@
 
 #include "glm/gtc/matrix_transform.hpp"
 #include "vk_types.h"
+#include "vk_helpers.h"
+#include "vk_initializers.h"
 #include "vk_window.h"
 #include "vk_device.h"
 #include "vk_swapchain.h"
@@ -87,7 +89,6 @@ public:
     void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
 
 private:
-    // Initialize vulkan
     void init_vulkan();
 
     void init_window();
@@ -109,12 +110,6 @@ private:
     void init_sync_structures();
 
     void init_pipelines();
-
-    std::vector<uint32_t> read_file(const char* filePath);
-
-    bool create_shader_module(const std::vector<uint32_t>& code, VkShaderModule* out);
-
-    // bool load_shader_module(const char* filePath, VkShaderModule* out);
 
     void load_meshes();
 

@@ -10,7 +10,6 @@
 
 class Window;
 class Device;
-class SwapChain;
 class RenderPass;
 
 class PipelineBuilder {
@@ -25,7 +24,8 @@ public:
     VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
 
-    VkPipelineLayout _pipelineLayout;
+    VkPipelineLayout _triPipelineLayout;
+    VkPipelineLayout _meshPipelineLayout;
 
     VkPipeline _graphicsPipeline;
     VkPipeline _redTrianglePipeline;
@@ -33,7 +33,7 @@ public:
 
     std::unordered_map<std::string, Material> _materials;
 
-    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, SwapChain& swapChain);
+    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass);
     ~PipelineBuilder();
 
     bool load_shader_module(const char* filePath, VkShaderModule* out);
@@ -47,9 +47,8 @@ public:
     Material* get_material(const std::string &name);
 
 private:
-    const class Window& _window;
     const class Device& _device;
-    class RenderPass& _renderPass;
-    class SwapChain& _swapChain;
+
+    VkPipelineLayout* _pipelineLayout;
 
 };

@@ -15,12 +15,8 @@
 #include <iostream>
 
 #include "VkBootstrap.h"
-#include "vk_helpers.h"
-#include "vk_camera.h"
 #include "vk_mem_alloc.h"
 #include "vk_engine.h"
-#include "vk_pipeline.h"
-#include "vk_initializers.h"
 
 using namespace std;
 
@@ -110,178 +106,15 @@ void VulkanEngine::init_sync_structures() {
     _mainDeletionQueue.push_function([=]() { // Destruction of semaphores
         delete _presentSemaphore;
         delete _renderSemaphore;
+        delete _renderFence;
     });
 }
 
 void VulkanEngine::init_pipelines() {
-    _pipelineBuilder = new PipelineBuilder(*_window, *_device, *_renderPass, *_swapchain);
-    // Load shaders
-//    VkShaderModule triangleFragShader;
-//    if (!load_shader_module("../shaders/shader_base.frag.spv", &triangleFragShader))
-//    {
-//        std::cout << "Error when building the triangle fragment shader module" << std::endl;
-//    }
-//    else {
-//        std::cout << "Triangle fragment shader successfully loaded" << std::endl;
-//    }
-//
-//    VkShaderModule triangleVertexShader;
-//    if (!load_shader_module("../shaders/shader_base.vert.spv", &triangleVertexShader))
-//    {
-//        std::cout << "Error when building the triangle vertex shader module" << std::endl;
-//
-//    }
-//    else {
-//        std::cout << "Triangle vertex shader successfully loaded" << std::endl;
-//    }
-//
-//    // Load shaders
-//    VkShaderModule redTriangleFragShader;
-//    if (!load_shader_module("../shaders/red_shader_base.frag.spv", &redTriangleFragShader))
-//    {
-//        std::cout << "Error when building the triangle fragment shader module" << std::endl;
-//    }
-//    else {
-//        std::cout << "Red triangle fragment shader successfully loaded" << std::endl;
-//    }
-//
-//    VkShaderModule redTriangleVertexShader;
-//    if (!load_shader_module("../shaders/red_shader_base.vert.spv", &redTriangleVertexShader))
-//    {
-//        std::cout << "Error when building the triangle vertex shader module" << std::endl;
-//
-//    }
-//    else {
-//        std::cout << "Red triangle vertex shader successfully loaded" << std::endl;
-//    }
-//
-//    VkShaderModule meshVertShader;
-//    if (!load_shader_module("../shaders/tri_mesh.vert.spv", &meshVertShader)) {
-//        std::cout << "Error when building the green triangle mesh vertex shader module" << std::endl;
-//    }
-//    else {
-//        std::cout << "Green triangle vertex shader successfully loaded" << std::endl;
-//    }
-//
-//
-//    // Build pipeline layout
-//    VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-//    VK_CHECK(vkCreatePipelineLayout(_device->_logicalDevice, &pipeline_layout_info, nullptr, &_pipelineLayout));
-//
-//    // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
-//    PipelineBuilder pipelineBuilder;
-//    pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
-//    pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
-//    pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
-//    pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-//    pipelineBuilder._depthStencil = vkinit::pipeline_depth_stencil_state_create_info(true, true, VK_COMPARE_OP_LESS);
-//
-//    VkViewport viewport{};
-//    viewport.x = 0.0f;
-//    viewport.y = 0.0f;
-//    viewport.width = (float) _window->_windowExtent.width;
-//    viewport.height = (float)_window->_windowExtent.height;
-//    viewport.minDepth = 0.0f;
-//    viewport.maxDepth = 1.0f;
-//    pipelineBuilder._viewport = viewport;
-//
-//    VkRect2D scissor{};
-//    scissor.offset = {0, 0};
-//    scissor.extent = _window->_windowExtent;
-//    pipelineBuilder._scissor = scissor;
-//
-//    pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-//    pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
-//    pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
-//    pipelineBuilder._pipelineLayout = _pipelineLayout;
-//
-//    // === 1 - Build graphics pipeline ===
-//    _graphicsPipeline = pipelineBuilder.build_pipeline(*_device, *_renderPass);
-//
-//    // === 2 - Build red triangle pipeline ===
-//    pipelineBuilder._shaderStages.clear();
-//    pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, redTriangleVertexShader));
-//    pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
-//    _redTrianglePipeline = pipelineBuilder.build_pipeline(*_device, *_renderPass);
-//
-//    // === 3 - Build dynamic triangle mesh
-//    pipelineBuilder._shaderStages.clear();  // Clear the shader stages for the builder
-//
-//    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
-//
-//    // Connect the pipeline builder vertex input info to the one we get from Vertex
-//    pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
-//    pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
-//    pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
-//    pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
-//
-//    pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
-//    pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
-//
-//    VkPushConstantRange push_constant;
-//    push_constant.offset = 0;
-//    push_constant.size = static_cast<uint32_t>(sizeof(MeshPushConstants));
-//    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-//
-//    VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
-//    mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
-//    mesh_pipeline_layout_info.pushConstantRangeCount = 1;
-//    VK_CHECK(vkCreatePipelineLayout(_device->_logicalDevice, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
-//
-//    pipelineBuilder._pipelineLayout = _meshPipelineLayout;
-//    _meshPipeline = pipelineBuilder.build_pipeline(*_device, *_renderPass);
-//    create_material(_meshPipeline, _meshPipelineLayout, "defaultMesh");
-//
-//    // === 4 - Clean
-//    // Deleting shaders
-//    vkDestroyShaderModule(_device->_logicalDevice, redTriangleVertexShader, nullptr);
-//    vkDestroyShaderModule(_device->_logicalDevice, redTriangleFragShader, nullptr);
-//    vkDestroyShaderModule(_device->_logicalDevice, triangleFragShader, nullptr);
-//    vkDestroyShaderModule(_device->_logicalDevice, triangleVertexShader, nullptr);
-//    vkDestroyShaderModule(_device->_logicalDevice, meshVertShader, nullptr);
-//
-//    _swapchain->_swapChainDeletionQueue.push_function([=]() {
-//        vkDestroyPipeline(_device->_logicalDevice, _redTrianglePipeline, nullptr);
-//        vkDestroyPipeline(_device->_logicalDevice, _graphicsPipeline, nullptr);
-//        vkDestroyPipeline(_device->_logicalDevice, _meshPipeline, nullptr);
-//        vkDestroyPipelineLayout(_device->_logicalDevice, _pipelineLayout, nullptr);
-//        vkDestroyPipelineLayout(_device->_logicalDevice, _meshPipelineLayout, nullptr);
-//    });
+    _pipelineBuilder = new PipelineBuilder(*_window, *_device, *_renderPass);
 }
 
-std::vector<uint32_t> VulkanEngine::read_file(const char* filePath) {
-    std::ifstream file(filePath, std::ios::ate | std::ios::binary);
-    if (!file.is_open()) {
-        throw std::runtime_error("failed to open file.");
-    }
-
-    size_t fileSize = (size_t) file.tellg();
-    std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
-    file.seekg(0);
-    file.read((char*)buffer.data(), fileSize);
-    file.close();
-
-    return buffer;
-}
-
-bool VulkanEngine::create_shader_module(const std::vector<uint32_t>& code, VkShaderModule* out) {
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.pNext = nullptr;
-
-    createInfo.codeSize = code.size() * sizeof(uint32_t);
-    createInfo.pCode = code.data();
-
-    VkShaderModule shaderModule;
-    if (vkCreateShaderModule(_device->_logicalDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-        return false;
-    }
-
-    *out = shaderModule;
-    return true;
-}
-
- void VulkanEngine::load_meshes()
+void VulkanEngine::load_meshes()
 {
     _mesh._vertices.resize(3);
 
@@ -344,16 +177,17 @@ void VulkanEngine::recreate_swap_chain() {
     }
 
     vkDeviceWaitIdle(_device->_logicalDevice);
-    delete _pipelineBuilder;
+    _renderables.clear(); // Possible memory leak. Revoir comment gerer les scenes
+    delete _pipelineBuilder; // Revoir comment gerer pipeline avec scene.
     delete _frameBuffers;
     delete _renderPass;
     delete _swapchain;
-    //_swapchain->_swapChainDeletionQueue.flush();
 
     init_swapchain();
     init_default_renderpass();
     init_framebuffers();
     init_pipelines();
+    init_scene();
 }
 
 void VulkanEngine::cleanup()
@@ -362,9 +196,6 @@ void VulkanEngine::cleanup()
         vkDeviceWaitIdle(_device->_logicalDevice);
         _renderFence->wait(1000000000);
         delete _pipelineBuilder;
-        delete _presentSemaphore;
-        delete _renderSemaphore;
-        delete _renderFence;
         // Should I handle semaphores here? static queue (shared) maybe?
         delete _frameBuffers;
         delete _renderPass;
@@ -395,7 +226,7 @@ void VulkanEngine::draw()
     VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, _presentSemaphore->_semaphore, nullptr, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) { // || result == VK_SUBOPTIMAL_KHR
-        //recreate_swap_chain();
+        recreate_swap_chain();
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR){
         throw std::runtime_error("failed to acquire swap chain image");
@@ -477,7 +308,7 @@ void VulkanEngine::draw()
     result = vkQueuePresentKHR(_device->get_graphics_queue(), &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = false;
-        //recreate_swap_chain();
+        recreate_swap_chain();
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swap chain image!");
     }

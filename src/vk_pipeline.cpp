@@ -10,12 +10,11 @@
 #include "vk_pipeline.h"
 #include "vk_window.h"
 #include "vk_device.h"
-#include "vk_swapchain.h"
 #include "vk_renderpass.h"
 #include "vk_material.h"
 
-PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, SwapChain& swapChain) :
-    _window(window), _device(device), _renderPass(renderPass), _swapChain(swapChain)
+PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass) :
+    _device(device)
 {
 
     // Load shaders
@@ -69,9 +68,9 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
 
     // Build pipeline layout
     VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-    VkPipelineLayout triPipelineLayout;
-    VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &pipeline_layout_info, nullptr, &triPipelineLayout));
-    this->_pipelineLayout = triPipelineLayout;
+    //VkPipelineLayout _triPipelineLayout;
+    VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &pipeline_layout_info, nullptr, &_triPipelineLayout));
+    this->_pipelineLayout = &_triPipelineLayout;
 
     // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
     this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
@@ -130,12 +129,12 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
     mesh_pipeline_layout_info.pushConstantRangeCount = 1;
 
-    VkPipelineLayout meshPipelineLayout;
-    VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &mesh_pipeline_layout_info, nullptr, &meshPipelineLayout));
-    this->_pipelineLayout = meshPipelineLayout;
+    //VkPipelineLayout meshPipelineLayout;
+    VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
+    this->_pipelineLayout = &_meshPipelineLayout;
 
     _meshPipeline = this->build_pipeline(device, renderPass);
-    create_material(_meshPipeline, meshPipelineLayout, "defaultMesh");
+    create_material(_meshPipeline, _meshPipelineLayout, "defaultMesh");
 
     // === 4 - Clean
     // Deleting shaders
@@ -152,9 +151,9 @@ PipelineBuilder::~PipelineBuilder() {
     vkDestroyPipeline(_device._logicalDevice, _redTrianglePipeline, nullptr);
     vkDestroyPipeline(_device._logicalDevice, _graphicsPipeline, nullptr);
     vkDestroyPipeline(_device._logicalDevice, _meshPipeline, nullptr);
-//    vkDestroyPipelineLayout(_device._logicalDevice, _triPipelineLayout, nullptr);
-//    vkDestroyPipelineLayout(_device._logicalDevice, _meshPipelineLayout, nullptr);
-    vkDestroyPipelineLayout(_device._logicalDevice, _pipelineLayout, nullptr); // attention !
+    vkDestroyPipelineLayout(_device._logicalDevice, _triPipelineLayout, nullptr);
+    vkDestroyPipelineLayout(_device._logicalDevice, _meshPipelineLayout, nullptr);
+    // vkDestroyPipelineLayout(_device._logicalDevice, _pipelineLayout, nullptr); // attention !
 }
 
 VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& renderPass) {
@@ -191,7 +190,7 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     pipelineInfo.pRasterizationState = &_rasterizer;
     pipelineInfo.pMultisampleState = &_multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.layout = _pipelineLayout; // Comment gerer plusieurs pipeline dans une meme classe sans changer cette fonction
+    pipelineInfo.layout = *_pipelineLayout; // Comment gerer plusieurs pipeline dans une meme classe sans changer cette fonction
     pipelineInfo.renderPass = renderPass._renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
