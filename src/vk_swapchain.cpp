@@ -8,6 +8,12 @@
 #include "vk_device.h"
 #include "vk_initializers.h"
 
+/**
+ * Implementation of SwapChain
+ *
+ * SwapChain owns buffers where rendering happen before visualizing it.
+ * A queue of images waiting to be displayed on screen.
+ */
 SwapChain::SwapChain(Window& window, const Device& device) {
     VkSurfaceCapabilitiesKHR capabilities{};
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device._physicalDevice, device._surface, &capabilities);

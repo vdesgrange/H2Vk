@@ -5,7 +5,15 @@
 #include "vk_renderpass.h"
 #include "vk_swapchain.h"
 
-
+/**
+ * Framebuffer object references all of the VkImageView objects that represent the attachments (ie. color)
+ * Image that we have to use for the attachment depends on which image the swap chain returns,
+ * a framebuffer must be created all of the images in the swap chain.
+ * @param window
+ * @param device
+ * @param swapchain
+ * @param renderPass
+ */
 FrameBuffers::FrameBuffers(const Window& window, const Device& device, const SwapChain& swapchain, RenderPass& renderPass) : _device(device), _swapchain(swapchain) {
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

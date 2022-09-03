@@ -13,6 +13,16 @@
 #include "vk_renderpass.h"
 #include "vk_material.h"
 
+/**
+ * Graphics pipeline
+ * graphics pipeline is the sequence of operations that take the vertices and textures of meshes all the way to the
+ * pixels in the render targets.
+ * vertex/index buffer -> input assembler -> vertex shader -> tesselation -> geometry shader ->
+ * rasterization -> fragment shader -> color blending -> framebuffer
+ * @param window
+ * @param device
+ * @param renderPass
+ */
 PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass) :
     _device(device)
 {
@@ -156,10 +166,12 @@ PipelineBuilder::~PipelineBuilder() {
     // vkDestroyPipelineLayout(_device._logicalDevice, _pipelineLayout, nullptr); // attention !
 }
 
+/**
+ * Create graphics pipeline
+ * vertex/index buffer -> input assembler -> vertex shader -> tesselation -> geometry shader ->
+ * rasterization -> fragment shader -> color blending -> framebuffer
+ */
 VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& renderPass) {
-    /**
-     * Create graphic pipeline
-     */
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.pNext = nullptr;

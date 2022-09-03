@@ -17,6 +17,20 @@
 #include "VkBootstrap.h"
 #include "vk_mem_alloc.h"
 #include "vk_engine.h"
+#include "vk_window.h"
+#include "vk_device.h"
+#include "vk_swapchain.h"
+#include "vk_command_pool.h"
+#include "vk_command_buffer.h"
+#include "vk_renderpass.h"
+#include "vk_framebuffers.h"
+#include "vk_fence.h"
+#include "vk_mesh_manager.h"
+#include "vk_semaphore.h"
+#include "vk_mesh.h"
+#include "vk_material.h"
+#include "vk_camera.h"
+#include "vk_pipeline.h"
 
 using namespace std;
 
@@ -205,30 +219,6 @@ void VulkanEngine::draw()
     renderPassInfo.clearValueCount = 2;
     renderPassInfo.pClearValues = &clearValues[0];
     vkCmdBeginRenderPass(_commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-//    if(_selectedShader == 0) {
-//        vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
-//    } else {
-//        vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _redTrianglePipeline);
-//    }
-//    vkCmdDraw(_mainCommandBuffer, 3, 1, 0, 0);
-
-//    vkCmdBindPipeline(_mainCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
-//    VkDeviceSize offset = 0;
-//    vkCmdBindVertexBuffers(_mainCommandBuffer, 0, 1, &_objMesh._vertexBuffer._buffer, &offset);
-//
-//    glm::vec3 camPos = { 0.f,0.f,-2.f };
-//    glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
-//    glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
-//    projection[1][1] *= -1;
-//    glm::mat4 model = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
-//    glm::mat4 mesh_matrix = projection * view * model;
-//    MeshPushConstants constants;
-//    constants.render_matrix = mesh_matrix;
-//
-//    //upload the matrix to the GPU via push constants
-//    vkCmdPushConstants(_mainCommandBuffer, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
-//    vkCmdDraw(_mainCommandBuffer, _objMesh._vertices.size(), 1, 0, 0);
 
     draw_objects(_commandBuffer->_mainCommandBuffer, _renderables.data(), _renderables.size());
     vkCmdEndRenderPass(_commandBuffer->_mainCommandBuffer);

@@ -2,6 +2,13 @@
 #include "vk_device.h"
 #include "vk_helpers.h"
 
+/**
+ * Command pools manage the memory that is used to store the buffers.
+ * Command buffers will be allocated from Command pools and executed on queues.
+ * Commands are typically drawing operation, data transfers, etc. and need to go through command buffers.
+ * @param device
+ * @param mainDeletionQueue
+ */
 CommandPool::CommandPool(const Device& device, DeletionQueue& mainDeletionQueue) : _device(device) {
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -10,11 +17,6 @@ CommandPool::CommandPool(const Device& device, DeletionQueue& mainDeletionQueue)
     poolInfo.pNext = nullptr;
 
     VK_CHECK(vkCreateCommandPool(device._logicalDevice, &poolInfo, nullptr, &_commandPool));
-
-    // mainDeletionQueue - might not be required
-//    mainDeletionQueue.push_function([=]() {
-//        vkDestroyCommandPool(device._logicalDevice, _commandPool, nullptr);
-//    });
 }
 
 CommandPool::~CommandPool() {

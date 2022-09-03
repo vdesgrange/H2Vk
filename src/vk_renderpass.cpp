@@ -2,6 +2,15 @@
 #include "vk_helpers.h"
 #include "vk_device.h"
 
+/**
+ * RenderPass
+ * Render pass object wraps all information related to the framebuffer attachments that will be used for rendering.
+ * Framebuffers are created for a specific render pass, so RenderPass must be created first.
+ * Framebuffer attachments : description of the image which will be written into the rendering commands (iow. pixels
+ * are rendered on a framebuffer).
+ * @param device
+ * @param swapchain
+ */
 RenderPass::RenderPass(const Device& device, SwapChain& swapchain) : _device(device) {
 
     // === Color ===

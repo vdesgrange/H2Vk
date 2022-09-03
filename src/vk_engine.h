@@ -12,21 +12,22 @@
 #include "vk_types.h"
 #include "vk_helpers.h"
 #include "vk_initializers.h"
-#include "vk_window.h"
-#include "vk_device.h"
-#include "vk_swapchain.h"
-#include "vk_command_pool.h"
-#include "vk_command_buffer.h"
-#include "vk_renderpass.h"
-#include "vk_framebuffers.h"
-#include "vk_fence.h"
-#include "vk_mesh_manager.h"
-#include "vk_semaphore.h"
-#include "vk_mesh.h"
-#include "vk_material.h"
-#include "vk_camera.h"
-#include "vk_pipeline.h"
 
+class Window;
+class Device;
+class SwapChain;
+class CommandPool;
+class CommandBuffer;
+class RenderPass;
+class FrameBuffers;
+class Fence;
+class Semaphore;
+class PipelineBuilder;
+class MeshManager;
+class DeletionQueue;
+class Camera;
+class Material;
+class Mesh;
 
 const bool enableValidationLayers = true;
 const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
