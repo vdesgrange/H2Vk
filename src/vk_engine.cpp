@@ -46,9 +46,10 @@ void VulkanEngine::init_vulkan() {
 }
 
 void VulkanEngine::init_camera() {
-    camera.set_flip_y(true);
-    camera.set_position({ 0.f, -6.f, -10.f });
-    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+    _camera = new Camera{};
+    _camera->set_flip_y(true);
+    _camera->set_position({ 0.f, -6.f, -10.f });
+    _camera->set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 }
 
 void VulkanEngine::init_swapchain() {
@@ -146,7 +147,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
         }
 
         glm::mat4 model = object.transformMatrix;
-        glm::mat4 mesh_matrix = camera.get_mesh_matrix(model);
+        glm::mat4 mesh_matrix = _camera->get_mesh_matrix(model);
 
         MeshPushConstants constants;
         constants.render_matrix = mesh_matrix;

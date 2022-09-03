@@ -63,7 +63,7 @@ public:
 
     DeletionQueue _mainDeletionQueue;
 
-    Camera camera;
+    Camera* _camera;
 
     int _selectedShader{ 0 };
 
