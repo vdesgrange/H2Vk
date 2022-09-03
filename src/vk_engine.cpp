@@ -20,22 +20,11 @@
 
 using namespace std;
 
-void VulkanEngine::init_window() {
-    _window = new Window();
-//    glfwInit();
-//    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-//    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-//
-//    _window = glfwCreateWindow(CWIDTH, CHEIGHT, "Vulkan", nullptr, nullptr);
-//    glfwSetWindowUserPointer(_window, this);
-//    glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
-}
-
 void VulkanEngine::init()
 {
     init_window();
-    init_camera();
     init_vulkan();
+    init_camera();
     init_swapchain();
     init_commands();
     init_default_renderpass();
@@ -48,29 +37,12 @@ void VulkanEngine::init()
 	_isInitialized = true;
 }
 
-void VulkanEngine::init_vulkan() {
-    _device = new Device(*_window, _mainDeletionQueue);
+void VulkanEngine::init_window() {
+    _window = new Window();
 }
 
-void VulkanEngine::init_scene() {
-    RenderObject monkey;
-    monkey.mesh = get_mesh("monkey");
-    monkey.material = _pipelineBuilder->get_material("defaultMesh");
-    monkey.transformMatrix = glm::mat4{ 1.0f };
-
-    _renderables.push_back(monkey);
-
-    for (int x = -20; x <= 20; x++) {
-        for (int y = -20; y <= 20; y++) {
-            RenderObject tri;
-            tri.mesh = get_mesh("triangle");
-            tri.material = _pipelineBuilder->get_material("defaultMesh");
-            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
-            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
-            tri.transformMatrix = translation * scale;
-            _renderables.push_back(tri);
-        }
-    }
+void VulkanEngine::init_vulkan() {
+    _device = new Device(*_window, _mainDeletionQueue);
 }
 
 void VulkanEngine::init_camera() {
@@ -116,56 +88,28 @@ void VulkanEngine::init_pipelines() {
 
 void VulkanEngine::load_meshes()
 {
-    _mesh._vertices.resize(3);
-
-    _mesh._vertices[0].position = { 1.f, 1.f, 0.0f };
-    _mesh._vertices[1].position = {-1.f, 1.f, 0.0f };
-    _mesh._vertices[2].position = { 0.f,-1.f, 0.0f };
-
-    _mesh._vertices[0].color = { 0.f, 1.f, 0.0f }; //pure green
-    _mesh._vertices[1].color = { 0.f, 1.f, 0.0f }; //pure green
-    _mesh._vertices[2].color = { 0.f, 1.f, 0.0f }; //pure green
-
-    _objMesh.load_from_obj("../assets/monkey_smooth.obj");
-
-    upload_mesh(_mesh);
-    upload_mesh(_objMesh);
-
-    _meshes["monkey"] = _objMesh;
-    _meshes["triangle"] = _mesh;
+    _meshManager = new MeshManager(*_device);
 }
 
-void VulkanEngine::upload_mesh(Mesh& mesh)
-{
-    //allocate vertex buffer
-    VkBufferCreateInfo bufferInfo = {};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    //this is the total size, in bytes, of the buffer we are allocating
-    bufferInfo.size = mesh._vertices.size() * sizeof(Vertex);
-    //this buffer is going to be used as a Vertex Buffer
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+void VulkanEngine::init_scene() {
+    RenderObject monkey;
+    monkey.mesh = _meshManager->get_mesh("monkey");
+    monkey.material = _pipelineBuilder->get_material("defaultMesh");
+    monkey.transformMatrix = glm::mat4{ 1.0f };
 
-    //let the VMA library know that this data should be writeable by CPU, but also readable by GPU
-    VmaAllocationCreateInfo vmaallocInfo = {};
-    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-    vmaallocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    _renderables.push_back(monkey);
 
-    //allocate the buffer
-    VkResult result = vmaCreateBuffer(_device->_allocator, &bufferInfo, &vmaallocInfo,
-                             &mesh._vertexBuffer._buffer,
-                             &mesh._vertexBuffer._allocation,
-                             nullptr);
-    VK_CHECK(result);
-
-    //add the destruction of triangle mesh buffer to the deletion queue
-    _mainDeletionQueue.push_function([=]() {
-        vmaDestroyBuffer(_device->_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
-    });
-
-    void* data;
-    vmaMapMemory(_device->_allocator, mesh._vertexBuffer._allocation, &data);
-    memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
-    vmaUnmapMemory(_device->_allocator, mesh._vertexBuffer._allocation);
+    for (int x = -20; x <= 20; x++) {
+        for (int y = -20; y <= 20; y++) {
+            RenderObject tri;
+            tri.mesh = _meshManager->get_mesh("triangle");
+            tri.material = _pipelineBuilder->get_material("defaultMesh");
+            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
+            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
+            tri.transformMatrix = translation * scale;
+            _renderables.push_back(tri);
+        }
+    }
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -190,29 +134,38 @@ void VulkanEngine::recreate_swap_chain() {
     init_scene();
 }
 
-void VulkanEngine::cleanup()
-{	
-	if (_isInitialized) {
-        vkDeviceWaitIdle(_device->_logicalDevice);
-        _renderFence->wait(1000000000);
-        delete _pipelineBuilder;
-        // Should I handle semaphores here? static queue (shared) maybe?
-        delete _frameBuffers;
-        delete _renderPass;
-        delete _commandPool;
-        delete _swapchain;
-        _mainDeletionQueue.flush();
+void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
+    Mesh* lastMesh = nullptr;
+    Material* lastMaterial = nullptr;
 
-        // todo find a way to move this into vk_device without breaking swapchain
-        vkDestroyDevice(_device->_logicalDevice, nullptr);
-        vkDestroySurfaceKHR(_device->_instance, _device->_surface, nullptr);
-        vkb::destroy_debug_utils_messenger(_device->_instance, _device->_debug_messenger);
-        vkDestroyInstance(_device->_instance, nullptr);
+    for (int i=0; i < count; i++) {
+        RenderObject& object = first[i];
+        if (object.material != lastMaterial) {
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
+            lastMaterial = object.material;
+        }
 
-        delete _device;
-        delete _window;
-        glfwTerminate();
-	}
+        glm::mat4 model = object.transformMatrix;
+        glm::mat4 mesh_matrix = camera.get_mesh_matrix(model);
+
+        MeshPushConstants constants;
+        constants.render_matrix = mesh_matrix;
+
+        vkCmdPushConstants(commandBuffer,
+                           object.material->pipelineLayout,
+                           VK_SHADER_STAGE_VERTEX_BIT,
+                           0,
+                           static_cast<uint32_t>(sizeof(MeshPushConstants)),
+                           &constants);
+
+        if (object.mesh != lastMesh) {
+            VkDeviceSize offset = 0;
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
+            lastMesh = object.mesh;
+        }
+
+        vkCmdDraw(commandBuffer, static_cast<uint32_t>(object.mesh->_vertices.size()), 1, 0, 0);
+    }
 }
 
 void VulkanEngine::draw()
@@ -318,12 +271,11 @@ void VulkanEngine::draw()
 
 void VulkanEngine::run()
 {
-
     while(!glfwWindowShouldClose(_window->_window)) {
         glfwPollEvents();
 
         if (glfwGetKey(_window->_window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-             if (glfwGetKey(_window->_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+            if (glfwGetKey(_window->_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
                 _selectedShader += 1;
                 if(_selectedShader > 1)
                 {
@@ -338,45 +290,28 @@ void VulkanEngine::run()
     vkDeviceWaitIdle(_device->_logicalDevice);
 }
 
-Mesh* VulkanEngine::get_mesh(const std::string &name) {
-    auto it = _meshes.find(name);
-    if ( it == _meshes.end()) {
-        return nullptr;
-    } else {
-        return &(*it).second;
-    }
-}
+void VulkanEngine::cleanup()
+{
+    if (_isInitialized) {
+        vkDeviceWaitIdle(_device->_logicalDevice);
+        _renderFence->wait(1000000000);
+        delete _meshManager;
+        delete _pipelineBuilder;
+        // Should I handle semaphores here? static queue (shared) maybe?
+        delete _frameBuffers;
+        delete _renderPass;
+        delete _commandPool;
+        delete _swapchain;
+        _mainDeletionQueue.flush();
 
-void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
-    Mesh* lastMesh = nullptr;
-    Material* lastMaterial = nullptr;
+        // todo find a way to move this into vk_device without breaking swapchain
+        vkDestroyDevice(_device->_logicalDevice, nullptr);
+        vkDestroySurfaceKHR(_device->_instance, _device->_surface, nullptr);
+        vkb::destroy_debug_utils_messenger(_device->_instance, _device->_debug_messenger);
+        vkDestroyInstance(_device->_instance, nullptr);
 
-    for (int i=0; i < count; i++) {
-        RenderObject& object = first[i];
-        if (object.material != lastMaterial) {
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
-            lastMaterial = object.material;
-        }
-
-        glm::mat4 model = object.transformMatrix;
-        glm::mat4 mesh_matrix = camera.get_mesh_matrix(model);
-
-        MeshPushConstants constants;
-        constants.render_matrix = mesh_matrix;
-
-        vkCmdPushConstants(commandBuffer,
-                           object.material->pipelineLayout,
-                           VK_SHADER_STAGE_VERTEX_BIT,
-                           0,
-                           static_cast<uint32_t>(sizeof(MeshPushConstants)),
-                           &constants);
-
-        if (object.mesh != lastMesh) {
-            VkDeviceSize offset = 0;
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
-            lastMesh = object.mesh;
-        }
-
-        vkCmdDraw(commandBuffer, static_cast<uint32_t>(object.mesh->_vertices.size()), 1, 0, 0);
+        delete _device;
+        delete _window;
+        glfwTerminate();
     }
 }

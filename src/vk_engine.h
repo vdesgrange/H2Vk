@@ -20,6 +20,7 @@
 #include "vk_renderpass.h"
 #include "vk_framebuffers.h"
 #include "vk_fence.h"
+#include "vk_mesh_manager.h"
 #include "vk_semaphore.h"
 #include "vk_mesh.h"
 #include "vk_material.h"
@@ -58,11 +59,7 @@ public:
     PipelineBuilder* _pipelineBuilder;
 
     std::vector<RenderObject> _renderables;
-    std::unordered_map<std::string, Material> _materials;
-    std::unordered_map<std::string, Mesh> _meshes;
-
-    Mesh _mesh;
-    Mesh _objMesh;
+    MeshManager* _meshManager;
 
     DeletionQueue _mainDeletionQueue;
 
@@ -83,8 +80,6 @@ public:
 
 	//run main loop
 	void run();
-
-    Mesh* get_mesh(const std::string& name);
 
     void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
 
@@ -112,9 +107,4 @@ private:
     void init_pipelines();
 
     void load_meshes();
-
-    bool load_from_obj(const char* filename);
-
-    void upload_mesh(Mesh& mesh);
-
 };
