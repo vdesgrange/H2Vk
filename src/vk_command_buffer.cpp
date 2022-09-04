@@ -6,6 +6,7 @@
 /**
  * Command buffers are allocated from Command pools and executed on queues.
  * Commands are typically drawing operation, data transfers, etc. and need to go through command buffers.
+ * Command buffers submitted to a queue can't be reset/modified until GPU finished executing them.
  * @param device
  * @param commandPool
  */

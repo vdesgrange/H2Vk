@@ -18,7 +18,7 @@ public:
 
     VmaAllocator _allocator;
 
-    Device(Window& _window, DeletionQueue& mainDeletionQueue);
+    Device(Window& _window);
     ~Device();
 
     VkQueue get_graphics_queue() const;

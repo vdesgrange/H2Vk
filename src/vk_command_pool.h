@@ -10,7 +10,7 @@ class CommandPool final {
 public:
     VkCommandPool _commandPool;
 
-    CommandPool(const Device& device, DeletionQueue& mainDeletionQueue);
+    CommandPool(const Device& device);
     ~CommandPool();
 
 private:

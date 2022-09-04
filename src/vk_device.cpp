@@ -5,7 +5,7 @@
 #include "vk_device.h"
 #include "vk_window.h"
 
-Device::Device(Window& _window, DeletionQueue& mainDeletionQueue) {
+Device::Device(Window& _window) {
     vkb::InstanceBuilder builder;
 
     //make the Vulkan instance, with basic debug features
@@ -53,15 +53,10 @@ Device::Device(Window& _window, DeletionQueue& mainDeletionQueue) {
     allocatorInfo.device = _logicalDevice;
     allocatorInfo.instance = _instance;
     vmaCreateAllocator(&allocatorInfo, &_allocator);
-
-    mainDeletionQueue.push_function([=]() {
-        vmaDestroyAllocator(_allocator);
-    });
 }
 
 Device::~Device() {
-    // vmaDestroyAllocator(_allocator);
-
+//    vmaDestroyAllocator(_allocator);
 //    vkDestroyDevice(_logicalDevice, nullptr);
 //    vkDestroySurfaceKHR(_instance, _surface, nullptr);
 //    vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);

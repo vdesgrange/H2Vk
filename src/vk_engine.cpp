@@ -56,7 +56,7 @@ void VulkanEngine::init_window() {
 }
 
 void VulkanEngine::init_vulkan() {
-    _device = new Device(*_window, _mainDeletionQueue);
+    _device = new Device(*_window);
 }
 
 void VulkanEngine::init_camera() {
@@ -71,8 +71,13 @@ void VulkanEngine::init_swapchain() {
 }
 
 void VulkanEngine::init_commands() {
-    _commandPool = new CommandPool(*_device, _mainDeletionQueue);
-    _commandBuffer = new CommandBuffer(*_device, *_commandPool);
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        _frames[i]._commandPool = new CommandPool(*_device);
+        _frames[i]._commandBuffer = new CommandBuffer(*_device, *_frames[i]._commandPool);
+        _mainDeletionQueue.push_function([=]() {
+            delete _frames[i]._commandPool;
+        });
+    }
 }
 
 void VulkanEngine::init_default_renderpass() {
@@ -84,17 +89,24 @@ void VulkanEngine::init_framebuffers() {
 }
 
 void VulkanEngine::init_sync_structures() {
-    _renderFence = new Fence(*_device);
-
     //  Used for GPU -> GPU synchronisation
-    _renderSemaphore = new Semaphore(*_device);
-    _presentSemaphore = new Semaphore(*_device);
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        _frames[i]._renderFence = new Fence(*_device);
+        _frames[i]._renderSemaphore = new Semaphore(*_device);
+        _frames[i]._presentSemaphore =  new Semaphore(*_device);
 
-    _mainDeletionQueue.push_function([=]() { // Destruction of semaphores
-        delete _presentSemaphore;
-        delete _renderSemaphore;
-        delete _renderFence;
-    });
+        _mainDeletionQueue.push_function([=]() { // Destruction of semaphores
+            delete _frames[i]._presentSemaphore;
+            delete _frames[i]._renderSemaphore;
+            delete _frames[i]._renderFence;
+        });
+
+    }
+}
+
+FrameData& VulkanEngine::get_current_frame()
+{
+    return _frames[_frameNumber % FRAME_OVERLAP];
 }
 
 void VulkanEngine::init_pipelines() {
@@ -187,11 +199,13 @@ void VulkanEngine::draw()
 {
     // Wait GPU to render latest frame
     //wait until the GPU has finished rendering the last frame. Timeout of 1 second
-    VK_CHECK(_renderFence->wait(1000000000));
-    VK_CHECK(_renderFence->reset());
+    VK_CHECK(get_current_frame()._renderFence->wait(1000000000));
+    VK_CHECK(get_current_frame()._renderFence->reset());
+//    VK_CHECK(_renderFence->wait(1000000000));
+//    VK_CHECK(_renderFence->reset());
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, _presentSemaphore->_semaphore, nullptr, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, get_current_frame()._presentSemaphore->_semaphore, nullptr, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) { // || result == VK_SUBOPTIMAL_KHR
         recreate_swap_chain();
@@ -200,13 +214,13 @@ void VulkanEngine::draw()
         throw std::runtime_error("failed to acquire swap chain image");
     }
 
-    VK_CHECK(vkResetCommandBuffer(_commandBuffer->_mainCommandBuffer, 0));
+    VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, 0));
     VkCommandBufferBeginInfo cmdBeginInfo{};
     cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmdBeginInfo.pNext = nullptr;
     cmdBeginInfo.pInheritanceInfo = nullptr; // VkCommandBufferInheritanceInfo for secondary cmd buff. defines states inheriting from primary cmd. buff.
     cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    VK_CHECK(vkBeginCommandBuffer(_commandBuffer->_mainCommandBuffer, &cmdBeginInfo));
+    VK_CHECK(vkBeginCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, &cmdBeginInfo));
 
     VkClearValue clearValue;
     float flash = abs(sin(_frameNumber / 120.f));
@@ -218,12 +232,12 @@ void VulkanEngine::draw()
     VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass, _window->_windowExtent, _frameBuffers->_frameBuffers[imageIndex]);
     renderPassInfo.clearValueCount = 2;
     renderPassInfo.pClearValues = &clearValues[0];
-    vkCmdBeginRenderPass(_commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    draw_objects(_commandBuffer->_mainCommandBuffer, _renderables.data(), _renderables.size());
-    vkCmdEndRenderPass(_commandBuffer->_mainCommandBuffer);
+    draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _renderables.data(), _renderables.size());
+    vkCmdEndRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer);
 
-    VK_CHECK(vkEndCommandBuffer(_commandBuffer->_mainCommandBuffer));
+    VK_CHECK(vkEndCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer));
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     VkSubmitInfo submitInfo{};
@@ -231,13 +245,13 @@ void VulkanEngine::draw()
     submitInfo.pNext = nullptr;
     submitInfo.pWaitDstStageMask = &waitStage;
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &(_presentSemaphore->_semaphore);
+    submitInfo.pWaitSemaphores = &(get_current_frame()._presentSemaphore->_semaphore);
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &(_renderSemaphore->_semaphore);
+    submitInfo.pSignalSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_commandBuffer->_mainCommandBuffer;
+    submitInfo.pCommandBuffers = &get_current_frame()._commandBuffer->_mainCommandBuffer;
 
-    VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, _renderFence->_fence));
+    VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, get_current_frame()._renderFence->_fence));
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -245,7 +259,7 @@ void VulkanEngine::draw()
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &(_swapchain->_swapchain);
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &(_renderSemaphore->_semaphore);
+    presentInfo.pWaitSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
 
@@ -285,17 +299,20 @@ void VulkanEngine::cleanup()
 {
     if (_isInitialized) {
         vkDeviceWaitIdle(_device->_logicalDevice);
-        _renderFence->wait(1000000000);
+        for (int i=0; i < FRAME_OVERLAP; i++) {
+            _frames[i]._renderFence->wait(1000000000);
+        }
+
         delete _meshManager;
         delete _pipelineBuilder;
         // Should I handle semaphores here? static queue (shared) maybe?
         delete _frameBuffers;
         delete _renderPass;
-        delete _commandPool;
         delete _swapchain;
         _mainDeletionQueue.flush();
 
         // todo find a way to move this into vk_device without breaking swapchain
+        vmaDestroyAllocator(_device->_allocator);
         vkDestroyDevice(_device->_logicalDevice, nullptr);
         vkDestroySurfaceKHR(_device->_instance, _device->_surface, nullptr);
         vkb::destroy_debug_utils_messenger(_device->_instance, _device->_debug_messenger);

@@ -30,7 +30,7 @@ class Material;
 class Mesh;
 
 const bool enableValidationLayers = true;
-const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
+constexpr unsigned int FRAME_OVERLAP = 2;
 
 struct RenderObject {
     Mesh* mesh;
@@ -38,10 +38,19 @@ struct RenderObject {
     glm::mat4 transformMatrix;
 };
 
+struct FrameData {
+    Semaphore* _presentSemaphore;
+    Semaphore* _renderSemaphore;
+    Fence* _renderFence;
+
+    CommandPool* _commandPool;
+    CommandBuffer* _commandBuffer;
+};
+
 class VulkanEngine {
 public:
 	bool _isInitialized{ false };
-	int _frameNumber {0};
+	uint32_t _frameNumber {0};
 
     Window* _window;
     bool framebufferResized = false;
@@ -52,6 +61,7 @@ public:
     CommandBuffer* _commandBuffer;
     RenderPass* _renderPass;
     FrameBuffers* _frameBuffers;
+    FrameData _frames[FRAME_OVERLAP];
 
     Fence* _renderFence;
     Semaphore*  _presentSemaphore;
@@ -94,6 +104,8 @@ private:
     void init_camera();
 
     VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities);
+
+    FrameData& get_current_frame();
 
     void init_swapchain();
 
