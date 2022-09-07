@@ -45,6 +45,9 @@ struct FrameData {
 
     CommandPool* _commandPool;
     CommandBuffer* _commandBuffer;
+
+    AllocatedBuffer cameraBuffer;
+    VkDescriptorSet globalDescriptor;
 };
 
 class VulkanEngine {
@@ -56,21 +59,15 @@ public:
     bool framebufferResized = false;
     Device* _device;
     SwapChain* _swapchain;
-
-    CommandPool* _commandPool;
-    CommandBuffer* _commandBuffer;
     RenderPass* _renderPass;
     FrameBuffers* _frameBuffers;
     FrameData _frames[FRAME_OVERLAP];
-
-    Fence* _renderFence;
-    Semaphore*  _presentSemaphore;
-    Semaphore* _renderSemaphore;
-
     PipelineBuilder* _pipelineBuilder;
-
     std::vector<RenderObject> _renderables;
     MeshManager* _meshManager;
+
+    VkDescriptorSetLayout _globalSetLayout;
+    VkDescriptorPool _descriptorPool;
 
     DeletionQueue _mainDeletionQueue;
 
@@ -78,18 +75,14 @@ public:
 
     int _selectedShader{ 0 };
 
-    //initializes everything in the engine
 	void init();
 
-	//shuts down the engine
 	void cleanup();
 
     void recreate_swap_chain();
 
-	//draw loop
 	void draw();
 
-	//run main loop
 	void run();
 
     void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
@@ -117,7 +110,11 @@ private:
 
     void init_sync_structures();
 
+    void init_descriptors();
+
     void init_pipelines();
 
     void load_meshes();
+
+    AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 };

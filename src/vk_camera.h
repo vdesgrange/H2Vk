@@ -4,6 +4,12 @@
 #include <math.h>
 #include "glm/gtc/matrix_transform.hpp"
 
+struct GPUCameraData{
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 viewproj;
+};
+
 class Camera final {
 public:
     glm::vec3 position = glm::vec3();

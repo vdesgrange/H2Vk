@@ -33,7 +33,7 @@ public:
 
     std::unordered_map<std::string, Material> _materials;
 
-    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass);
+    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, VkDescriptorSetLayout& globalSetLayout);
     ~PipelineBuilder();
 
     bool load_shader_module(const char* filePath, VkShaderModule* out);

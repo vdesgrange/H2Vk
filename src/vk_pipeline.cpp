@@ -23,7 +23,7 @@
  * @param device
  * @param renderPass
  */
-PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass) :
+PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, VkDescriptorSetLayout& globalSetLayout) :
     _device(device)
 {
 
@@ -138,6 +138,8 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
     mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
     mesh_pipeline_layout_info.pushConstantRangeCount = 1;
+    mesh_pipeline_layout_info.setLayoutCount = 1;
+    mesh_pipeline_layout_info.pSetLayouts = &globalSetLayout;
 
     //VkPipelineLayout meshPipelineLayout;
     VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
