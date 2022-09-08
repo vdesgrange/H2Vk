@@ -70,6 +70,7 @@ public:
     VkDescriptorPool _descriptorPool;
 
     DeletionQueue _mainDeletionQueue;
+    DeletionQueue _descriptorsDeleletionQueue;
 
     Camera* _camera;
 

@@ -161,17 +161,17 @@ void VulkanEngine::init_descriptors() {
 
         vkUpdateDescriptorSets(_device->_logicalDevice, 1, &setWrite, 0, nullptr);
     }
+    
+    _mainDeletionQueue.push_function([&]() {
+        for (int i = 0; i < FRAME_OVERLAP; i++) {
+            vmaDestroyBuffer(_device->_allocator, _frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
+        }
+    });
 
     _mainDeletionQueue.push_function([&]() {
         vkDestroyDescriptorSetLayout(_device->_logicalDevice, _globalSetLayout, nullptr);
         vkDestroyDescriptorPool(_device->_logicalDevice, _descriptorPool, nullptr);
     });
-
-    for (int i = 0; i < FRAME_OVERLAP; i++) {
-        _mainDeletionQueue.push_function([&]() {
-            vmaDestroyBuffer(_device->_allocator, _frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
-        });
-    }
 }
 
 FrameData& VulkanEngine::get_current_frame()
@@ -220,6 +220,7 @@ void VulkanEngine::recreate_swap_chain() {
     vkDeviceWaitIdle(_device->_logicalDevice);
     _renderables.clear(); // Possible memory leak. Revoir comment gerer les scenes
     delete _pipelineBuilder; // Revoir comment gerer pipeline avec scene.
+    _descriptorsDeleletionQueue.flush();
     delete _frameBuffers;
     delete _renderPass;
     delete _swapchain;
@@ -385,6 +386,7 @@ void VulkanEngine::cleanup()
             _frames[i]._renderFence->wait(1000000000);
         }
 
+        _descriptorsDeleletionQueue.flush();
         delete _meshManager;
         delete _pipelineBuilder;
         // Should I handle semaphores here? static queue (shared) maybe?
