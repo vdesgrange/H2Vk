@@ -19,6 +19,7 @@ AllocatedBuffer Buffer::create_buffer(const Device& device, size_t allocSize, Vk
 
     VmaAllocationCreateInfo vmaallocInfo = {};
     vmaallocInfo.usage = memoryUsage;
+    vmaallocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
     AllocatedBuffer newBuffer;
     VK_CHECK(vmaCreateBuffer(device._allocator,
