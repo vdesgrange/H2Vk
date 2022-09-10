@@ -29,7 +29,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
 
     // Load shaders
     VkShaderModule triangleFragShader;
-    if (!load_shader_module("../shaders/shader_base.frag.spv", &triangleFragShader))
+    if (!load_shader_module("../shaders/default_lit.frag.spv", &triangleFragShader))
     {
         std::cout << "Error when building the triangle fragment shader module" << std::endl;
     }

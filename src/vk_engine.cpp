@@ -257,6 +257,16 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     memcpy(data, &camData, sizeof(GPUCameraData));
     vmaUnmapMemory(_device->_allocator, get_current_frame().cameraBuffer._allocation);
 
+    float framed = (_frameNumber / 120.f);
+    _sceneParameters.ambientColor = { sin(framed),0,cos(framed),1 };
+    char* sceneData;
+    vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
+    int frameIndex = _frameNumber % FRAME_OVERLAP;
+    sceneData += pad_uniform_buffer_size(sizeof(GPUSceneData)) * frameIndex;
+    memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
+    vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
+
+
     for (int i=0; i < count; i++) {
         RenderObject& object = first[i];
         if (object.material != lastMaterial) {
