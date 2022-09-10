@@ -5,7 +5,7 @@
 #include "vk_device.h"
 #include "vk_window.h"
 
-Device::Device(Window& _window) {
+Device::Device(Window& window) {
     vkb::InstanceBuilder builder;
 
     //make the Vulkan instance, with basic debug features
@@ -23,7 +23,7 @@ Device::Device(Window& _window) {
     _debug_messenger = vkb_inst.debug_messenger;
 
     // Get the surface of the window we opened with SDL
-    if (glfwCreateWindowSurface(_instance, _window._window, nullptr, &_surface) != VK_SUCCESS) {
+    if (glfwCreateWindowSurface(_instance, window._window, nullptr, &_surface) != VK_SUCCESS) {
         throw std::runtime_error("failed to create window surface!");
     }
 
@@ -43,6 +43,7 @@ Device::Device(Window& _window) {
     // Get the VkDevice handle used in the rest of a Vulkan application
     _logicalDevice = vkbDevice.device;
     _physicalDevice = physicalDevice.physical_device;
+    _gpuProperties = physicalDevice.properties;
 
     _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
     _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();

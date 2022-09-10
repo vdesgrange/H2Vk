@@ -38,6 +38,14 @@ struct RenderObject {
     glm::mat4 transformMatrix;
 };
 
+struct GPUSceneData {
+    glm::vec4 fogColor;
+    glm::vec4 fogDistance;
+    glm::vec4 ambientColor;
+    glm::vec4 sunlightDirection;
+    glm::vec4 sunlightColor;
+};
+
 struct FrameData {
     Semaphore* _presentSemaphore;
     Semaphore* _renderSemaphore;
@@ -70,9 +78,10 @@ public:
     VkDescriptorPool _descriptorPool;
 
     DeletionQueue _mainDeletionQueue;
-    DeletionQueue _descriptorsDeleletionQueue;
 
     Camera* _camera;
+    GPUSceneData _sceneParameters;
+    AllocatedBuffer _sceneParameterBuffer;
 
     int _selectedShader{ 0 };
 
@@ -117,5 +126,5 @@ private:
 
     void load_meshes();
 
-    AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+    size_t pad_uniform_buffer_size(size_t originalSize);
 };

@@ -16,7 +16,10 @@ public:
     VkDevice _logicalDevice; // Vulkan device for commands
     VkSurfaceKHR _surface; // Vulkan window surface
 
+    VkPhysicalDeviceProperties _gpuProperties; // request gpu information
+
     VmaAllocator _allocator;
+
 
     Device(Window& _window);
     ~Device();
@@ -25,8 +28,6 @@ public:
     uint32_t get_graphics_queue_family() const;
 
 private:
-    GLFWwindow* _window;
-
     VkQueue _graphicsQueue;
     uint32_t _graphicsQueueFamily;
 };
