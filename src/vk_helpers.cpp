@@ -1,4 +1,5 @@
 #include "vk_helpers.h"
+#include "vk_device.h"
 
 std::vector<uint32_t> Helper::read_file(const char* filePath) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
@@ -13,4 +14,14 @@ std::vector<uint32_t> Helper::read_file(const char* filePath) {
     file.close();
 
     return buffer;
+}
+
+size_t Helper::pad_uniform_buffer_size(const Device& device, size_t originalSize) {
+    size_t minUboAlignment = device._gpuProperties.limits.minUniformBufferOffsetAlignment;
+    size_t alignedSize = originalSize;
+    if (minUboAlignment > 0 ) {
+        alignedSize = (alignedSize + minUboAlignment - 1) & ~(minUboAlignment - 1);
+    }
+
+    return alignedSize;
 }
