@@ -13,6 +13,7 @@
 #include "vk_helpers.h"
 #include "vk_initializers.h"
 #include "vk_fence.h"
+#include "vk_mesh_manager.h"
 
 class Window;
 class Device;
@@ -49,12 +50,6 @@ struct GPUSceneData {
 
 struct GPUObjectData {
     glm::mat4 modelMatrix;
-};
-
-struct UploadContext {
-    Fence* _uploadFence;
-    VkCommandPool _commandPool;
-    VkCommandBuffer _commandBuffer;
 };
 
 struct FrameData {

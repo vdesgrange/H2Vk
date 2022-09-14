@@ -17,6 +17,7 @@
 #include "VkBootstrap.h"
 #include "vk_mem_alloc.h"
 #include "vk_engine.h"
+#include "vk_initializers.h"
 #include "vk_window.h"
 #include "vk_device.h"
 #include "vk_swapchain.h"
@@ -81,6 +82,9 @@ void VulkanEngine::init_commands() {
             delete _frames[i]._commandPool;
         });
     }
+
+    _uploadContext._commandPool = new CommandPool(*_device);
+    _uploadContext._commandBuffer = new CommandBuffer(*_device, *_uploadContext._commandPool);
 }
 
 void VulkanEngine::init_default_renderpass() {
@@ -225,7 +229,7 @@ void VulkanEngine::init_pipelines() {
 
 void VulkanEngine::load_meshes()
 {
-    _meshManager = new MeshManager(*_device);
+    _meshManager = new MeshManager(*_device, _uploadContext);
 }
 
 void VulkanEngine::init_scene() {

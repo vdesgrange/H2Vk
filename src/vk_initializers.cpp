@@ -231,7 +231,7 @@ VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageF
     return info;
 }
 
-VkSubmitInfo submit_info(VkCommandBuffer* cmd) {
+VkSubmitInfo vkinit::submit_info(VkCommandBuffer* cmd) {
     VkSubmitInfo info{};
     info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     info.pNext = nullptr;
