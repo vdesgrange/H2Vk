@@ -25,7 +25,7 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 
     void* data;
     vmaMapMemory(engine._device->_allocator, buffer._allocation, &data);
-    memcpy(data, &pixel_ptr, static_cast<size_t>(imageSize));
+    memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
     vmaUnmapMemory(engine._device->_allocator, buffer._allocation);
     stbi_image_free(pixels);
 
