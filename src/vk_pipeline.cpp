@@ -75,6 +75,13 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
         std::cout << "Green triangle vertex shader successfully loaded" << std::endl;
     }
 
+    VkShaderModule textureShader;
+    if (!load_shader_module("../shaders/texture_lig.frag.spv", &textureShader)) {
+        std::cout << "Error when building the texture fragment shader module" << std::endl;
+    } else {
+        std::cout << "Texture fragment shader successfully loaded" << std::endl;
+    }
+
 
     // Build pipeline layout
     VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
@@ -150,14 +157,21 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     _meshPipeline = this->build_pipeline(device, renderPass);
     create_material(_meshPipeline, _meshPipelineLayout, "defaultMesh");
 
-    // === 4 - Clean
+    // === 4 - Build Texture pipeline
+    this->_shaderStages.clear();
+    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
+    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, textureShader));
+    _texturePipeline = this->build_pipeline(device, renderPass);
+    create_material(_texturePipeline, _meshPipelineLayout, "texturedMesh");
+
+    // === 5 - Clean
     // Deleting shaders
     vkDestroyShaderModule(device._logicalDevice, redTriangleVertexShader, nullptr);
     vkDestroyShaderModule(device._logicalDevice, redTriangleFragShader, nullptr);
     vkDestroyShaderModule(device._logicalDevice, triangleFragShader, nullptr);
     vkDestroyShaderModule(device._logicalDevice, triangleVertexShader, nullptr);
     vkDestroyShaderModule(device._logicalDevice, meshVertShader, nullptr);
-
+    vkDestroyShaderModule(device._logicalDevice, textureShader, nullptr);
 }
 
 PipelineBuilder::~PipelineBuilder() {
@@ -165,6 +179,7 @@ PipelineBuilder::~PipelineBuilder() {
     vkDestroyPipeline(_device._logicalDevice, _redTrianglePipeline, nullptr);
     vkDestroyPipeline(_device._logicalDevice, _graphicsPipeline, nullptr);
     vkDestroyPipeline(_device._logicalDevice, _meshPipeline, nullptr);
+    vkDestroyPipeline(_device._logicalDevice, _texturePipeline, nullptr);
     vkDestroyPipelineLayout(_device._logicalDevice, _triPipelineLayout, nullptr);
     vkDestroyPipelineLayout(_device._logicalDevice, _meshPipelineLayout, nullptr);
     // vkDestroyPipelineLayout(_device._logicalDevice, _pipelineLayout, nullptr); // attention !

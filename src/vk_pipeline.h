@@ -30,6 +30,7 @@ public:
     VkPipeline _graphicsPipeline;
     VkPipeline _redTrianglePipeline;
     VkPipeline _meshPipeline;
+    VkPipeline _texturePipeline;
 
     std::unordered_map<std::string, Material> _materials;
 

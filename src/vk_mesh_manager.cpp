@@ -1,3 +1,5 @@
+#include "VkBootstrap.h"
+
 #include "vk_mesh_manager.h"
 #include "vk_helpers.h"
 #include "vk_device.h"
@@ -20,12 +22,18 @@ MeshManager::~MeshManager() {
                          it.second._vertexBuffer._allocation);
     }
 
+    if (_uploadContext._commandPool != nullptr) {
+        delete _uploadContext._commandPool;
+    }
+
 }
 
 void MeshManager::load_meshes()
 {
     Mesh mesh{};
     Mesh objMesh{};
+    Mesh lostEmpire{};
+
     mesh._vertices.resize(3);
 
     mesh._vertices[0].position = { 1.f, 1.f, 0.0f };
@@ -37,12 +45,15 @@ void MeshManager::load_meshes()
     mesh._vertices[2].color = { 0.f, 1.f, 0.0f }; //pure green
 
     objMesh.load_from_obj("../assets/monkey_smooth.obj");
+    lostEmpire.load_from_obj("../assets/lost_empire.obj");
 
     upload_mesh(mesh);
     upload_mesh(objMesh);
+    upload_mesh(lostEmpire);
 
     _meshes["monkey"] = objMesh;
     _meshes["triangle"] = mesh;
+    _meshes["empire"] = lostEmpire;
 }
 
 void MeshManager::upload_mesh(Mesh& mesh)

@@ -12,6 +12,7 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
 #include "VkBootstrap.h"
@@ -253,8 +254,13 @@ void VulkanEngine::init_scene() {
     monkey.mesh = _meshManager->get_mesh("monkey");
     monkey.material = _pipelineBuilder->get_material("defaultMesh");
     monkey.transformMatrix = glm::mat4{ 1.0f };
-
     _renderables.push_back(monkey);
+
+    RenderObject map;
+    map.mesh = _meshManager->get_mesh("empire");
+    map.material = _pipelineBuilder->get_material("texturedMesh");
+    map.transformMatrix = glm::translate(glm::mat4(1.f), glm::vec3{ 5,-10,0 });
+    _renderables.push_back(map);
 
     for (int x = -20; x <= 20; x++) {
         for (int y = -20; y <= 20; y++) {
