@@ -113,4 +113,3 @@ void MeshManager::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& fu
 
     vkResetCommandPool(_device._logicalDevice, _uploadContext._commandPool->_commandPool, 0);
 }
-

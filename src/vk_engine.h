@@ -52,6 +52,12 @@ struct GPUObjectData {
     glm::mat4 modelMatrix;
 };
 
+struct Texture {
+    AllocatedImage image;
+    VkImageView imageView;
+
+};
+
 struct FrameData {
     Semaphore* _presentSemaphore;
     Semaphore* _renderSemaphore;
@@ -82,6 +88,7 @@ public:
     PipelineBuilder* _pipelineBuilder;
     std::vector<RenderObject> _renderables;
     MeshManager* _meshManager;
+    std::unordered_map<std::string, Texture> _loadedTextures;
 
     VkDescriptorSetLayout _globalSetLayout;
     VkDescriptorSetLayout _objectSetLayout;
@@ -108,7 +115,7 @@ public:
 
     void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
 
-    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+    void load_images();
 
 private:
     void init_vulkan();

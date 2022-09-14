@@ -33,6 +33,7 @@
 #include "vk_camera.h"
 #include "vk_pipeline.h"
 #include "vk_buffer.h"
+#include "vk_texture.h"
 
 using namespace std;
 
@@ -49,6 +50,7 @@ void VulkanEngine::init()
     init_descriptors();
     init_pipelines();
 	load_meshes();
+    load_images();
     init_scene();
 
 	_isInitialized = true;
@@ -230,6 +232,20 @@ void VulkanEngine::init_pipelines() {
 void VulkanEngine::load_meshes()
 {
     _meshManager = new MeshManager(*_device, _uploadContext);
+}
+
+void VulkanEngine::load_images() {
+    Texture lostEmpire;
+    vkutil::load_image_from_file(*this, "../assets/lost_empire-RGBA.png", lostEmpire.image);
+
+    VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, lostEmpire.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(_device->_logicalDevice, &imageinfo, nullptr, &lostEmpire.imageView);
+
+    _loadedTextures["empire_diffuse"] = lostEmpire;
+
+    _mainDeletionQueue.push_function([=]() {
+        vkDestroyImageView(_device->_logicalDevice, lostEmpire.imageView, nullptr);
+    });
 }
 
 void VulkanEngine::init_scene() {

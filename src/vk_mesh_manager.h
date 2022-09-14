@@ -29,9 +29,10 @@ public:
     void upload_mesh(Mesh& mesh);
     Mesh* get_mesh(const std::string &name);
 
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+
 private:
     const class Device& _device;
     UploadContext& _uploadContext;
 
-    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 };
