@@ -6,3 +6,4 @@ glslc default_lit.frag -o default_lit.frag.spv
 glslc red_shader_base.vert -o red_shader_base.vert.spv
 glslc red_shader_base.frag -o red_shader_base.frag.spv
 glslc tri_mesh.vert -o tri_mesh.vert.spv
+glslc texture_lig.frag -o texture_lig.frag.spv
