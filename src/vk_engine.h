@@ -12,6 +12,7 @@
 #include "vk_types.h"
 #include "vk_helpers.h"
 #include "vk_initializers.h"
+#include "vk_fence.h"
 
 class Window;
 class Device;
@@ -50,6 +51,11 @@ struct GPUObjectData {
     glm::mat4 modelMatrix;
 };
 
+struct UploadContext {
+    Fence* _uploadFence;
+    VkCommandPool _commandPool;
+    VkCommandBuffer _commandBuffer;
+};
 
 struct FrameData {
     Semaphore* _presentSemaphore;
@@ -91,6 +97,7 @@ public:
     Camera* _camera;
     GPUSceneData _sceneParameters;
     AllocatedBuffer _sceneParameterBuffer;
+    UploadContext _uploadContext;
 
     int _selectedShader{ 0 };
 
@@ -105,6 +112,8 @@ public:
 	void run();
 
     void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
+
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
 private:
     void init_vulkan();

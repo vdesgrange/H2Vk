@@ -5,7 +5,13 @@
 
 Fence::Fence(const Device& device) : _device(device) {
     // Used for CPU -> GPU communication
-    VkFenceCreateInfo fenceInfo = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
+    VkFenceCreateInfo fenceInfo = vkinit::fence_create_info();
+    VK_CHECK(vkCreateFence(device._logicalDevice, &fenceInfo, nullptr, &_fence));
+}
+
+Fence::Fence(const Device& device, VkFenceCreateFlagBits flags) : _device(device) {
+    // Used for CPU -> GPU communication
+    VkFenceCreateInfo fenceInfo = vkinit::fence_create_info(flags); // VK_FENCE_CREATE_SIGNALED_BIT
     VK_CHECK(vkCreateFence(device._logicalDevice, &fenceInfo, nullptr, &_fence));
 }
 

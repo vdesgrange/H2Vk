@@ -94,7 +94,7 @@ void VulkanEngine::init_framebuffers() {
 void VulkanEngine::init_sync_structures() {
     //  Used for GPU -> GPU synchronisation
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        _frames[i]._renderFence = new Fence(*_device);
+        _frames[i]._renderFence = new Fence(*_device, VK_FENCE_CREATE_SIGNALED_BIT);
         _frames[i]._renderSemaphore = new Semaphore(*_device);
         _frames[i]._presentSemaphore =  new Semaphore(*_device);
 
@@ -103,8 +103,12 @@ void VulkanEngine::init_sync_structures() {
             delete _frames[i]._renderSemaphore;
             delete _frames[i]._renderFence;
         });
-
     }
+
+    _uploadContext._uploadFence = new Fence(*_device);
+    _mainDeletionQueue.push_function([=]() {
+        delete _uploadContext._uploadFence;
+    });
 }
 
 void VulkanEngine::init_descriptors() {

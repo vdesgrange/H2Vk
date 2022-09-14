@@ -9,6 +9,7 @@ public:
     VkFence _fence;
 
     Fence(const Device& device);
+    Fence(const Device& device, VkFenceCreateFlagBits flags);
     ~Fence();
 
     VkResult wait(uint64_t timeout);
