@@ -85,7 +85,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
 
     // Build pipeline layout
     VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-    pipeline_layout_info.setLayoutCount = 2;
+    pipeline_layout_info.setLayoutCount = 3; // 2
     pipeline_layout_info.pSetLayouts = setLayouts;
     //VkPipelineLayout _triPipelineLayout;
     VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &pipeline_layout_info, nullptr, &_triPipelineLayout));
@@ -147,10 +147,11 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
     mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
     mesh_pipeline_layout_info.pushConstantRangeCount = 1;
-    mesh_pipeline_layout_info.setLayoutCount = 2;
+    mesh_pipeline_layout_info.setLayoutCount = 3;
     mesh_pipeline_layout_info.pSetLayouts = setLayouts;
 
     //VkPipelineLayout meshPipelineLayout;
+    // VkPipelineLayout texturedPipelineLayout;
     VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
     this->_pipelineLayout = &_meshPipelineLayout;
 
