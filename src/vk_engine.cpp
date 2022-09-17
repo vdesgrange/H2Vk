@@ -119,7 +119,7 @@ void VulkanEngine::init_sync_structures() {
 }
 
 void VulkanEngine::init_descriptors() {
-    const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData));
+    const size_t sceneParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData));
     _sceneParameterBuffer = Buffer::create_buffer(*_device, sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
     std::vector<VkDescriptorPoolSize> sizes = {
@@ -210,8 +210,6 @@ void VulkanEngine::init_descriptors() {
 
         VkDescriptorBufferInfo sceneBInfo{};
         sceneBInfo.buffer = _sceneParameterBuffer._buffer;
-        // sceneBInfo.offset = pad_uniform_buffer_size(sizeof(GPUSceneData)) * i;
-        // sceneBInfo.offset = 0;
         sceneBInfo.range = sizeof(GPUSceneData);
 
         VkWriteDescriptorSet objWrite = vkinit::write_descriptor_set(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _frames[i].objectDescriptor, &objectsBInfo, 0);
@@ -334,16 +332,6 @@ void VulkanEngine::recreate_swap_chain() {
     init_scene();
 }
 
-size_t VulkanEngine::pad_uniform_buffer_size(size_t originalSize) {
-    size_t minUboAlignment = _device->_gpuProperties.limits.minUniformBufferOffsetAlignment;
-    size_t alignedSize = originalSize;
-    if (minUboAlignment > 0 ) {
-        alignedSize = (alignedSize + minUboAlignment - 1) & ~(minUboAlignment - 1);
-    }
-
-    return alignedSize;
-}
-
 void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
     Mesh* lastMesh = nullptr;
     Material* lastMaterial = nullptr;
@@ -372,7 +360,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     char* sceneData;
     vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
     int frameIndex = _frameNumber % FRAME_OVERLAP;
-    sceneData += pad_uniform_buffer_size(sizeof(GPUSceneData)) * frameIndex;
+    sceneData += Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
     memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
     vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
 
@@ -381,7 +369,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
         if (object.material != lastMaterial) {
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
             lastMaterial = object.material;
-            uint32_t dynOffset = pad_uniform_buffer_size(sizeof(GPUSceneData)) * frameIndex;
+            uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().globalDescriptor, 1, &dynOffset);
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
 
