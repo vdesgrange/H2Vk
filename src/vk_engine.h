@@ -31,6 +31,8 @@ class Camera;
 class Material;
 class Mesh;
 class DescriptorPools;
+class DescriptorLayoutCache;
+class DescriptorAllocator;
 
 const bool enableValidationLayers = true;
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -90,6 +92,9 @@ public:
     std::vector<RenderObject> _renderables;
     MeshManager* _meshManager;
     std::unordered_map<std::string, Texture> _loadedTextures;
+
+    DescriptorLayoutCache* _layoutCache;
+    DescriptorAllocator* _allocator;
 
     DescriptorPools* _descriptorPools;
     VkDescriptorSetLayout _globalSetLayout;

@@ -1,27 +1,24 @@
 #include "vk_descriptor_cache.h"
 #include "vk_device.h"
 
-DescriptorLayoutCache::DescriptorLayoutCache(const Device &device) : _device(device) {
-
-}
-
 DescriptorLayoutCache::~DescriptorLayoutCache() {
-    for (auto setLayout : _setLayouts)
-    vkDestroyDescriptorSetLayout(_device._logicalDevice, setLayout, nullptr);
+    for (auto setLayout : _setLayouts) {
+        vkDestroyDescriptorSetLayout(_device._logicalDevice, setLayout, nullptr);
+    }
 }
 
 VkDescriptorSetLayout DescriptorLayoutCache::createDescriptorLayout(VkDescriptorSetLayoutCreateInfo& info) {
     DescriptorLayoutInfo layoutInfo;
-    layoutInfo._bindings.reserve(info.bindingCount);
     bool sorted = true;
     int lastBinding = -1;
+
+    layoutInfo._bindings.reserve(info.bindingCount);
 
     for (int i = 0; i < info.bindingCount; i++) {
         layoutInfo._bindings.push_back(info.pBindings[i]);
         if (info.pBindings[i].binding > lastBinding){
             lastBinding = info.pBindings[i].binding;
-        }
-        else{
+        } else{
             sorted = false;
         }
     }

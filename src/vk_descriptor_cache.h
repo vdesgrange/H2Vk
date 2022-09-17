@@ -18,7 +18,7 @@ public:
     std::vector<VkDescriptorSetLayout> _setLayouts;
     DescriptorLayoutInfo _layoutInfo;
 
-    DescriptorLayoutCache(const Device& device);
+    DescriptorLayoutCache(const Device &device) : _device(device) {};
     ~DescriptorLayoutCache();
     VkDescriptorSetLayout createDescriptorLayout(VkDescriptorSetLayoutCreateInfo& info);
 

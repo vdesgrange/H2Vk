@@ -1,10 +1,6 @@
 #include "vk_descriptor_allocator.h"
 #include "vk_device.h"
 
-DescriptorAllocator::DescriptorAllocator(const Device &device) : _device(device) {
-
-}
-
 DescriptorAllocator::~DescriptorAllocator() {
     for (auto p : freePools) {
         vkDestroyDescriptorPool(_device._logicalDevice, p, nullptr);
@@ -14,8 +10,7 @@ DescriptorAllocator::~DescriptorAllocator() {
     }
 }
 
-
-bool DescriptorAllocator::allocate(VkDescriptorSet& set, VkDescriptorSetLayout& setLayout, std::vector<VkDescriptorPoolSize> sizes) {
+bool DescriptorAllocator::allocate(VkDescriptorSet& descriptor, VkDescriptorSetLayout& setLayout, std::vector<VkDescriptorPoolSize> sizes) {
     if (_currentPool == VK_NULL_HANDLE){
         _currentPool = getPool(sizes, 0, 1000);
         usedPools.push_back(_currentPool);
@@ -28,7 +23,8 @@ bool DescriptorAllocator::allocate(VkDescriptorSet& set, VkDescriptorSetLayout& 
     info.descriptorSetCount = 1;
     info.pSetLayouts = &setLayout;
 
-    VkResult result = vkAllocateDescriptorSets(_device._logicalDevice, &info, &set);
+    VkResult result = vkAllocateDescriptorSets(_device._logicalDevice, &info, &descriptor);
+
     bool reallocate = false;
     switch (result) {
         case VK_SUCCESS:
@@ -44,7 +40,7 @@ bool DescriptorAllocator::allocate(VkDescriptorSet& set, VkDescriptorSetLayout& 
     if (reallocate) {
         _currentPool = getPool(sizes, 0, 1000);
         usedPools.push_back(_currentPool);
-        result = vkAllocateDescriptorSets(_device._logicalDevice, &info, &set);
+        result = vkAllocateDescriptorSets(_device._logicalDevice, &info, &descriptor);
         if (result == VK_SUCCESS){
             return true;
         }

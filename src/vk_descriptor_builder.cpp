@@ -11,6 +11,33 @@ DescriptorBuilder DescriptorBuilder::begin(DescriptorLayoutCache& layoutCache, D
     return builder;
 }
 
+DescriptorBuilder& DescriptorBuilder::bind_buffer(VkDescriptorBufferInfo& bInfo, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding) {
+    VkDescriptorSetLayoutBinding bind = vkinit::descriptor_set_layout_binding(type, stageFlags, binding);
+    _bindings.push_back(bind);
+
+    VkWriteDescriptorSet write = vkinit::write_descriptor_set(type, nullptr, &bInfo, binding);
+    _writes.push_back(write);
+
+    return *this;
+}
+
+DescriptorBuilder& DescriptorBuilder::bind_image(VkDescriptorImageInfo& iInfo, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding) {
+    VkDescriptorSetLayoutBinding bind = vkinit::descriptor_set_layout_binding(type, stageFlags, binding);
+    _bindings.push_back(bind);
+
+    VkWriteDescriptorSet write = vkinit::write_descriptor_image(type, nullptr, &iInfo, binding);
+    _writes.push_back(write);
+
+    return *this;
+}
+
+DescriptorBuilder& DescriptorBuilder::bind_none(VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding) {
+    VkDescriptorSetLayoutBinding bind = vkinit::descriptor_set_layout_binding(type, stageFlags, binding);
+    _bindings.push_back(bind);
+
+    return *this;
+}
+
 bool DescriptorBuilder::build(VkDescriptorSet& set, VkDescriptorSetLayout& setLayout, std::vector<VkDescriptorPoolSize> sizes) {
     VkDescriptorSetLayoutCreateInfo setInfo{};
     setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -35,22 +62,13 @@ bool DescriptorBuilder::build(VkDescriptorSet& set, VkDescriptorSetLayout& setLa
     return true;
 }
 
-DescriptorBuilder& DescriptorBuilder::bind_buffer(uint32_t binding, VkDescriptorBufferInfo& bInfo, VkDescriptorType type, VkShaderStageFlags stageFlags) {
-    VkDescriptorSetLayoutBinding bind = vkinit::descriptor_set_layout_binding(type, stageFlags, binding);
-    _bindings.push_back(bind);
+void DescriptorBuilder::build(VkDescriptorSetLayout& setLayout, std::vector<VkDescriptorPoolSize> sizes) {
+    VkDescriptorSetLayoutCreateInfo setInfo{};
+    setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    setInfo.pNext = nullptr;
+    setInfo.flags = 0;
+    setInfo.bindingCount = static_cast<uint32_t>(_bindings.size());
+    setInfo.pBindings = _bindings.data();
 
-    VkWriteDescriptorSet write = vkinit::write_descriptor_set(type, nullptr, &bInfo, binding);
-    _writes.push_back(write);
-
-    return *this;
-}
-
-DescriptorBuilder& DescriptorBuilder::bind_image(uint32_t binding, VkDescriptorImageInfo& iInfo, VkDescriptorType type, VkShaderStageFlags stageFlags) {
-    VkDescriptorSetLayoutBinding bind = vkinit::descriptor_set_layout_binding(type, stageFlags, binding);
-    _bindings.push_back(bind);
-
-    VkWriteDescriptorSet write = vkinit::write_descriptor_image(type, nullptr, &iInfo, binding);
-    _writes.push_back(write);
-
-    return *this;
+    setLayout = _cache->createDescriptorLayout(setInfo);
 }
