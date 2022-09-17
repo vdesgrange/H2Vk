@@ -30,6 +30,7 @@ class DeletionQueue;
 class Camera;
 class Material;
 class Mesh;
+class DescriptorPools;
 
 const bool enableValidationLayers = true;
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -90,6 +91,7 @@ public:
     MeshManager* _meshManager;
     std::unordered_map<std::string, Texture> _loadedTextures;
 
+    DescriptorPools* _descriptorPools;
     VkDescriptorSetLayout _globalSetLayout;
     VkDescriptorSetLayout _objectSetLayout;
     VkDescriptorSetLayout _singleTextureSetLayout;

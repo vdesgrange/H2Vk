@@ -35,6 +35,7 @@
 #include "vk_pipeline.h"
 #include "vk_buffer.h"
 #include "vk_texture.h"
+#include "vk_descriptor_pools.h"
 
 using namespace std;
 
@@ -129,14 +130,9 @@ void VulkanEngine::init_descriptors() {
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
     };
 
-    VkDescriptorPoolCreateInfo pool_info = {};
-    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.flags = 0;
-    pool_info.maxSets = 10;
-    pool_info.poolSizeCount = (uint32_t)sizes.size();
-    pool_info.pPoolSizes = sizes.data();
-
-    vkCreateDescriptorPool(_device->_logicalDevice, &pool_info, nullptr, &_descriptorPool);
+    // -- Pool
+    _descriptorPools = new DescriptorPools(*_device, sizes);
+    _descriptorPool = _descriptorPools->_descriptorPool;
 
     // --- Binding
     VkDescriptorSetLayoutBinding camBufferBinding = vkinit::descriptor_set_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
@@ -149,8 +145,8 @@ void VulkanEngine::init_descriptors() {
     VkDescriptorSetLayoutCreateInfo setInfo{};
     setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     setInfo.pNext = nullptr;
-    setInfo.bindingCount = 2;
     setInfo.flags = 0;
+    setInfo.bindingCount = 2;
     setInfo.pBindings = bindings;
 
     vkCreateDescriptorSetLayout(_device->_logicalDevice, &setInfo, nullptr, &_globalSetLayout);
@@ -183,8 +179,8 @@ void VulkanEngine::init_descriptors() {
         VkDescriptorSetAllocateInfo objectAllocInfo{};
         objectAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         objectAllocInfo.pNext = nullptr;
-        objectAllocInfo.descriptorSetCount = 1;
         objectAllocInfo.descriptorPool = _descriptorPool;
+        objectAllocInfo.descriptorSetCount = 1;
         objectAllocInfo.pSetLayouts = &_objectSetLayout;
 
         vkAllocateDescriptorSets(_device->_logicalDevice, &objectAllocInfo, &_frames[i].objectDescriptor);
@@ -230,6 +226,7 @@ void VulkanEngine::init_descriptors() {
         vkDestroyDescriptorSetLayout(_device->_logicalDevice, _globalSetLayout, nullptr);
         vkDestroyDescriptorSetLayout(_device->_logicalDevice, _objectSetLayout, nullptr);
         vkDestroyDescriptorPool(_device->_logicalDevice, _descriptorPool, nullptr);
+        delete _descriptorPools;
     });
 }
 
