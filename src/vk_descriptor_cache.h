@@ -15,9 +15,6 @@ public:
         size_t hash() const;
     };
 
-    std::vector<VkDescriptorSetLayout> _setLayouts;
-    DescriptorLayoutInfo _layoutInfo;
-
     DescriptorLayoutCache(const Device &device) : _device(device) {};
     ~DescriptorLayoutCache();
     VkDescriptorSetLayout createDescriptorLayout(VkDescriptorSetLayoutCreateInfo& info);

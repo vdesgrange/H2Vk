@@ -48,7 +48,7 @@ bool DescriptorBuilder::build(VkDescriptorSet& set, VkDescriptorSetLayout& setLa
 
     setLayout = _cache->createDescriptorLayout(setInfo);
 
-    bool success = _alloc->allocate(set, setLayout, sizes);
+    bool success = _alloc->allocate(&set, &setLayout, sizes);
     if (!success) {
         return false;
     };

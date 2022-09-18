@@ -61,6 +61,15 @@ struct Texture {
 
 };
 
+struct PoolSize {
+    std::vector<VkDescriptorPoolSize> sizes = {
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
+    };
+};
+
 struct FrameData {
     Semaphore* _presentSemaphore;
     Semaphore* _renderSemaphore;
@@ -96,11 +105,9 @@ public:
     DescriptorLayoutCache* _layoutCache;
     DescriptorAllocator* _allocator;
 
-    DescriptorPools* _descriptorPools;
     VkDescriptorSetLayout _globalSetLayout;
     VkDescriptorSetLayout _objectSetLayout;
     VkDescriptorSetLayout _singleTextureSetLayout;
-    VkDescriptorPool _descriptorPool;
 
     DeletionQueue _mainDeletionQueue;
 
@@ -108,6 +115,8 @@ public:
     GPUSceneData _sceneParameters;
     AllocatedBuffer _sceneParameterBuffer;
     UploadContext _uploadContext;
+
+    PoolSize poolSize;
 
     int _selectedShader{ 0 };
 

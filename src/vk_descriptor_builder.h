@@ -4,6 +4,7 @@
 #include "VkBootstrap.h"
 
 struct DescriptorLayoutCache;
+
 class DescriptorAllocator;
 
 class DescriptorBuilder final {
