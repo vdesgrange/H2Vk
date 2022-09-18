@@ -11,15 +11,18 @@ ENDIF()
 
 set(CMAKE_CXX_STANDARD 17)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -O0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -O0") # -fsanitize=address -fsanitize=thread -fsanitize=undefined
+set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fsanitize=address -O0")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fsanitize=address")
+option(TRACY_ENABLE "" ON)
+option(TRACY_ON_DEMAND "" ON)
 
 find_package(Vulkan REQUIRED)
 
 add_subdirectory(third_party)
 add_subdirectory(src)
+add_subdirectory(third_party/tracy/)
 
 include_directories(/usr/local/include/ src/)
 include_directories(SDL2_HEADER /Library/Frameworks/SDL2.framework/Headers)
