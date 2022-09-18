@@ -10,6 +10,10 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
 
+UInterface::~UInterface() {
+    this->clean_up();
+}
+
 void UInterface::init_imgui() {
     VkDescriptorPoolSize pool_sizes[] =
             {
@@ -58,12 +62,9 @@ void UInterface::init_imgui() {
 
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 
-    _engine._mainDeletionQueue.push_function([=]() {
-        vkDestroyDescriptorPool(_engine._device->_logicalDevice, _imguiPool, nullptr);
-        ImGui_ImplVulkan_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
-    });
+//    _engine._mainDeletionQueue.push_function([=]() {
+//        this->clean_up();
+//    });
 }
 
 void UInterface::new_frame() {
@@ -73,6 +74,7 @@ void UInterface::new_frame() {
 }
 
 void UInterface::clean_up() {
+    vkDestroyDescriptorPool(_engine._device->_logicalDevice, _imguiPool, nullptr);
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

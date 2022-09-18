@@ -34,6 +34,7 @@ class DescriptorPools;
 class DescriptorLayoutCache;
 class DescriptorAllocator;
 class UInterface;
+class ImDrawData;
 
 const bool enableValidationLayers = true;
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -167,5 +168,6 @@ private:
 
     void load_meshes();
 
-    size_t pad_uniform_buffer_size(size_t originalSize);
+    void render(ImDrawData* draw_data, int imageIndex);
+
 };

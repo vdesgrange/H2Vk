@@ -10,6 +10,7 @@ public:
     VkDescriptorPool _imguiPool;
 
     UInterface(VulkanEngine& engine) : _engine(engine) {};
+    ~UInterface();
 
     void init_imgui();
     void new_frame();

@@ -107,7 +107,6 @@ void VulkanEngine::init_commands() {
 
 void VulkanEngine::init_default_renderpass() {
     _renderPass = new RenderPass(*_device, *_swapchain);
-    // ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), _uploadContext._commandBuffer->_mainCommandBuffer);
 }
 
 void VulkanEngine::init_framebuffers() {
@@ -269,8 +268,8 @@ void VulkanEngine::recreate_swap_chain() {
         glfwGetFramebufferSize(_window->_window, &width, &height);
         glfwWaitEvents();
     }
-
     vkDeviceWaitIdle(_device->_logicalDevice);
+
     _renderables.clear(); // Possible memory leak. Revoir comment gerer les scenes
     delete _pipelineBuilder; // Revoir comment gerer pipeline avec scene.
     delete _frameBuffers;
@@ -372,47 +371,7 @@ void VulkanEngine::draw() {
         throw std::runtime_error("failed to acquire swap chain image");
     }
 
-    VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, 0));
-    VkCommandBufferBeginInfo cmdBeginInfo{};
-    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmdBeginInfo.pNext = nullptr;
-    cmdBeginInfo.pInheritanceInfo = nullptr; // VkCommandBufferInheritanceInfo for secondary cmd buff. defines states inheriting from primary cmd. buff.
-    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    VK_CHECK(vkBeginCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, &cmdBeginInfo));
-
-    VkClearValue clearValue;
-    float flash = abs(sin(_frameNumber / 120.f));
-    clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
-    VkClearValue depthValue;
-    depthValue.depthStencil.depth = 1.0f;
-    std::array<VkClearValue, 2> clearValues = {clearValue, depthValue};
-
-    VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass, _window->_windowExtent, _frameBuffers->_frameBuffers[imageIndex]);
-    renderPassInfo.clearValueCount = 2;
-    renderPassInfo.pClearValues = &clearValues[0];
-    vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _renderables.data(), _renderables.size());
-
-    ImGui_ImplVulkan_RenderDrawData(draw_data, get_current_frame()._commandBuffer->_mainCommandBuffer);
-
-    vkCmdEndRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer);
-
-    VK_CHECK(vkEndCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer));
-    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.pNext = nullptr;
-    submitInfo.pWaitDstStageMask = &waitStage;
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &(get_current_frame()._presentSemaphore->_semaphore);
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &get_current_frame()._commandBuffer->_mainCommandBuffer;
-
-    VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, get_current_frame()._renderFence->_fence));
+    render(draw_data, imageIndex);
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -433,6 +392,57 @@ void VulkanEngine::draw() {
     }
 
     _frameNumber++;
+}
+
+void VulkanEngine::render(ImDrawData* draw_data, int imageIndex) {
+
+    // --- Command Buffer
+    VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, 0));
+
+    VkCommandBufferBeginInfo cmdBeginInfo{};
+    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmdBeginInfo.pNext = nullptr;
+    cmdBeginInfo.pInheritanceInfo = nullptr; // VkCommandBufferInheritanceInfo for secondary cmd buff. defines states inheriting from primary cmd. buff.
+    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VK_CHECK(vkBeginCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, &cmdBeginInfo));
+
+    // -- Clear value
+    VkClearValue clearValue;
+    float flash = abs(sin(_frameNumber / 120.f));
+    clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
+    VkClearValue depthValue;
+    depthValue.depthStencil.depth = 1.0f;
+    std::array<VkClearValue, 2> clearValues = {clearValue, depthValue};
+
+    // -- Render pass
+    VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass, _window->_windowExtent, _frameBuffers->_frameBuffers[imageIndex]);
+    renderPassInfo.clearValueCount = 2;
+    renderPassInfo.pClearValues = &clearValues[0];
+    vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _renderables.data(), _renderables.size());
+
+    ImGui_ImplVulkan_RenderDrawData(draw_data, get_current_frame()._commandBuffer->_mainCommandBuffer);
+
+    vkCmdEndRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer);
+    VK_CHECK(vkEndCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer));
+
+    // --- Submit queue
+    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.pNext = nullptr;
+    submitInfo.pWaitDstStageMask = &waitStage;
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = &(get_current_frame()._presentSemaphore->_semaphore);
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &get_current_frame()._commandBuffer->_mainCommandBuffer;
+
+    VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, get_current_frame()._renderFence->_fence));
 }
 
 void VulkanEngine::run()
@@ -467,11 +477,9 @@ void VulkanEngine::cleanup()
             _frames[i]._renderFence->wait(1000000000);
         }
 
-        _ui->clean_up();
-
+        delete _ui;
         delete _meshManager;
         delete _pipelineBuilder;
-        // Should I handle semaphores here? static queue (shared) maybe?
         delete _frameBuffers;
         delete _renderPass;
         delete _swapchain;
