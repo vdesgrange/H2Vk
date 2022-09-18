@@ -80,12 +80,11 @@ RenderPass::RenderPass(const Device& device, SwapChain& swapchain) : _device(dev
     renderPassInfo.pDependencies = dependencies.data();
 
     VK_CHECK(vkCreateRenderPass(device._logicalDevice, &renderPassInfo, nullptr, &_renderPass));
-
-//    swapchain._swapChainDeletionQueue.push_function([=]() {
-//        vkDestroyRenderPass(device._logicalDevice, _renderPass, nullptr);
-//    });
 }
 
 RenderPass::~RenderPass() {
     vkDestroyRenderPass(_device._logicalDevice, _renderPass, nullptr);
+    //    swapchain._swapChainDeletionQueue.push_function([=]() {
+//        vkDestroyRenderPass(device._logicalDevice, _renderPass, nullptr);
+//    });
 }

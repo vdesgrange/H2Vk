@@ -39,6 +39,11 @@
 #include "vk_descriptor_builder.h"
 #include "vk_descriptor_cache.h"
 #include "vk_descriptor_allocator.h"
+#include "vk_imgui.h"
+
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_vulkan.h"
 
 using namespace std;
 
@@ -57,6 +62,7 @@ void VulkanEngine::init()
 	load_meshes();
     load_images();
     init_scene();
+    init_interface();
 
 	_isInitialized = true;
 }
@@ -68,6 +74,11 @@ void VulkanEngine::init_window() {
 void VulkanEngine::init_vulkan() {
     _device = new Device(*_window);
     std::cout << "GPU has a minimum buffer alignment = " << _device->_gpuProperties.limits.minUniformBufferOffsetAlignment << std::endl;
+}
+
+void VulkanEngine::init_interface() {
+    _ui = new UInterface(*this);
+    _ui->init_imgui();
 }
 
 void VulkanEngine::init_camera() {
@@ -96,6 +107,7 @@ void VulkanEngine::init_commands() {
 
 void VulkanEngine::init_default_renderpass() {
     _renderPass = new RenderPass(*_device, *_swapchain);
+    // ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), _uploadContext._commandBuffer->_mainCommandBuffer);
 }
 
 void VulkanEngine::init_framebuffers() {
@@ -342,14 +354,13 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     }
 }
 
-void VulkanEngine::draw()
-{
+void VulkanEngine::draw() {
+    ImGui::Render();
+    ImDrawData* draw_data = ImGui::GetDrawData();
+
     // Wait GPU to render latest frame
-    //wait until the GPU has finished rendering the last frame. Timeout of 1 second
-    VK_CHECK(get_current_frame()._renderFence->wait(1000000000));
+    VK_CHECK(get_current_frame()._renderFence->wait(1000000000));  // wait until the GPU has finished rendering the last frame. Timeout of 1 second
     VK_CHECK(get_current_frame()._renderFence->reset());
-//    VK_CHECK(_renderFence->wait(1000000000));
-//    VK_CHECK(_renderFence->reset());
 
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, get_current_frame()._presentSemaphore->_semaphore, nullptr, &imageIndex);
@@ -382,6 +393,9 @@ void VulkanEngine::draw()
     vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _renderables.data(), _renderables.size());
+
+    ImGui_ImplVulkan_RenderDrawData(draw_data, get_current_frame()._commandBuffer->_mainCommandBuffer);
+
     vkCmdEndRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer);
 
     VK_CHECK(vkEndCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer));
@@ -436,6 +450,9 @@ void VulkanEngine::run()
             }
         }
 
+        _ui->new_frame();
+        _ui->interface();
+
         draw();
     }
 
@@ -449,6 +466,8 @@ void VulkanEngine::cleanup()
         for (int i=0; i < FRAME_OVERLAP; i++) {
             _frames[i]._renderFence->wait(1000000000);
         }
+
+        _ui->clean_up();
 
         delete _meshManager;
         delete _pipelineBuilder;

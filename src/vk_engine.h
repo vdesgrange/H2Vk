@@ -33,6 +33,7 @@ class Mesh;
 class DescriptorPools;
 class DescriptorLayoutCache;
 class DescriptorAllocator;
+class UInterface;
 
 const bool enableValidationLayers = true;
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -101,6 +102,7 @@ public:
     std::vector<RenderObject> _renderables;
     MeshManager* _meshManager;
     std::unordered_map<std::string, Texture> _loadedTextures;
+    UInterface* _ui;
 
     DescriptorLayoutCache* _layoutCache;
     DescriptorAllocator* _allocator;
@@ -138,6 +140,8 @@ private:
     void init_vulkan();
 
     void init_window();
+
+    void init_interface();
 
     void init_scene();
 
