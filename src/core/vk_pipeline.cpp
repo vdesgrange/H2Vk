@@ -26,10 +26,10 @@
 PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, VkDescriptorSetLayout setLayouts[]) :
     _device(device)
 {
-
+    system("pwd");
     // Load shaders
     VkShaderModule triangleFragShader;
-    if (!load_shader_module("../shaders/default_lit.frag.spv", &triangleFragShader))
+    if (!load_shader_module("../src/shaders/default_lit.frag.spv", &triangleFragShader))
     {
         std::cout << "Error when building the triangle fragment shader module" << std::endl;
     }
@@ -38,7 +38,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     }
 
     VkShaderModule triangleVertexShader;
-    if (!load_shader_module("../shaders/shader_base.vert.spv", &triangleVertexShader))
+    if (!load_shader_module("../src/shaders/shader_base.vert.spv", &triangleVertexShader))
     {
         std::cout << "Error when building the triangle vertex shader module" << std::endl;
 
@@ -49,7 +49,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
 
     // Load shaders
     VkShaderModule redTriangleFragShader;
-    if (!load_shader_module("../shaders/red_shader_base.frag.spv", &redTriangleFragShader))
+    if (!load_shader_module("../src/shaders/red_shader_base.frag.spv", &redTriangleFragShader))
     {
         std::cout << "Error when building the triangle fragment shader module" << std::endl;
     }
@@ -58,7 +58,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     }
 
     VkShaderModule redTriangleVertexShader;
-    if (!load_shader_module("../shaders/red_shader_base.vert.spv", &redTriangleVertexShader))
+    if (!load_shader_module("../src/shaders/red_shader_base.vert.spv", &redTriangleVertexShader))
     {
         std::cout << "Error when building the triangle vertex shader module" << std::endl;
 
@@ -68,7 +68,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     }
 
     VkShaderModule meshVertShader;
-    if (!load_shader_module("../shaders/tri_mesh.vert.spv", &meshVertShader)) {
+    if (!load_shader_module("../src/shaders/tri_mesh.vert.spv", &meshVertShader)) {
         std::cout << "Error when building the green triangle mesh vertex shader module" << std::endl;
     }
     else {
@@ -76,7 +76,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     }
 
     VkShaderModule textureShader;
-    if (!load_shader_module("../shaders/texture_lig.frag.spv", &textureShader)) {
+    if (!load_shader_module("../src/shaders/texture_lig.frag.spv", &textureShader)) {
         std::cout << "Error when building the texture fragment shader module" << std::endl;
     } else {
         std::cout << "Texture fragment shader successfully loaded" << std::endl;
