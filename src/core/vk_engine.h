@@ -60,7 +60,6 @@ struct GPUObjectData {
 struct Texture {
     AllocatedImage image;
     VkImageView imageView;
-
 };
 
 struct PoolSize {
@@ -168,6 +167,6 @@ private:
 
     void load_meshes();
 
-    void render(ImDrawData* draw_data, int imageIndex);
+    void render(int imageIndex); // ImDrawData* draw_data,
 
 };

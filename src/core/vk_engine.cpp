@@ -219,17 +219,17 @@ void VulkanEngine::load_images() {
 }
 
 void VulkanEngine::init_scene() {
-    RenderObject monkey;
-    monkey.mesh = _meshManager->get_mesh("monkey");
-    monkey.material = _pipelineBuilder->get_material("defaultMesh");
-    monkey.transformMatrix = glm::mat4{ 1.0f };
-    _renderables.push_back(monkey);
+//    RenderObject monkey;
+//    monkey.mesh = _meshManager->get_mesh("monkey");
+//    monkey.material = _pipelineBuilder->get_material("defaultMesh");
+//    monkey.transformMatrix = glm::mat4{ 1.0f };
+//    _renderables.push_back(monkey);
 
-    RenderObject map;
-    map.mesh = _meshManager->get_mesh("empire");
-    map.material = _pipelineBuilder->get_material("texturedMesh");
-    map.transformMatrix = glm::translate(glm::mat4(1.f), glm::vec3{ 5,-10,0 });
-    _renderables.push_back(map);
+//    RenderObject map;
+//    map.mesh = _meshManager->get_mesh("empire");
+//    map.material = _pipelineBuilder->get_material("texturedMesh");
+//    map.transformMatrix = glm::translate(glm::mat4(1.f), glm::vec3{ 5,-10,0 });
+//    _renderables.push_back(map);
 
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
     VkSampler blockySampler;
@@ -248,17 +248,17 @@ void VulkanEngine::init_scene() {
 
     vkUpdateDescriptorSets(_device->_logicalDevice, 1, &texture1, 0, nullptr);
 
-    for (int x = -20; x <= 20; x++) {
-        for (int y = -20; y <= 20; y++) {
-            RenderObject tri;
-            tri.mesh = _meshManager->get_mesh("triangle");
-            tri.material = _pipelineBuilder->get_material("defaultMesh");
-            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
-            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
-            tri.transformMatrix = translation * scale;
-            _renderables.push_back(tri);
-        }
-    }
+//    for (int x = -20; x <= 20; x++) {
+//        for (int y = -20; y <= 20; y++) {
+//            RenderObject tri;
+//            tri.mesh = _meshManager->get_mesh("triangle");
+//            tri.material = _pipelineBuilder->get_material("defaultMesh");
+//            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
+//            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
+//            tri.transformMatrix = translation * scale;
+//            _renderables.push_back(tri);
+//        }
+//    }
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -354,8 +354,8 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
 }
 
 void VulkanEngine::draw() {
-    ImGui::Render();
-    ImDrawData* draw_data = ImGui::GetDrawData();
+//    ImGui::Render();
+//    ImDrawData* draw_data = ImGui::GetDrawData();
 
     // Wait GPU to render latest frame
     VK_CHECK(get_current_frame()._renderFence->wait(1000000000));  // wait until the GPU has finished rendering the last frame. Timeout of 1 second
@@ -371,7 +371,7 @@ void VulkanEngine::draw() {
         throw std::runtime_error("failed to acquire swap chain image");
     }
 
-    render(draw_data, imageIndex);
+    render(imageIndex); // draw_data,
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -394,7 +394,7 @@ void VulkanEngine::draw() {
     _frameNumber++;
 }
 
-void VulkanEngine::render(ImDrawData* draw_data, int imageIndex) {
+void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
 
     // --- Command Buffer
     VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, 0));
@@ -423,7 +423,8 @@ void VulkanEngine::render(ImDrawData* draw_data, int imageIndex) {
 
     draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _renderables.data(), _renderables.size());
 
-    ImGui_ImplVulkan_RenderDrawData(draw_data, get_current_frame()._commandBuffer->_mainCommandBuffer);
+    _ui->render(get_current_frame()._commandBuffer->_mainCommandBuffer);
+    //ImGui_ImplVulkan_RenderDrawData(draw_data, get_current_frame()._commandBuffer->_mainCommandBuffer);
 
     vkCmdEndRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer);
     VK_CHECK(vkEndCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer));

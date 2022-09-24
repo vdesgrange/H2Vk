@@ -14,6 +14,7 @@ public:
 
     void init_imgui();
     void new_frame();
+    void render(VkCommandBuffer cmd);
     void interface();
     void clean_up();
 

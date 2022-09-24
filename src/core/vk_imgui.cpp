@@ -61,16 +61,20 @@ void UInterface::init_imgui() {
     });
 
     ImGui_ImplVulkan_DestroyFontUploadObjects();
-
-//    _engine._mainDeletionQueue.push_function([=]() {
-//        this->clean_up();
-//    });
 }
 
 void UInterface::new_frame() {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+}
+
+void UInterface::render(VkCommandBuffer cmd) {
+    // It might be interesting to use a dedicated commandBuffer (not mainCommandBuffer).
+    ImGui::Render();
+    ImDrawData* draw_data = ImGui::GetDrawData();
+
+    ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 }
 
 void UInterface::clean_up() {

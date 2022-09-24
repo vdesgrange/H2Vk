@@ -26,7 +26,7 @@
 PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, VkDescriptorSetLayout setLayouts[]) :
     _device(device)
 {
-    system("pwd");
+
     // Load shaders
     VkShaderModule triangleFragShader;
     if (!load_shader_module("../src/shaders/default_lit.frag.spv", &triangleFragShader))
