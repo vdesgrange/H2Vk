@@ -36,6 +36,7 @@ class DescriptorLayoutCache;
 class DescriptorAllocator;
 class UInterface;
 class ImDrawData;
+class Statistics;
 
 const bool enableValidationLayers = true;
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -73,6 +74,7 @@ class VulkanEngine {
 public:
 	bool _isInitialized{ false };
 	uint32_t _frameNumber {0};
+    double _time = 0;
 
     Window* _window;
     bool framebufferResized = false;
@@ -152,5 +154,7 @@ private:
     void load_meshes();
 
     void render(int imageIndex); // ImDrawData* draw_data,
+
+    Statistics monitoring();
 
 };

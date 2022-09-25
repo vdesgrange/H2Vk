@@ -72,7 +72,12 @@ void UInterface::new_frame() {
     ImGui::NewFrame();
 }
 
-void UInterface::render(VkCommandBuffer cmd) {
+void UInterface::render(VkCommandBuffer cmd, Statistics statistics) {
+    this->new_frame();
+
+    this->interface();
+    this->interface_statistics(statistics);
+
     // It might be interesting to use a dedicated commandBuffer (not mainCommandBuffer).
     ImGui::Render();
     ImDrawData* draw_data = ImGui::GetDrawData();
@@ -111,8 +116,7 @@ void UInterface::interface() {
 
     ImGui::Text("Help");
     ImGui::Separator();
-    ImGui::BulletText("F1: toggle Settings.");
-    ImGui::BulletText("F2: toggle Statistics.");
+    ImGui::Checkbox("Enable Statistics.", &get_settings().p_overlay);
 
     ImGui::Text("Scene");
     ImGui::Separator();
@@ -127,7 +131,7 @@ void UInterface::interface() {
 }
 
 void UInterface::interface_statistics(const Statistics& statistics) {
-    if (!Settings().p_overlay) {
+    if (!get_settings().p_overlay) {
         return;
     }
 

@@ -26,10 +26,10 @@ public:
 
     void init_imgui();
     void new_frame();
-    void render(VkCommandBuffer cmd);
+    void render(VkCommandBuffer cmd, Statistics stats);
     void demo();
     void interface();
-    void statistics(const Statistics& statistics);
+    void interface_statistics(const Statistics& statistics);
     void clean_up();
 
     Settings& get_settings() { return _settings; };

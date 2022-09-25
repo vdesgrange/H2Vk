@@ -14,6 +14,9 @@ public:
     Window();
     ~Window();
 
+    double get_time();
+    VkExtent2D get_framebuffer_size();
+
 private:
     bool framebufferResized = false;
 

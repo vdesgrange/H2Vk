@@ -22,3 +22,13 @@ void Window::framebufferResizeCallback(GLFWwindow* window, int width, int height
     auto app = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
     app->framebufferResized = true;
 }
+
+double Window::get_time() {
+    return glfwGetTime();
+}
+
+VkExtent2D Window::get_framebuffer_size() {
+    int width, height;
+    glfwGetFramebufferSize(_window, &width, &height);
+    return VkExtent2D{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+}

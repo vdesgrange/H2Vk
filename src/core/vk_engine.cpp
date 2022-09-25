@@ -396,8 +396,21 @@ void VulkanEngine::draw() {
     _frameNumber++;
 }
 
-void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
+Statistics VulkanEngine::monitoring() {
 
+    // Record delta time between calls to Render.
+    const auto prevTime = _time;
+    _time = _window->get_time();
+    const auto timeDelta = _time - prevTime;
+
+    Statistics stats = {};
+    stats.FramebufferSize = _window->get_framebuffer_size();
+    stats.FrameRate = static_cast<float>(1 / timeDelta); // FPS
+
+    return stats;
+}
+
+void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
     // --- Command Buffer
     VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, 0));
 
@@ -425,8 +438,8 @@ void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
 
     draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _renderables.data(), _renderables.size());
 
-    _ui->render(get_current_frame()._commandBuffer->_mainCommandBuffer);
-    //ImGui_ImplVulkan_RenderDrawData(draw_data, get_current_frame()._commandBuffer->_mainCommandBuffer);
+    Statistics stats = monitoring();
+    _ui->render(get_current_frame()._commandBuffer->_mainCommandBuffer, stats);
 
     vkCmdEndRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer);
     VK_CHECK(vkEndCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer));
@@ -463,8 +476,11 @@ void VulkanEngine::run()
             }
         }
 
-        _ui->new_frame();
-        _ui->interface();
+//        if (glfwGetKey(_window->_window, GLFW_KEY_S) == GLFW_PRESS) {
+//            _ui->get_settings().p_overlay = true;
+//        } else {
+//            _ui->get_settings().p_overlay = false;
+//        }
 
         draw();
     }
