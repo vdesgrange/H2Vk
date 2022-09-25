@@ -40,6 +40,7 @@
 #include "vk_descriptor_cache.h"
 #include "vk_descriptor_allocator.h"
 #include "vk_imgui.h"
+#include "vk_scene_listing.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
@@ -77,7 +78,12 @@ void VulkanEngine::init_vulkan() {
 }
 
 void VulkanEngine::init_interface() {
-    _ui = new UInterface(*this);
+    Settings settings = Settings{
+            .p_open=true,
+            .scene_index=0
+    };
+
+    _ui = new UInterface(*this, settings);
     _ui->init_imgui();
 }
 
@@ -197,11 +203,13 @@ FrameData& VulkanEngine::get_current_frame()
 void VulkanEngine::init_pipelines() {
     VkDescriptorSetLayout setLayouts[] = {_globalSetLayout, _objectSetLayout, _singleTextureSetLayout};
     _pipelineBuilder = new PipelineBuilder(*_window, *_device, *_renderPass, setLayouts);
+
+    // move to scene listing as well? Only usage
 }
 
 void VulkanEngine::load_meshes()
 {
-    _meshManager = new MeshManager(*_device, _uploadContext);
+    _meshManager = new MeshManager(*_device, _uploadContext); // move to sceneListing ?
 }
 
 void VulkanEngine::load_images() {
@@ -219,6 +227,7 @@ void VulkanEngine::load_images() {
 }
 
 void VulkanEngine::init_scene() {
+    _sceneListing = new SceneListing(_meshManager, _pipelineBuilder);
 //    RenderObject monkey;
 //    monkey.mesh = _meshManager->get_mesh("monkey");
 //    monkey.material = _pipelineBuilder->get_material("defaultMesh");
@@ -329,11 +338,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
             }
         }
 
-        //glm::mat4 model = object.transformMatrix;
-        //glm::mat4 mesh_matrix = _camera->get_mesh_matrix(model);
-
         MeshPushConstants constants;
-        // constants.render_matrix = mesh_matrix;
         constants.render_matrix = object.transformMatrix;
 
         vkCmdPushConstants(commandBuffer,
@@ -354,9 +359,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
 }
 
 void VulkanEngine::draw() {
-//    ImGui::Render();
-//    ImDrawData* draw_data = ImGui::GetDrawData();
-
     // Wait GPU to render latest frame
     VK_CHECK(get_current_frame()._renderFence->wait(1000000000));  // wait until the GPU has finished rendering the last frame. Timeout of 1 second
     VK_CHECK(get_current_frame()._renderFence->reset());

@@ -14,6 +14,7 @@
 #include "vk_initializers.h"
 #include "vk_fence.h"
 #include "vk_mesh_manager.h"
+#include "vk_scene_listing.h"
 
 class Window;
 class Device;
@@ -38,24 +39,6 @@ class ImDrawData;
 
 const bool enableValidationLayers = true;
 constexpr unsigned int FRAME_OVERLAP = 2;
-
-struct RenderObject {
-    Mesh* mesh;
-    Material* material;
-    glm::mat4 transformMatrix;
-};
-
-struct GPUSceneData {
-    glm::vec4 fogColor;
-    glm::vec4 fogDistance;
-    glm::vec4 ambientColor;
-    glm::vec4 sunlightDirection;
-    glm::vec4 sunlightColor;
-};
-
-struct GPUObjectData {
-    glm::mat4 modelMatrix;
-};
 
 struct Texture {
     AllocatedImage image;
@@ -102,6 +85,7 @@ public:
     std::vector<RenderObject> _renderables;
     MeshManager* _meshManager;
     std::unordered_map<std::string, Texture> _loadedTextures;
+    SceneListing* _sceneListing;
     UInterface* _ui;
 
     DescriptorLayoutCache* _layoutCache;

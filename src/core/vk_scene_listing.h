@@ -4,6 +4,8 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 #include <vector>
+#include <utility>
+#include <string>
 
 class Camera;
 class Mesh;
@@ -33,11 +35,13 @@ typedef std::vector<RenderObject> Renderables;
 
 class SceneListing final {
 public:
+    static const std::vector<std::pair<std::string, std::function<Renderables (Camera& camera, MeshManager* meshManager, PipelineBuilder* pipelineBuilder)>>> scenes;
+
     SceneListing(MeshManager* meshManager, PipelineBuilder* pipelineBuilder) : _meshManager(meshManager), _pipelineBuilder(pipelineBuilder) {};
     ~SceneListing();
 
-    Renderables monkeyAndTriangles(Camera& camera);
-    Renderables lostEmpire(Camera &camera);
+    static Renderables monkeyAndTriangles(Camera& camera, MeshManager* meshManager, PipelineBuilder* pipelineBuilder);
+    static Renderables lostEmpire(Camera &camera, MeshManager* meshManager, PipelineBuilder* pipelineBuilder);
 
 private:
     class MeshManager* _meshManager;

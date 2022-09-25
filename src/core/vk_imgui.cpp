@@ -5,10 +5,13 @@
 #include "vk_renderpass.h"
 #include "vk_helpers.h"
 #include "vk_types.h"
+#include "vk_scene_listing.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
+
+UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine), _settings(settings) {};
 
 UInterface::~UInterface() {
     this->clean_up();
@@ -84,7 +87,67 @@ void UInterface::clean_up() {
     ImGui::DestroyContext();
 }
 
-void UInterface::interface() {
+void UInterface::demo() {
     ImGui::ShowDemoWindow();
     // ImGui::EndFrame(); // Call by ImGui::Render()
+}
+
+void UInterface::interface() {
+    static bool p_open = false;
+
+    const auto window_flags = ImGuiWindowFlags_NoSavedSettings;
+
+    if (!ImGui::Begin("Settings", &get_settings().p_open, window_flags))
+    {
+        // Early out if the window is collapsed, as an optimization.
+        ImGui::End();
+        return;
+    }
+
+    std::vector<const char*> scenes;
+    for (const auto& scene : SceneListing::scenes) {
+        scenes.push_back(scene.first.c_str());
+    }
+
+    ImGui::Text("Help");
+    ImGui::Separator();
+    ImGui::BulletText("F1: toggle Settings.");
+    ImGui::BulletText("F2: toggle Statistics.");
+
+    ImGui::Text("Scene");
+    ImGui::Separator();
+    ImGui::PushItemWidth(-1);
+    ImGui::Combo("##SceneList", &get_settings().scene_index, scenes.data(), static_cast<int>(scenes.size()));
+    ImGui::PopItemWidth();
+    ImGui::NewLine();
+
+    ImGui::End();
+
+    // ImGui::EndFrame(); // Call by ImGui::Render()
+}
+
+void UInterface::interface_statistics(const Statistics& statistics) {
+    if (!Settings().p_overlay) {
+        return;
+    }
+
+    const auto& io = ImGui::GetIO();
+    const float distance = 10.0f;
+    const ImVec2 pos = ImVec2(io.DisplaySize.x - distance, distance);
+    const ImVec2 posPivot = ImVec2(1.0f, 0.0f);
+    ImGui::SetNextWindowPos(pos, ImGuiCond_Always, posPivot);
+    ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
+
+    const auto flags = ImGuiWindowFlags_AlwaysAutoResize |
+            ImGuiWindowFlags_NoDecoration |
+            ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoSavedSettings;
+
+    if (ImGui::Begin("Statistics", &get_settings().p_overlay, flags))
+    {
+        ImGui::Text("Statistics (%dx%d):", statistics.FramebufferSize.width, statistics.FramebufferSize.height);
+        ImGui::Separator();
+        ImGui::Text("Frame rate: %.1f fps", statistics.FrameRate);
+    }
+    ImGui::End();
 }
