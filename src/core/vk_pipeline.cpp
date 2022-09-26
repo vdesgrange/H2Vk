@@ -87,7 +87,6 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
     pipeline_layout_info.setLayoutCount = 3; // 2
     pipeline_layout_info.pSetLayouts = setLayouts;
-    //VkPipelineLayout _triPipelineLayout;
     VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &pipeline_layout_info, nullptr, &_triPipelineLayout));
     this->_pipelineLayout = &_triPipelineLayout;
 

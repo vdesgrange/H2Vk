@@ -2,6 +2,7 @@
 #include "vk_mesh_manager.h"
 #include "vk_pipeline.h"
 #include "vk_camera.h"
+#include "vk_mesh.h"
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, MeshManager* meshManager, PipelineBuilder* pipelineBuilder)>>> SceneListing::scenes = {
         {"Monkey and triangles", SceneListing::monkeyAndTriangles},
@@ -15,6 +16,30 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, MeshManager* meshMa
     camera.set_position({ 0.f, -6.f, -10.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
+    // Upload mesh
+    Mesh mesh{};
+    Mesh objMesh{};
+
+    mesh._vertices.resize(3);
+
+    mesh._vertices[0].position = { 1.f, 1.f, 0.0f };
+    mesh._vertices[1].position = {-1.f, 1.f, 0.0f };
+    mesh._vertices[2].position = { 0.f,-1.f, 0.0f };
+
+    mesh._vertices[0].color = { 0.f, 1.f, 0.0f }; //pure green
+    mesh._vertices[1].color = { 0.f, 1.f, 0.0f }; //pure green
+    mesh._vertices[2].color = { 0.f, 1.f, 0.0f }; //pure green
+
+    objMesh.load_from_obj("../assets/monkey_smooth.obj");
+    meshManager->upload_mesh(mesh);
+    meshManager->upload_mesh(objMesh);
+
+    meshManager->_meshes["monkey"] = objMesh;
+    meshManager->_meshes["triangle"] = mesh;
+
+    // Shaders - to do
+
+    // From init_scene
     RenderObject monkey;
     monkey.mesh = meshManager->get_mesh("monkey");
     monkey.material = pipelineBuilder->get_material("defaultMesh");
@@ -43,6 +68,15 @@ Renderables SceneListing::lostEmpire(Camera& camera, MeshManager* meshManager, P
     camera.set_position({ 0.f, -6.f, -10.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
+    // Upload mesh
+    Mesh lostEmpire{};
+    lostEmpire.load_from_obj("../assets/lost_empire.obj");
+    meshManager->upload_mesh(lostEmpire);
+    meshManager->_meshes["empire"] = lostEmpire;
+
+    // Shaders - to do
+
+    // From init_scene
     RenderObject map;
     map.mesh = meshManager->get_mesh("empire");
     map.material = pipelineBuilder->get_material("texturedMesh");

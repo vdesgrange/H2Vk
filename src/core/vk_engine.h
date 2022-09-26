@@ -37,6 +37,8 @@ class DescriptorAllocator;
 class UInterface;
 class ImDrawData;
 class Statistics;
+class Scene;
+class SceneListing;
 
 const bool enableValidationLayers = true;
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -88,6 +90,7 @@ public:
     MeshManager* _meshManager;
     std::unordered_map<std::string, Texture> _loadedTextures;
     SceneListing* _sceneListing;
+    Scene* _scene;
     UInterface* _ui;
 
     DescriptorLayoutCache* _layoutCache;

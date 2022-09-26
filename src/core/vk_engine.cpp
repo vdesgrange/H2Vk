@@ -41,6 +41,7 @@
 #include "vk_descriptor_allocator.h"
 #include "vk_imgui.h"
 #include "vk_scene_listing.h"
+#include "vk_scene.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
@@ -228,6 +229,8 @@ void VulkanEngine::load_images() {
 
 void VulkanEngine::init_scene() {
     _sceneListing = new SceneListing(_meshManager, _pipelineBuilder);
+    _scene = new Scene(*_meshManager, *_pipelineBuilder);
+
 //    RenderObject monkey;
 //    monkey.mesh = _meshManager->get_mesh("monkey");
 //    monkey.material = _pipelineBuilder->get_material("defaultMesh");
@@ -249,6 +252,12 @@ void VulkanEngine::init_scene() {
             .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
             .build(texturedMat->textureSet, _singleTextureSetLayout, poolSize.sizes);
 
+    // Utilise DescriptorBuilder::begin()
+    /*
+     * DescriptorBuilder::begin(*_layoutCache, *_allocator)
+     * .bind_image(imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, ???, 0)
+     * .build()
+     */
     VkDescriptorImageInfo imageBufferInfo;
     imageBufferInfo.sampler = blockySampler;
     imageBufferInfo.imageView = _loadedTextures["empire_diffuse"].imageView;
@@ -279,7 +288,7 @@ void VulkanEngine::recreate_swap_chain() {
     }
     vkDeviceWaitIdle(_device->_logicalDevice);
 
-    _renderables.clear(); // Possible memory leak. Revoir comment gerer les scenes
+    _scene->_renderables.clear(); // Possible memory leak. Revoir comment gerer les scenes
     delete _pipelineBuilder; // Revoir comment gerer pipeline avec scene.
     delete _frameBuffers;
     delete _renderPass;
@@ -436,7 +445,14 @@ void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
     renderPassInfo.pClearValues = &clearValues[0];
     vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _renderables.data(), _renderables.size());
+
+    // Load scene (if new)
+    if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
+        _scene->load_scene(_ui->get_settings().scene_index, *_camera);
+        _renderables = _scene->_renderables;
+    }
+
+    draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _scene->_renderables.data(), _scene->_renderables.size());
 
     Statistics stats = monitoring();
     _ui->render(get_current_frame()._commandBuffer->_mainCommandBuffer, stats);
@@ -475,12 +491,6 @@ void VulkanEngine::run()
                 }
             }
         }
-
-//        if (glfwGetKey(_window->_window, GLFW_KEY_S) == GLFW_PRESS) {
-//            _ui->get_settings().p_overlay = true;
-//        } else {
-//            _ui->get_settings().p_overlay = false;
-//        }
 
         draw();
     }
