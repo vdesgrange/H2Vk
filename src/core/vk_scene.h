@@ -4,6 +4,7 @@
 
 class SceneListing;
 class MeshManager;
+class TextureManager;
 class PipelineBuilder;
 class Camera;
 struct RenderObject;
@@ -15,12 +16,13 @@ public:
     int _sceneIndex;
     Renderables _renderables;
 
-    Scene(MeshManager& meshManager, PipelineBuilder& pipelineBuilder);
+    Scene(MeshManager& meshManager, TextureManager& textureManager, PipelineBuilder& pipelineBuilder);
     ~Scene();
 
     void load_scene(int sceneIndex, Camera& camera);
 
 private:
     MeshManager& _meshManager;
+    TextureManager& _textureManager;
     PipelineBuilder& _pipelineBuilder;
 };

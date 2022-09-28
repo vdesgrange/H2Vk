@@ -39,14 +39,17 @@ class ImDrawData;
 class Statistics;
 class Scene;
 class SceneListing;
+class TextureManager;
+
+struct Texture;
 
 const bool enableValidationLayers = true;
 constexpr unsigned int FRAME_OVERLAP = 2;
 
-struct Texture {
-    AllocatedImage image;
-    VkImageView imageView;
-};
+//struct Texture {
+//    AllocatedImage image;
+//    VkImageView imageView;
+//};
 
 struct PoolSize {
     std::vector<VkDescriptorPoolSize> sizes = {
@@ -88,7 +91,8 @@ public:
     PipelineBuilder* _pipelineBuilder;
     std::vector<RenderObject> _renderables;
     MeshManager* _meshManager;
-    std::unordered_map<std::string, Texture> _loadedTextures;
+    TextureManager* _textureManager;
+    // std::unordered_map<std::string, Texture> _loadedTextures;
     SceneListing* _sceneListing;
     Scene* _scene;
     UInterface* _ui;

@@ -214,34 +214,13 @@ void VulkanEngine::load_meshes()
 }
 
 void VulkanEngine::load_images() {
-    Texture lostEmpire;
-    vkutil::load_image_from_file(*this, "../assets/lost_empire-RGBA.png", lostEmpire.image);
-
-    VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, lostEmpire.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
-    vkCreateImageView(_device->_logicalDevice, &imageinfo, nullptr, &lostEmpire.imageView);
-
-    _loadedTextures["empire_diffuse"] = lostEmpire;
-
-    _mainDeletionQueue.push_function([=]() {
-        vkDestroyImageView(_device->_logicalDevice, lostEmpire.imageView, nullptr);
-    });
+    _meshManager = new MeshManager(*_device, _uploadContext);
+    _textureManager = new TextureManager(*this);
 }
 
 void VulkanEngine::init_scene() {
-    _sceneListing = new SceneListing(_meshManager, _pipelineBuilder);
-    _scene = new Scene(*_meshManager, *_pipelineBuilder);
-
-//    RenderObject monkey;
-//    monkey.mesh = _meshManager->get_mesh("monkey");
-//    monkey.material = _pipelineBuilder->get_material("defaultMesh");
-//    monkey.transformMatrix = glm::mat4{ 1.0f };
-//    _renderables.push_back(monkey);
-
-//    RenderObject map;
-//    map.mesh = _meshManager->get_mesh("empire");
-//    map.material = _pipelineBuilder->get_material("texturedMesh");
-//    map.transformMatrix = glm::translate(glm::mat4(1.f), glm::vec3{ 5,-10,0 });
-//    _renderables.push_back(map);
+    _sceneListing = new SceneListing(_meshManager, _textureManager, _pipelineBuilder);
+    _scene = new Scene(*_meshManager, *_textureManager, *_pipelineBuilder);
 
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
     VkSampler blockySampler;
@@ -253,30 +232,14 @@ void VulkanEngine::init_scene() {
             .build(texturedMat->textureSet, _singleTextureSetLayout, poolSize.sizes);
 
     // Utilise DescriptorBuilder::begin()
-    /*
-     * DescriptorBuilder::begin(*_layoutCache, *_allocator)
-     * .bind_image(imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, ???, 0)
-     * .build()
-     */
     VkDescriptorImageInfo imageBufferInfo;
     imageBufferInfo.sampler = blockySampler;
-    imageBufferInfo.imageView = _loadedTextures["empire_diffuse"].imageView;
+    imageBufferInfo.imageView = _textureManager->_loadedTextures["empire_diffuse"].imageView;
     imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     VkWriteDescriptorSet texture1 = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texturedMat->textureSet, &imageBufferInfo, 0);
 
     vkUpdateDescriptorSets(_device->_logicalDevice, 1, &texture1, 0, nullptr);
 
-//    for (int x = -20; x <= 20; x++) {
-//        for (int y = -20; y <= 20; y++) {
-//            RenderObject tri;
-//            tri.mesh = _meshManager->get_mesh("triangle");
-//            tri.material = _pipelineBuilder->get_material("defaultMesh");
-//            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
-//            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
-//            tri.transformMatrix = translation * scale;
-//            _renderables.push_back(tri);
-//        }
-//    }
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -445,7 +408,6 @@ void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
     renderPassInfo.pClearValues = &clearValues[0];
     vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-
     // Load scene (if new)
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
         _scene->load_scene(_ui->get_settings().scene_index, *_camera);
@@ -507,6 +469,7 @@ void VulkanEngine::cleanup()
         }
 
         delete _ui;
+        delete _textureManager;
         delete _meshManager;
         delete _pipelineBuilder;
         delete _frameBuffers;

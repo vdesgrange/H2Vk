@@ -8,6 +8,23 @@
 #include <stb_image.h>
 #include <iostream>
 
+
+TextureManager::~TextureManager() {
+    for (auto const& it : _loadedTextures) {
+        vkDestroyImageView(_engine._device->_logicalDevice, it.second.imageView, nullptr);
+    }
+}
+
+void TextureManager::load_texture(const char* file, std::string name) {
+    Texture texture{};
+    vkutil::load_image_from_file(_engine, file, texture.image);
+
+    VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, texture.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(_engine._device->_logicalDevice, &imageinfo, nullptr, &texture.imageView);
+
+    _loadedTextures[name] = texture;
+}
+
 bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, AllocatedImage& outImage) {
     int texWidth, texHeight, texChannels;
 

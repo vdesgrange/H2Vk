@@ -3,13 +3,15 @@
 #include "vk_pipeline.h"
 #include "vk_camera.h"
 #include "vk_mesh.h"
+#include "vk_texture.h"
+#include "vk_helpers.h"
 
-const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, MeshManager* meshManager, PipelineBuilder* pipelineBuilder)>>> SceneListing::scenes = {
+const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, MeshManager* meshManager, TextureManager* textureManager, PipelineBuilder* pipelineBuilder)>>> SceneListing::scenes = {
         {"Monkey and triangles", SceneListing::monkeyAndTriangles},
         {"Lost empire", SceneListing::lostEmpire}
 };
 
-Renderables SceneListing::monkeyAndTriangles(Camera& camera, MeshManager* meshManager, PipelineBuilder* pipelineBuilder) {
+Renderables SceneListing::monkeyAndTriangles(Camera& camera, MeshManager* meshManager, TextureManager* textureManager, PipelineBuilder* pipelineBuilder) {
     Renderables renderables{};
 
     camera.set_flip_y(true);
@@ -61,7 +63,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, MeshManager* meshMa
     return renderables;
 }
 
-Renderables SceneListing::lostEmpire(Camera& camera, MeshManager* meshManager, PipelineBuilder* pipelineBuilder) {
+Renderables SceneListing::lostEmpire(Camera& camera, MeshManager* meshManager, TextureManager* textureManager, PipelineBuilder* pipelineBuilder) {
     Renderables renderables{};
 
     camera.set_flip_y(true);
@@ -73,6 +75,9 @@ Renderables SceneListing::lostEmpire(Camera& camera, MeshManager* meshManager, P
     lostEmpire.load_from_obj("../assets/lost_empire.obj");
     meshManager->upload_mesh(lostEmpire);
     meshManager->_meshes["empire"] = lostEmpire;
+
+    // Load texture
+    textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
 
     // Shaders - to do
 
