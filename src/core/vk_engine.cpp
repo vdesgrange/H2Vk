@@ -180,7 +180,7 @@ void VulkanEngine::init_descriptors() {
 
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .build(_singleTextureSetLayout, poolSize.sizes);
+            .layout(_singleTextureSetLayout);
     }
 
     _mainDeletionQueue.push_function([&]() {
@@ -208,38 +208,38 @@ void VulkanEngine::init_pipelines() {
     // move to scene listing as well? Only usage
 }
 
-void VulkanEngine::load_meshes()
-{
+void VulkanEngine::load_meshes() {
     _meshManager = new MeshManager(*_device, _uploadContext); // move to sceneListing ?
 }
 
 void VulkanEngine::load_images() {
     _meshManager = new MeshManager(*_device, _uploadContext);
     _textureManager = new TextureManager(*this);
+
+    // If texture not loaded here, it create issues -> Must be loaded before init_scene
+    _textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
 }
 
 void VulkanEngine::init_scene() {
     _sceneListing = new SceneListing(_meshManager, _textureManager, _pipelineBuilder);
     _scene = new Scene(*_meshManager, *_textureManager, *_pipelineBuilder);
 
+    // If texture not loaded here, it create issues -> Must be loaded before binding
+    // _textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
+
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
     VkSampler blockySampler;
     vkCreateSampler(_device->_logicalDevice, &samplerInfo, nullptr, &blockySampler);
     Material* texturedMat =	_pipelineBuilder->get_material("texturedMesh");
 
-    DescriptorBuilder::begin(*_layoutCache, *_allocator)
-            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .build(texturedMat->textureSet, _singleTextureSetLayout, poolSize.sizes);
-
-    // Utilise DescriptorBuilder::begin()
     VkDescriptorImageInfo imageBufferInfo;
     imageBufferInfo.sampler = blockySampler;
     imageBufferInfo.imageView = _textureManager->_loadedTextures["empire_diffuse"].imageView;
     imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    VkWriteDescriptorSet texture1 = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texturedMat->textureSet, &imageBufferInfo, 0);
 
-    vkUpdateDescriptorSets(_device->_logicalDevice, 1, &texture1, 0, nullptr);
-
+    DescriptorBuilder::begin(*_layoutCache, *_allocator)
+            .bind_image(imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texturedMat->textureSet, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .build(texturedMat->textureSet, _singleTextureSetLayout, poolSize.sizes);
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -396,8 +396,9 @@ void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
 
     // -- Clear value
     VkClearValue clearValue;
-    float flash = abs(sin(_frameNumber / 120.f));
-    clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
+//    float flash = abs(sin(_frameNumber / 120.f));
+//    clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
+    clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
     VkClearValue depthValue;
     depthValue.depthStencil.depth = 1.0f;
     std::array<VkClearValue, 2> clearValues = {clearValue, depthValue};

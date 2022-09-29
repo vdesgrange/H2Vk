@@ -21,11 +21,18 @@ DescriptorBuilder& DescriptorBuilder::bind_buffer(VkDescriptorBufferInfo& bInfo,
     return *this;
 }
 
-DescriptorBuilder& DescriptorBuilder::bind_image(VkDescriptorImageInfo& iInfo, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding) {
+DescriptorBuilder& DescriptorBuilder::bind_image(VkDescriptorImageInfo& iInfo, VkDescriptorType type, VkDescriptorSet dst, VkShaderStageFlags stageFlags, uint32_t binding) {
     VkDescriptorSetLayoutBinding bind = vkinit::descriptor_set_layout_binding(type, stageFlags, binding);
     _bindings.push_back(bind);
 
-    VkWriteDescriptorSet write = vkinit::write_descriptor_image(type, nullptr, &iInfo, binding);
+    VkWriteDescriptorSet write = vkinit::write_descriptor_image(type, dst, &iInfo, binding);
+    _writes.push_back(write);
+
+    return *this;
+}
+
+DescriptorBuilder& DescriptorBuilder::bind_image(VkDescriptorImageInfo& iInfo, VkDescriptorType type, VkDescriptorSet dst, uint32_t binding) {
+    VkWriteDescriptorSet write = vkinit::write_descriptor_image(type, dst, &iInfo, binding);
     _writes.push_back(write);
 
     return *this;
@@ -37,6 +44,28 @@ DescriptorBuilder& DescriptorBuilder::bind_none(VkDescriptorType type, VkShaderS
 
     return *this;
 }
+
+DescriptorBuilder& DescriptorBuilder::layout(VkDescriptorSetLayout& setLayout) {
+    VkDescriptorSetLayoutCreateInfo setInfo{};
+    setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    setInfo.pNext = nullptr;
+    setInfo.flags = 0;
+    setInfo.bindingCount = static_cast<uint32_t>(_bindings.size());
+    setInfo.pBindings = _bindings.data();
+
+    setLayout = _cache->createDescriptorLayout(setInfo);
+
+    return *this;
+}
+
+//DescriptorBuilder& DescriptorBuilder::update(VkDescriptorSet& set) {
+//    for (VkWriteDescriptorSet& w : _writes) {
+//        w.dstSet = set;
+//    }
+//
+//    vkUpdateDescriptorSets(_alloc->_device._logicalDevice, _writes.size(), _writes.data(), 0, nullptr);
+//
+//}
 
 bool DescriptorBuilder::build(VkDescriptorSet& set, VkDescriptorSetLayout& setLayout, std::vector<VkDescriptorPoolSize> sizes) {
     VkDescriptorSetLayoutCreateInfo setInfo{};
@@ -62,7 +91,7 @@ bool DescriptorBuilder::build(VkDescriptorSet& set, VkDescriptorSetLayout& setLa
     return true;
 }
 
-void DescriptorBuilder::build(VkDescriptorSetLayout& setLayout, std::vector<VkDescriptorPoolSize> sizes) {
+void DescriptorBuilder::build(VkDescriptorSetLayout& setLayout) {
     VkDescriptorSetLayoutCreateInfo setInfo{};
     setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     setInfo.pNext = nullptr;

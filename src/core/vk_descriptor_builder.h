@@ -12,12 +12,13 @@ public:
     static DescriptorBuilder begin(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator);
 
     DescriptorBuilder& bind_buffer(VkDescriptorBufferInfo& bufferInfo, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding);
-    DescriptorBuilder& bind_image(VkDescriptorImageInfo& imageInfo, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding);
+    DescriptorBuilder& bind_image(VkDescriptorImageInfo& iInfo, VkDescriptorType type, VkDescriptorSet dst, VkShaderStageFlags stageFlags, uint32_t binding);
+    DescriptorBuilder& bind_image(VkDescriptorImageInfo& iInfo, VkDescriptorType type, VkDescriptorSet dst, uint32_t binding);
     DescriptorBuilder& bind_none(VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding);
+    DescriptorBuilder& layout(VkDescriptorSetLayout& setLayout);
 
     bool build(VkDescriptorSet& set, VkDescriptorSetLayout& layout, std::vector<VkDescriptorPoolSize> sizes);
-    bool build(VkDescriptorSet& set, std::vector<VkDescriptorPoolSize> sizes);
-    void build(VkDescriptorSetLayout& setLayout, std::vector<VkDescriptorPoolSize> sizes);
+    void build(VkDescriptorSetLayout& setLayout);
 
 private:
     std::vector<VkWriteDescriptorSet> _writes;
