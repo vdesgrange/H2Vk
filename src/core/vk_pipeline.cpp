@@ -23,65 +23,65 @@
  * @param device
  * @param renderPass
  */
-PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, VkDescriptorSetLayout setLayouts[]) :
+PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, std::vector<VkDescriptorSetLayout> setLayouts) :
     _device(device), _renderPass(renderPass)
 {
-
     // Load shaders
-    VkShaderModule triangleFragShader;
-    if (!load_shader_module("../src/shaders/default_lit.frag.spv", &triangleFragShader))
-    {
-        std::cout << "Error when building the triangle fragment shader module" << std::endl;
-    }
-    else {
-        std::cout << "Triangle fragment shader successfully loaded" << std::endl;
-    }
+//    VkShaderModule triangleFragShader;
+//    if (!load_shader_module("../src/shaders/default_lit.frag.spv", &triangleFragShader))
+//    {
+//        std::cout << "Error when building the triangle fragment shader module" << std::endl;
+//    }
+//    else {
+//        std::cout << "Triangle fragment shader successfully loaded" << std::endl;
+//    }
+//
+//    VkShaderModule triangleVertexShader;
+//    if (!load_shader_module("../src/shaders/shader_base.vert.spv", &triangleVertexShader))
+//    {
+//        std::cout << "Error when building the triangle vertex shader module" << std::endl;
+//
+//    }
+//    else {
+//        std::cout << "Triangle vertex shader successfully loaded" << std::endl;
+//    }
 
-    VkShaderModule triangleVertexShader;
-    if (!load_shader_module("../src/shaders/shader_base.vert.spv", &triangleVertexShader))
-    {
-        std::cout << "Error when building the triangle vertex shader module" << std::endl;
+//    // Load shaders
+//    VkShaderModule redTriangleFragShader;
+//    if (!load_shader_module("../src/shaders/red_shader_base.frag.spv", &redTriangleFragShader))
+//    {
+//        std::cout << "Error when building the triangle fragment shader module" << std::endl;
+//    }
+//    else {
+//        std::cout << "Red triangle fragment shader successfully loaded" << std::endl;
+//    }
+//
+//    VkShaderModule redTriangleVertexShader;
+//    if (!load_shader_module("../src/shaders/red_shader_base.vert.spv", &redTriangleVertexShader))
+//    {
+//        std::cout << "Error when building the triangle vertex shader module" << std::endl;
+//
+//    }
+//    else {
+//        std::cout << "Red triangle vertex shader successfully loaded" << std::endl;
+//    }
+//
+//    VkShaderModule meshVertShader;
+//    if (!load_shader_module("../src/shaders/tri_mesh.vert.spv", &meshVertShader)) {
+//        std::cout << "Error when building the green triangle mesh vertex shader module" << std::endl;
+//    }
+//    else {
+//        std::cout << "Green triangle vertex shader successfully loaded" << std::endl;
+//    }
+//
+//    VkShaderModule textureShader;
+//    if (!load_shader_module("../src/shaders/texture_lig.frag.spv", &textureShader)) {
+//        std::cout << "Error when building the texture fragment shader module" << std::endl;
+//    } else {
+//        std::cout << "Texture fragment shader successfully loaded" << std::endl;
+//    }
 
-    }
-    else {
-        std::cout << "Triangle vertex shader successfully loaded" << std::endl;
-    }
-
-    // Load shaders
-    VkShaderModule redTriangleFragShader;
-    if (!load_shader_module("../src/shaders/red_shader_base.frag.spv", &redTriangleFragShader))
-    {
-        std::cout << "Error when building the triangle fragment shader module" << std::endl;
-    }
-    else {
-        std::cout << "Red triangle fragment shader successfully loaded" << std::endl;
-    }
-
-    VkShaderModule redTriangleVertexShader;
-    if (!load_shader_module("../src/shaders/red_shader_base.vert.spv", &redTriangleVertexShader))
-    {
-        std::cout << "Error when building the triangle vertex shader module" << std::endl;
-
-    }
-    else {
-        std::cout << "Red triangle vertex shader successfully loaded" << std::endl;
-    }
-
-    VkShaderModule meshVertShader;
-    if (!load_shader_module("../src/shaders/tri_mesh.vert.spv", &meshVertShader)) {
-        std::cout << "Error when building the green triangle mesh vertex shader module" << std::endl;
-    }
-    else {
-        std::cout << "Green triangle vertex shader successfully loaded" << std::endl;
-    }
-
-    VkShaderModule textureShader;
-    if (!load_shader_module("../src/shaders/texture_lig.frag.spv", &textureShader)) {
-        std::cout << "Error when building the texture fragment shader module" << std::endl;
-    } else {
-        std::cout << "Texture fragment shader successfully loaded" << std::endl;
-    }
-
+    // ok
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -90,7 +90,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     this->_viewport = viewport;
-
+    // ok
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = window._windowExtent;
@@ -104,90 +104,92 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     this->_multisampling = vkinit::multisampling_state_create_info();
     this->_colorBlendAttachment = vkinit::color_blend_attachment_state();
 
-    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
-    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+    this->scene_monkey_triangle(setLayouts);
+    this->scene_lost_empire(setLayouts);
+
+//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
+//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
 
     // Build pipeline layout
-    VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-    pipeline_layout_info.setLayoutCount = 3; // 2
-    pipeline_layout_info.pSetLayouts = setLayouts;
-    VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &pipeline_layout_info, nullptr, &_triPipelineLayout));
-    this->_pipelineLayout = &_triPipelineLayout;
+//    VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+//    pipeline_layout_info.setLayoutCount = 3; // 2
+//    pipeline_layout_info.pSetLayouts = setLayouts;
+//    VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &pipeline_layout_info, nullptr, &_triPipelineLayout));
+//    this->_pipelineLayout = &_triPipelineLayout;
 
     // === 1 - Build graphics pipeline ===
-    _graphicsPipeline = this->build_pipeline(device, renderPass);
+//    _graphicsPipeline = this->build_pipeline(device, renderPass);
 
-    // === 2 - Build red triangle pipeline ===
-    this->_shaderStages.clear();
-    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, redTriangleVertexShader));
-    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
-    _redTrianglePipeline = this->build_pipeline(device, renderPass);
+    // === 2 - Build red triangle pipeline === No using this anymore
+//    this->_shaderStages.clear();
+//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, redTriangleVertexShader));
+//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
+//    _redTrianglePipeline = this->build_pipeline(device, renderPass);
 
     // === 3 - Build dynamic triangle mesh
-    this->_shaderStages.clear();  // Clear the shader stages for the builder
-
-    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
+//    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
 
     // Connect the pipeline builder vertex input info to the one we get from Vertex
-    this->_vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
-    this->_vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
-    this->_vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
-    this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+//    this->_vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
+//    this->_vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+//    this->_vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
+//    this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
-    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
-    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
-
-    VkPushConstantRange push_constant;
-    push_constant.offset = 0;
-    push_constant.size = static_cast<uint32_t>(sizeof(MeshPushConstants));
-    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-    VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
-    mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
-    mesh_pipeline_layout_info.pushConstantRangeCount = 1;
-    mesh_pipeline_layout_info.setLayoutCount = 3;
-    mesh_pipeline_layout_info.pSetLayouts = setLayouts;
+//    this->_shaderStages.clear();  // Clear the shader stages for the builder
+//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
+//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+//
+//    VkPushConstantRange push_constant;
+//    push_constant.offset = 0;
+//    push_constant.size = static_cast<uint32_t>(sizeof(MeshPushConstants));
+//    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+//
+//    VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
+//    mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
+//    mesh_pipeline_layout_info.pushConstantRangeCount = 1;
+//    mesh_pipeline_layout_info.setLayoutCount = 3;
+//    mesh_pipeline_layout_info.pSetLayouts = setLayouts;
 
     //VkPipelineLayout meshPipelineLayout;
     // VkPipelineLayout texturedPipelineLayout;
-    VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
-    this->_pipelineLayout = &_meshPipelineLayout;
+//    VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
+//    this->_pipelineLayout = &_meshPipelineLayout;
 
-    _meshPipeline = this->build_pipeline(device, renderPass);
-    create_material(_meshPipeline, _meshPipelineLayout, "defaultMesh");
+//    _meshPipeline = this->build_pipeline(device, renderPass);
+//    create_material(_meshPipeline, _meshPipelineLayout, "defaultMesh");
 
     // === 4 - Build Texture pipeline
-    this->_shaderStages.clear();
-    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
-    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, textureShader));
-    _texturePipeline = this->build_pipeline(device, renderPass);
-    create_material(_texturePipeline, _meshPipelineLayout, "texturedMesh");
+//    this->_shaderStages.clear();
+//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
+//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, textureShader));
+//    _texturePipeline = this->build_pipeline(device, renderPass);
+//    create_material(_texturePipeline, _meshPipelineLayout, "texturedMesh");
 
     // === 5 - Clean
     // Deleting shaders
-    vkDestroyShaderModule(device._logicalDevice, redTriangleVertexShader, nullptr);
-    vkDestroyShaderModule(device._logicalDevice, redTriangleFragShader, nullptr);
-    vkDestroyShaderModule(device._logicalDevice, triangleFragShader, nullptr);
-    vkDestroyShaderModule(device._logicalDevice, triangleVertexShader, nullptr);
-    vkDestroyShaderModule(device._logicalDevice, meshVertShader, nullptr);
-    vkDestroyShaderModule(device._logicalDevice, textureShader, nullptr);
+//    vkDestroyShaderModule(device._logicalDevice, redTriangleVertexShader, nullptr);
+//    vkDestroyShaderModule(device._logicalDevice, redTriangleFragShader, nullptr);
+//    vkDestroyShaderModule(device._logicalDevice, triangleFragShader, nullptr);
+//    vkDestroyShaderModule(device._logicalDevice, triangleVertexShader, nullptr);
+//    vkDestroyShaderModule(device._logicalDevice, meshVertShader, nullptr);
+//    vkDestroyShaderModule(device._logicalDevice, textureShader, nullptr);
 }
 
 PipelineBuilder::~PipelineBuilder() {
     _materials.clear();
-    vkDestroyPipeline(_device._logicalDevice, _redTrianglePipeline, nullptr);
-    vkDestroyPipeline(_device._logicalDevice, _graphicsPipeline, nullptr);
-    vkDestroyPipeline(_device._logicalDevice, _meshPipeline, nullptr);
-    vkDestroyPipeline(_device._logicalDevice, _texturePipeline, nullptr);
-    vkDestroyPipelineLayout(_device._logicalDevice, _triPipelineLayout, nullptr);
-    vkDestroyPipelineLayout(_device._logicalDevice, _meshPipelineLayout, nullptr);
-    // vkDestroyPipelineLayout(_device._logicalDevice, _pipelineLayout, nullptr); // attention !
+//    vkDestroyPipeline(_device._logicalDevice, _redTrianglePipeline, nullptr);
+//    vkDestroyPipeline(_device._logicalDevice, _graphicsPipeline, nullptr);
+//    vkDestroyPipeline(_device._logicalDevice, _meshPipeline, nullptr);
+//    vkDestroyPipeline(_device._logicalDevice, _texturePipeline, nullptr);
+//    vkDestroyPipelineLayout(_device._logicalDevice, _triPipelineLayout, nullptr);
+//    vkDestroyPipelineLayout(_device._logicalDevice, _meshPipelineLayout, nullptr);
+//     vkDestroyPipelineLayout(_device._logicalDevice, *_pipelineLayout, nullptr); // attention !
 
     // duplicat ?
-//    for (const auto& item : _shaderPasses) {
-//        vkDestroyPipeline(_device._logicalDevice, item.pipeline, nullptr);
-//        vkDestroyPipelineLayout(_device._logicalDevice, item.pipelineLayout, nullptr);
-//    }
+    for (const auto& item : this->_shaderPasses) {
+        vkDestroyPipeline(_device._logicalDevice, item.pipeline, nullptr);
+        vkDestroyPipelineLayout(_device._logicalDevice, item.pipelineLayout, nullptr);
+    }
 }
 
 /**
@@ -199,7 +201,6 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.pNext = nullptr;
-
     viewportState.viewportCount = 1;
     viewportState.pViewports = &_viewport;
     viewportState.scissorCount = 1;
@@ -217,7 +218,6 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.pNext = nullptr;
-
     pipelineInfo.pVertexInputState = &_vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &_inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
@@ -226,7 +226,6 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.pDepthStencilState = &_depthStencil;
-
     pipelineInfo.stageCount = static_cast<uint32_t>(_shaderStages.size());
     pipelineInfo.pStages = _shaderStages.data();
     pipelineInfo.layout = *_pipelineLayout; // Comment gerer plusieurs pipeline dans une meme classe sans changer cette fonction
@@ -242,38 +241,60 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     }
 }
 
-VkPipeline PipelineBuilder::set_shaders(ShaderEffect& effect) {
-    _shaderStages.clear();
-
-    std::vector<VkPipelineShaderStageCreateInfo> shaderStages{};
-    for (const auto& stage : effect.shaderStages) {
-        shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(stage.flags, *stage.shaderModule));
-    }
-
-    _pipelineLayout = &effect.pipelineLayout;
-}
-
 void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules_tri {
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/default_lit.frag.spv"},
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/default_lit.vert.spv"},
-//            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/red_shader_base.frag.spv"},
-//            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/red_shader_base.vert.spv"}
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/shader_base.vert.spv"},
     };
 
-    ShaderEffect effect = this->build_effect(setLayouts, modules);
-    this->set_shaders(effect);
-    VkPipeline graphicsPipeline = this->build_pipeline(_device, _renderPass);
+    ShaderEffect effect_triangle = this->build_effect(setLayouts, {}, modules_tri);
+    ShaderPass pass = this->build_pass(&effect_triangle);
+    this->_shaderPasses.push_back(pass);
+//    this->set_shaders(effect_triangle);
+//    VkPipeline pipeline_triangle = this->build_pipeline(_device, _renderPass);
 
-    ShaderPass pass{};
-    pass.effect = effect;
-    pass.pipelineLayout = effect.pipelineLayout;
-    pass.pipeline = graphicsPipeline;
+//    ShaderPass pass{};
+//    pass.effect = effect_triangle;
+//    pass.pipelineLayout = effect_triangle.pipelineLayout;
+//    pass.pipeline = pipeline_triangle;
 
-    _shaderPasses.push_back(pass);
 
-    for (auto& shader : effect.shaderStages) {
-        vkDestroyShaderModule(_device._logicalDevice, *shader.shaderModule, nullptr);
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules_mesh {
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/default_lit.frag.spv"},
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/tri_mesh.vert.spv"},
+    };
+
+    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
+    this->_vertexInputInfo = vkinit::vertex_input_state_create_info();
+    this->_vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
+    this->_vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+    this->_vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
+    this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+
+    VkPushConstantRange push_constant;
+    push_constant.offset = 0;
+    push_constant.size = static_cast<uint32_t>(sizeof(MeshPushConstants));
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    ShaderEffect effect_mesh = this->build_effect(setLayouts, {push_constant}, modules_mesh);
+    ShaderPass pass_mesh = this->build_pass(&effect_mesh);
+    this->_shaderPasses.push_back(pass_mesh);
+    // this->set_shaders(effect_mesh);
+    // VkPipeline pipeline_mesh = this->build_pipeline(_device, _renderPass);
+
+//    ShaderPass pass_mesh{};
+//    pass_mesh.effect = effect_mesh;
+//    pass_mesh.pipelineLayout = effect_mesh.pipelineLayout;
+//    pass_mesh.pipeline = pipeline_mesh;
+    create_material(pass_mesh.pipeline, pass_mesh.pipelineLayout, "defaultMesh");
+
+    vkDestroyPipeline(_device._logicalDevice, pass_mesh.pipeline, nullptr);
+
+    for (auto& shader : effect_triangle.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+    }
+    for (auto& shader : effect_mesh.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }
 
@@ -282,9 +303,6 @@ void PipelineBuilder::scene_lost_empire(std::vector<VkDescriptorSetLayout> setLa
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/tri_mesh.vert.spv"},
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/default_lit.frag.spv"},
     };
-
-    ShaderEffect effect = this->build_effect(setLayouts, modules);
-    this->set_shaders(effect);
 
     VertexInputDescription vertexDescription = Vertex::get_vertex_description();
     this->_vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
@@ -297,62 +315,95 @@ void PipelineBuilder::scene_lost_empire(std::vector<VkDescriptorSetLayout> setLa
     push_constant.size = static_cast<uint32_t>(sizeof(MeshPushConstants));
     push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    // TO HANDLE INTO build_effect
-    VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
-    mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
-    mesh_pipeline_layout_info.pushConstantRangeCount = 1;
-    mesh_pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
-    mesh_pipeline_layout_info.pSetLayouts = setLayouts.data();
-
-    _meshPipeline = this->build_pipeline(_device, _renderPass);
-    create_material(_meshPipeline, _meshPipelineLayout, "defaultMesh");
+    ShaderEffect effect_mesh = this->build_effect(setLayouts, {push_constant}, modules);
+    ShaderPass pass = this->build_pass(&effect_mesh);
+    this->_shaderPasses.push_back(pass);
+//     this->set_shaders(effect_mesh);
+//     VkPipeline pipeline_mesh = this->build_pipeline(_device, _renderPass);
+//    _meshPipeline = this->build_pipeline(_device, _renderPass);
+    create_material(pass.pipeline, pass.pipelineLayout, "defaultMesh");
 
     // === 4 - Build Texture pipeline
 
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules_texture {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/tri_mesh.vert.spv"},
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
     };
 
-    ShaderEffect effect_tex = this->build_effect(setLayouts, modules);
-    this->set_shaders(effect_tex);
+    ShaderEffect effect_tex = this->build_effect(setLayouts, {push_constant}, modules_texture);
+    // effect_tex.pipelineLayout = effect_mesh.pipelineLayout;
+    ShaderPass pass_tex = this->build_pass(&effect_tex);
+    this->_shaderPasses.push_back(pass_tex);
+//    this->set_shaders(effect_tex);
+//    VkPipeline pipeline_tex = this->build_pipeline(_device, _renderPass);
+//
+//    ShaderPass pass_tex{};
+//    pass_tex.effect = effect_tex;
+//    pass_tex.pipelineLayout = effect_tex.pipelineLayout;
+//    pass_tex.pipeline = pipeline_tex;
 
-//    this->_shaderStages.clear();
-//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
-//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, textureShader));
-    _texturePipeline = this->build_pipeline(_device, _renderPass);
-    create_material(_texturePipeline, _meshPipelineLayout, "texturedMesh");
+    create_material(pass_tex.pipeline, pass_tex.pipelineLayout, "texturedMesh");
 
+    for (auto& shader : effect_mesh.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+    }
+
+    for (auto& shader : effect_tex.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+    }
 }
 
-ShaderEffect PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules) {
+ShaderPass PipelineBuilder::build_pass(ShaderEffect* effect) {
+    this->set_shaders(*effect);
+
+    ShaderPass pass{};
+    pass.effect = *effect;
+    pass.pipelineLayout = effect->pipelineLayout;
+    pass.pipeline =  this->build_pipeline(_device, _renderPass);
+
+    return pass;
+}
+
+ShaderEffect PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules) {
     ShaderEffect effect{};
+    effect.pipelineLayout = this->build_layout(setLayouts, pushConstants);
+    effect.setLayouts = setLayouts;
 
     for (auto const& module: modules) {
         VkShaderModule shader;
-        if (!load_shader_module(module.second, &shader))
-        {
+        if (!load_shader_module(module.second, &shader)) {
             std::cout << "Error when building the shader module" << std::string(module.second) << std::endl;
         }
         else {
-            std::cout << "Shader " << std::string(module.second) << "successfully loaded" << std::endl;
+            std::cout << "Shader " << std::string(module.second) << " successfully loaded" << std::endl;
         }
 
-        vkinit::pipeline_shader_stage_create_info(module.first, shader);
-        // pointer to module might be an issue
-        effect.shaderStages.push_back(ShaderEffect::ShaderStage{&shader, module.first});
+        effect.shaderStages.push_back(ShaderEffect::ShaderStage{shader, module.first});
     }
 
-    VkPipelineLayout pipelineLayout{};
-    VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-    pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(setLayouts.size()); // 2
-    pipeline_layout_info.pSetLayouts = setLayouts.data();
-    VK_CHECK(vkCreatePipelineLayout(_device._logicalDevice, &pipeline_layout_info, nullptr, &pipelineLayout));
-
-    effect.pipelineLayout = pipelineLayout;
-    effect.setLayouts = setLayouts;
 
     return effect;
+}
+
+VkPipelineLayout PipelineBuilder::build_layout(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants) {
+    VkPipelineLayout layout{};
+    VkPipelineLayoutCreateInfo layoutInfo = vkinit::pipeline_layout_create_info();
+    layoutInfo.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
+    layoutInfo.pSetLayouts = setLayouts.empty() ? nullptr : setLayouts.data();
+    layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstants.size());
+    layoutInfo.pPushConstantRanges = pushConstants.empty() ? nullptr : pushConstants.data();
+
+    VK_CHECK(vkCreatePipelineLayout(_device._logicalDevice, &layoutInfo, nullptr, &layout));
+
+    return layout;
+}
+
+void PipelineBuilder::set_shaders(ShaderEffect& effect) {
+    this->_pipelineLayout = &effect.pipelineLayout;
+    this->_shaderStages.clear();
+    for (const auto& stage : effect.shaderStages) {
+        this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(stage.flags, stage.shaderModule));
+    }
 }
 
 bool PipelineBuilder::load_shader_module(const char* filePath, VkShaderModule* out) {

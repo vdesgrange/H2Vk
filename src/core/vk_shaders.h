@@ -9,7 +9,7 @@ struct ShaderEffect {
     std::vector<VkDescriptorSetLayout> setLayouts;
 
     struct ShaderStage {
-        VkShaderModule* shaderModule;
+        VkShaderModule shaderModule;
         VkShaderStageFlagBits flags;
     };
 

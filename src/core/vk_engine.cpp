@@ -202,7 +202,8 @@ FrameData& VulkanEngine::get_current_frame()
 }
 
 void VulkanEngine::init_pipelines() {
-    VkDescriptorSetLayout setLayouts[] = {_globalSetLayout, _objectSetLayout, _singleTextureSetLayout};
+    // VkDescriptorSetLayout setLayouts[] = {_globalSetLayout, _objectSetLayout, _singleTextureSetLayout};
+    std::vector<VkDescriptorSetLayout> setLayouts = {_globalSetLayout, _objectSetLayout, _singleTextureSetLayout};
     _pipelineBuilder = new PipelineBuilder(*_window, *_device, *_renderPass, setLayouts);
 
     // move to scene listing as well? Only usage

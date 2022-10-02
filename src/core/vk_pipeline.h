@@ -37,7 +37,7 @@ public:
 
     std::unordered_map<std::string, Material> _materials;
 
-    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, VkDescriptorSetLayout setLayouts[]);
+    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, std::vector<VkDescriptorSetLayout> setLayouts);
     ~PipelineBuilder();
 
     bool load_shader_module(const char* filePath, VkShaderModule* out);
@@ -56,6 +56,15 @@ private:
 
     VkPipelineLayout* _pipelineLayout;
 
-    ShaderEffect build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules);
+    ShaderPass build_pass(ShaderEffect* effect);
 
+    ShaderEffect build_effect(std::vector<VkDescriptorSetLayout> setLayouts,  std::vector<VkPushConstantRange> pushConstants, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules);
+
+    VkPipelineLayout build_layout(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants);
+
+    void set_shaders(ShaderEffect& effect);
+
+    void scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts);
+
+    void scene_lost_empire(std::vector<VkDescriptorSetLayout> setLayouts);
 };
