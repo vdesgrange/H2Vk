@@ -7,6 +7,7 @@
 
 #include "vk_types.h"
 #include "vk_material.h"
+#include "vk_shaders.h"
 
 class Window;
 class Device;
@@ -32,6 +33,8 @@ public:
     VkPipeline _meshPipeline;
     VkPipeline _texturePipeline;
 
+    std::vector<ShaderPass> _shaderPasses;
+
     std::unordered_map<std::string, Material> _materials;
 
     PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, VkDescriptorSetLayout setLayouts[]);
@@ -49,7 +52,10 @@ public:
 
 private:
     const class Device& _device;
+    class RenderPass& _renderPass;
 
     VkPipelineLayout* _pipelineLayout;
+
+    ShaderEffect build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules);
 
 };

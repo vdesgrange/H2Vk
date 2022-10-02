@@ -24,7 +24,7 @@
  * @param renderPass
  */
 PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, VkDescriptorSetLayout setLayouts[]) :
-    _device(device)
+    _device(device), _renderPass(renderPass)
 {
 
     // Load shaders
@@ -82,21 +82,6 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
         std::cout << "Texture fragment shader successfully loaded" << std::endl;
     }
 
-
-    // Build pipeline layout
-    VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-    pipeline_layout_info.setLayoutCount = 3; // 2
-    pipeline_layout_info.pSetLayouts = setLayouts;
-    VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &pipeline_layout_info, nullptr, &_triPipelineLayout));
-    this->_pipelineLayout = &_triPipelineLayout;
-
-    // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
-    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
-    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
-    this->_vertexInputInfo = vkinit::vertex_input_state_create_info();
-    this->_inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    this->_depthStencil = vkinit::pipeline_depth_stencil_state_create_info(true, true, VK_COMPARE_OP_LESS);
-
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -111,9 +96,23 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     scissor.extent = window._windowExtent;
     this->_scissor = scissor;
 
+    // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
+    this->_vertexInputInfo = vkinit::vertex_input_state_create_info();
+    this->_inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    this->_depthStencil = vkinit::pipeline_depth_stencil_state_create_info(true, true, VK_COMPARE_OP_LESS);
     this->_rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
     this->_multisampling = vkinit::multisampling_state_create_info();
     this->_colorBlendAttachment = vkinit::color_blend_attachment_state();
+
+    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
+    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+
+    // Build pipeline layout
+    VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+    pipeline_layout_info.setLayoutCount = 3; // 2
+    pipeline_layout_info.pSetLayouts = setLayouts;
+    VK_CHECK(vkCreatePipelineLayout(device._logicalDevice, &pipeline_layout_info, nullptr, &_triPipelineLayout));
+    this->_pipelineLayout = &_triPipelineLayout;
 
     // === 1 - Build graphics pipeline ===
     _graphicsPipeline = this->build_pipeline(device, renderPass);
@@ -183,6 +182,12 @@ PipelineBuilder::~PipelineBuilder() {
     vkDestroyPipelineLayout(_device._logicalDevice, _triPipelineLayout, nullptr);
     vkDestroyPipelineLayout(_device._logicalDevice, _meshPipelineLayout, nullptr);
     // vkDestroyPipelineLayout(_device._logicalDevice, _pipelineLayout, nullptr); // attention !
+
+    // duplicat ?
+//    for (const auto& item : _shaderPasses) {
+//        vkDestroyPipeline(_device._logicalDevice, item.pipeline, nullptr);
+//        vkDestroyPipelineLayout(_device._logicalDevice, item.pipelineLayout, nullptr);
+//    }
 }
 
 /**
@@ -213,27 +218,141 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.pNext = nullptr;
 
-    pipelineInfo.stageCount = _shaderStages.size();
-    pipelineInfo.pStages = _shaderStages.data();
     pipelineInfo.pVertexInputState = &_vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &_inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &_rasterizer;
     pipelineInfo.pMultisampleState = &_multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.layout = *_pipelineLayout; // Comment gerer plusieurs pipeline dans une meme classe sans changer cette fonction
-    pipelineInfo.renderPass = renderPass._renderPass;
-    pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.pDepthStencilState = &_depthStencil;
 
+    pipelineInfo.stageCount = static_cast<uint32_t>(_shaderStages.size());
+    pipelineInfo.pStages = _shaderStages.data();
+    pipelineInfo.layout = *_pipelineLayout; // Comment gerer plusieurs pipeline dans une meme classe sans changer cette fonction
+    pipelineInfo.renderPass = renderPass._renderPass;
+    pipelineInfo.subpass = 0;
+
     VkPipeline graphicsPipeline;
     if (vkCreateGraphicsPipelines(device._logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
-        std::cout << "failed to create pipeline\n";
+        std::cout << "Failed to create graphics pipeline\n";
         return VK_NULL_HANDLE;
     } else {
         return graphicsPipeline;
     }
+}
+
+VkPipeline PipelineBuilder::set_shaders(ShaderEffect& effect) {
+    _shaderStages.clear();
+
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages{};
+    for (const auto& stage : effect.shaderStages) {
+        shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(stage.flags, *stage.shaderModule));
+    }
+
+    _pipelineLayout = &effect.pipelineLayout;
+}
+
+void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts) {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/default_lit.frag.spv"},
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/default_lit.vert.spv"},
+//            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/red_shader_base.frag.spv"},
+//            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/red_shader_base.vert.spv"}
+    };
+
+    ShaderEffect effect = this->build_effect(setLayouts, modules);
+    this->set_shaders(effect);
+    VkPipeline graphicsPipeline = this->build_pipeline(_device, _renderPass);
+
+    ShaderPass pass{};
+    pass.effect = effect;
+    pass.pipelineLayout = effect.pipelineLayout;
+    pass.pipeline = graphicsPipeline;
+
+    _shaderPasses.push_back(pass);
+
+    for (auto& shader : effect.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, *shader.shaderModule, nullptr);
+    }
+}
+
+void PipelineBuilder::scene_lost_empire(std::vector<VkDescriptorSetLayout> setLayouts) {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/tri_mesh.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/default_lit.frag.spv"},
+    };
+
+    ShaderEffect effect = this->build_effect(setLayouts, modules);
+    this->set_shaders(effect);
+
+    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
+    this->_vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
+    this->_vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+    this->_vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
+    this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+
+    VkPushConstantRange push_constant;
+    push_constant.offset = 0;
+    push_constant.size = static_cast<uint32_t>(sizeof(MeshPushConstants));
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    // TO HANDLE INTO build_effect
+    VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = vkinit::pipeline_layout_create_info();
+    mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
+    mesh_pipeline_layout_info.pushConstantRangeCount = 1;
+    mesh_pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
+    mesh_pipeline_layout_info.pSetLayouts = setLayouts.data();
+
+    _meshPipeline = this->build_pipeline(_device, _renderPass);
+    create_material(_meshPipeline, _meshPipelineLayout, "defaultMesh");
+
+    // === 4 - Build Texture pipeline
+
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/tri_mesh.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
+    };
+
+    ShaderEffect effect_tex = this->build_effect(setLayouts, modules);
+    this->set_shaders(effect_tex);
+
+//    this->_shaderStages.clear();
+//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
+//    this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, textureShader));
+    _texturePipeline = this->build_pipeline(_device, _renderPass);
+    create_material(_texturePipeline, _meshPipelineLayout, "texturedMesh");
+
+}
+
+ShaderEffect PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules) {
+    ShaderEffect effect{};
+
+    for (auto const& module: modules) {
+        VkShaderModule shader;
+        if (!load_shader_module(module.second, &shader))
+        {
+            std::cout << "Error when building the shader module" << std::string(module.second) << std::endl;
+        }
+        else {
+            std::cout << "Shader " << std::string(module.second) << "successfully loaded" << std::endl;
+        }
+
+        vkinit::pipeline_shader_stage_create_info(module.first, shader);
+        // pointer to module might be an issue
+        effect.shaderStages.push_back(ShaderEffect::ShaderStage{&shader, module.first});
+    }
+
+    VkPipelineLayout pipelineLayout{};
+    VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+    pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(setLayouts.size()); // 2
+    pipeline_layout_info.pSetLayouts = setLayouts.data();
+    VK_CHECK(vkCreatePipelineLayout(_device._logicalDevice, &pipeline_layout_info, nullptr, &pipelineLayout));
+
+    effect.pipelineLayout = pipelineLayout;
+    effect.setLayouts = setLayouts;
+
+    return effect;
 }
 
 bool PipelineBuilder::load_shader_module(const char* filePath, VkShaderModule* out) {

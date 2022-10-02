@@ -11,7 +11,7 @@
 #include "vk_command_pool.h"
 
 MeshManager::MeshManager(const Device& device, UploadContext& uploadContext) : _device(device), _uploadContext(uploadContext) {
-    load_meshes();
+    //load_meshes();
 };
 
 MeshManager::~MeshManager() {
