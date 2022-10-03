@@ -288,7 +288,7 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
 //    pass_mesh.pipeline = pipeline_mesh;
     create_material(pass_mesh.pipeline, pass_mesh.pipelineLayout, "defaultMesh");
 
-    vkDestroyPipeline(_device._logicalDevice, pass_mesh.pipeline, nullptr);
+    // vkDestroyPipeline(_device._logicalDevice, pass_mesh.pipeline, nullptr);
 
     for (auto& shader : effect_triangle.shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);

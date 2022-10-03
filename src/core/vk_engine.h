@@ -40,6 +40,7 @@ class Statistics;
 class Scene;
 class SceneListing;
 class TextureManager;
+class SamplerManager;
 
 struct Texture;
 
@@ -92,7 +93,7 @@ public:
     std::vector<RenderObject> _renderables;
     MeshManager* _meshManager;
     TextureManager* _textureManager;
-    // std::unordered_map<std::string, Texture> _loadedTextures;
+    SamplerManager* _samplerManager;
     SceneListing* _sceneListing;
     Scene* _scene;
     UInterface* _ui;

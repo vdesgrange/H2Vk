@@ -76,8 +76,8 @@ Renderables SceneListing::lostEmpire(Camera& camera, MeshManager* meshManager, T
     meshManager->upload_mesh(lostEmpire);
     meshManager->_meshes["empire"] = lostEmpire;
 
-    // Load texture
-    textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
+    // Load texture -> important : rajouter hashage pour ne pas dupliquer les textures
+    // textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
 
     // Shaders - to do
 

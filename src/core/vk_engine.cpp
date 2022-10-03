@@ -216,31 +216,33 @@ void VulkanEngine::load_meshes() {
 void VulkanEngine::load_images() {
     _meshManager = new MeshManager(*_device, _uploadContext);
     _textureManager = new TextureManager(*this);
+    _samplerManager = new SamplerManager(*this);
 
-    // If texture not loaded here, it create issues -> Must be loaded before init_scene
-    _textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
 }
 
 void VulkanEngine::init_scene() {
     _sceneListing = new SceneListing(_meshManager, _textureManager, _pipelineBuilder);
     _scene = new Scene(*_meshManager, *_textureManager, *_pipelineBuilder);
 
-    // If texture not loaded here, it create issues -> Must be loaded before binding
-    // _textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
+    // If texture not loaded here, it create issues -> Must be loaded before binding (previously in load_images)
+    _textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
 
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
-    VkSampler blockySampler;
+    VkSampler blockySampler; // add cache for sampler
     vkCreateSampler(_device->_logicalDevice, &samplerInfo, nullptr, &blockySampler);
+    _samplerManager->_loadedSampler["blocky_sampler"] = blockySampler;
+
     Material* texturedMat =	_pipelineBuilder->get_material("texturedMesh");
 
     VkDescriptorImageInfo imageBufferInfo;
-    imageBufferInfo.sampler = blockySampler;
+    imageBufferInfo.sampler = _samplerManager->_loadedSampler["blocky_sampler"];
     imageBufferInfo.imageView = _textureManager->_loadedTextures["empire_diffuse"].imageView;
     imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_image(imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texturedMat->textureSet, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
             .build(texturedMat->textureSet, _singleTextureSetLayout, poolSize.sizes);
+
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -471,6 +473,7 @@ void VulkanEngine::cleanup()
         }
 
         delete _ui;
+        delete _samplerManager;
         delete _textureManager;
         delete _meshManager;
         delete _pipelineBuilder;

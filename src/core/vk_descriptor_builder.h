@@ -13,7 +13,6 @@ public:
 
     DescriptorBuilder& bind_buffer(VkDescriptorBufferInfo& bufferInfo, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding);
     DescriptorBuilder& bind_image(VkDescriptorImageInfo& iInfo, VkDescriptorType type, VkDescriptorSet dst, VkShaderStageFlags stageFlags, uint32_t binding);
-    DescriptorBuilder& bind_image(VkDescriptorImageInfo& iInfo, VkDescriptorType type, VkDescriptorSet dst, uint32_t binding);
     DescriptorBuilder& bind_none(VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding);
     DescriptorBuilder& layout(VkDescriptorSetLayout& setLayout);
 
