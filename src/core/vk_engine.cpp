@@ -146,6 +146,9 @@ void VulkanEngine::init_descriptors() {
 
     const size_t sceneParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData));
     _sceneParameterBuffer = Buffer::create_buffer(*_device, sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    VkDescriptorBufferInfo sceneBInfo{};
+    sceneBInfo.buffer = _sceneParameterBuffer._buffer;
+    sceneBInfo.range = sizeof(GPUSceneData);
 
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         _frames[i].globalDescriptor = VkDescriptorSet();
@@ -160,10 +163,6 @@ void VulkanEngine::init_descriptors() {
         camBInfo.offset = 0;
         camBInfo.range = sizeof(GPUCameraData);
 
-        VkDescriptorBufferInfo sceneBInfo{};
-        sceneBInfo.buffer = _sceneParameterBuffer._buffer;
-        sceneBInfo.range = sizeof(GPUSceneData);
-
         VkDescriptorBufferInfo objectsBInfo{};
         objectsBInfo.buffer = _frames[i].objectBuffer._buffer;
         objectsBInfo.offset = 0;
@@ -177,11 +176,11 @@ void VulkanEngine::init_descriptors() {
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_buffer(objectsBInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
             .build(_frames[i].objectDescriptor, _objectSetLayout, poolSize.sizes);
+    }
 
-        DescriptorBuilder::begin(*_layoutCache, *_allocator)
+    DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
             .layout(_singleTextureSetLayout);
-    }
 
     _mainDeletionQueue.push_function([&]() {
         vmaDestroyBuffer(_device->_allocator, _sceneParameterBuffer._buffer, _sceneParameterBuffer._allocation);
@@ -214,17 +213,15 @@ void VulkanEngine::load_meshes() {
 }
 
 void VulkanEngine::load_images() {
-    _meshManager = new MeshManager(*_device, _uploadContext);
     _textureManager = new TextureManager(*this);
     _samplerManager = new SamplerManager(*this);
-
 }
 
 void VulkanEngine::init_scene() {
     _sceneListing = new SceneListing(_meshManager, _textureManager, _pipelineBuilder);
     _scene = new Scene(*_meshManager, *_textureManager, *_pipelineBuilder);
 
-    // If texture not loaded here, it create issues -> Must be loaded before binding (previously in load_images)
+    // If texture not loaded here, it creates issues -> Must be loaded before binding (previously in load_images)
     _textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
 
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
