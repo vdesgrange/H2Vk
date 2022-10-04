@@ -29,13 +29,12 @@
 #include "vk_fence.h"
 #include "vk_mesh_manager.h"
 #include "vk_semaphore.h"
-#include "vk_mesh.h"
+#include "assets/vk_mesh.h"
 #include "vk_material.h"
 #include "vk_camera.h"
 #include "vk_pipeline.h"
 #include "vk_buffer.h"
 #include "vk_texture.h"
-#include "vk_descriptor_pools.h"
 #include "vk_descriptor_builder.h"
 #include "vk_descriptor_cache.h"
 #include "vk_descriptor_allocator.h"
@@ -44,8 +43,6 @@
 #include "vk_scene.h"
 
 #include "imgui.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_vulkan.h"
 
 using namespace std;
 

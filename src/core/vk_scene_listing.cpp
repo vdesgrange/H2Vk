@@ -2,13 +2,14 @@
 #include "vk_mesh_manager.h"
 #include "vk_pipeline.h"
 #include "vk_camera.h"
-#include "vk_mesh.h"
+#include "assets/vk_mesh.h"
 #include "vk_texture.h"
 #include "vk_helpers.h"
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, MeshManager* meshManager, TextureManager* textureManager, PipelineBuilder* pipelineBuilder)>>> SceneListing::scenes = {
         {"Monkey and triangles", SceneListing::monkeyAndTriangles},
-        {"Lost empire", SceneListing::lostEmpire}
+        {"Lost empire", SceneListing::lostEmpire},
+        {"Swimming pool", SceneListing::cubeScene}
 };
 
 Renderables SceneListing::monkeyAndTriangles(Camera& camera, MeshManager* meshManager, TextureManager* textureManager, PipelineBuilder* pipelineBuilder) {
@@ -91,3 +92,21 @@ Renderables SceneListing::lostEmpire(Camera& camera, MeshManager* meshManager, T
     return renderables;
 }
 
+Renderables SceneListing::cubeScene(Camera& camera, MeshManager* meshManager, TextureManager* textureManager, PipelineBuilder* pipelineBuilder) {
+    Renderables renderables{};
+
+    camera.set_flip_y(true);
+    camera.set_position({ 0.f, -6.f, -10.f });
+    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+
+    Mesh cube = Mesh::cube();
+    meshManager->upload_mesh(cube);
+    meshManager->_meshes["cube"] = cube;
+
+    RenderObject cubeObj;
+    cubeObj.mesh = meshManager->get_mesh("cube");
+    cubeObj.material = pipelineBuilder->get_material("defaultMesh");
+    renderables.push_back(cubeObj);
+
+    return renderables;
+}

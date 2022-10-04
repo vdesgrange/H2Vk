@@ -1,5 +1,5 @@
 # Add source to this project's executable.
-file(GLOB_RECURSE CORE "*.cpp" "*.h" "core/*.cpp" "core/*.h")
+file(GLOB_RECURSE CORE "*.cpp" "*.h" "core/*.cpp" "core/*.h" "assets/*.cpp" "assets/*.h")
 file(GLOB_RECURSE TRACY_CLIENT "../third_party/tracy/public/TracyClient.cpp")
 add_executable(vulkan_guide ${CORE} ${TRACY_CLIENT})
 

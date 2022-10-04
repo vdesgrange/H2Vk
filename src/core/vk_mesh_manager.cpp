@@ -3,7 +3,7 @@
 #include "vk_mesh_manager.h"
 #include "vk_helpers.h"
 #include "vk_device.h"
-#include "vk_mesh.h"
+#include "assets/vk_mesh.h"
 #include "vk_buffer.h"
 #include "vk_initializers.h"
 #include "vk_fence.h"

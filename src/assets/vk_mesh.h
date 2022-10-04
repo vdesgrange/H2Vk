@@ -2,16 +2,16 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include <glm/vec3.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtx/hash.hpp>
+#include "glm/vec3.hpp"
+#include "glm/glm.hpp"
+#include "glm/gtx/hash.hpp"
 #include <vector>
 #include <array>
 #include <iostream>
 #include <unordered_map>
 
 #include "tiny_obj_loader.h"
-#include "vk_types.h"
+#include "core/vk_types.h"
 
 struct VertexInputDescription {
     std::vector<VkVertexInputBindingDescription> bindings;
@@ -40,10 +40,12 @@ namespace std {
     };
 }
 
-struct Mesh {
+class Mesh {
+public:
     std::vector<Vertex> _vertices;
     AllocatedBuffer _vertexBuffer;
 
+    static Mesh cube();
     bool load_from_obj(const char* filename);
 };
 

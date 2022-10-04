@@ -6,7 +6,7 @@
 #include <fstream>
 #include "vk_helpers.h"
 #include "vk_initializers.h"
-#include "vk_mesh.h"
+#include "assets/vk_mesh.h"
 #include "vk_pipeline.h"
 #include "vk_window.h"
 #include "vk_device.h"

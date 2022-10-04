@@ -44,6 +44,7 @@ public:
 
     static Renderables monkeyAndTriangles(Camera& camera, MeshManager* meshManager, TextureManager* textureManager, PipelineBuilder* pipelineBuilder);
     static Renderables lostEmpire(Camera &camera, MeshManager* meshManager, TextureManager* textureManager,  PipelineBuilder* pipelineBuilder);
+    static Renderables cubeScene(Camera &camera, MeshManager* meshManager, TextureManager* textureManager,  PipelineBuilder* pipelineBuilder);
 
 private:
     static const class Device& _device;
