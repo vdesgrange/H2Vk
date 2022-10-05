@@ -15,6 +15,13 @@ struct Settings final {
     bool p_open;
     bool p_overlay;
     int scene_index;
+
+    // Camera
+    int coordinates[3];
+    float fov; // 0 - 360
+    float aspect; // 0 - 1
+    float z_near; // 0 - 1000, valeurs a la louche
+    float z_far; // 0 - 1000, valeurs a la louche
 };
 
 class UInterface final {

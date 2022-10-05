@@ -125,6 +125,15 @@ void UInterface::interface() {
     ImGui::PopItemWidth();
     ImGui::NewLine();
 
+    ImGui::Text("Camera");
+    ImGui::Separator();
+    ImGui::InputInt3("X/Y/Z", get_settings().coordinates, 0);
+    ImGui::SliderFloat("FOV", &get_settings().fov, 0.0f, 360.0f);
+    ImGui::SliderFloat("Aspect", &get_settings().aspect, 0.0f, 1.0f);
+    ImGui::SliderFloat("Z-Near", &get_settings().z_near, 0.0f, 10.0f);
+    ImGui::SliderFloat("Z-Far", &get_settings().z_far, 0.0f, 500.0f);
+    ImGui::NewLine();
+
     ImGui::End();
 
     // ImGui::EndFrame(); // Call by ImGui::Render()

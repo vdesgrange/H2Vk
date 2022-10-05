@@ -406,6 +406,10 @@ void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
     renderPassInfo.pClearValues = &clearValues[0];
     vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+    // Camera
+    _camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near, _ui->get_settings().z_far);
+    _camera->set_position({_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2]});
+
     // Load scene (if new)
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
         _scene->load_scene(_ui->get_settings().scene_index, *_camera);
