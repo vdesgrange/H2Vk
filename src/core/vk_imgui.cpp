@@ -127,6 +127,7 @@ void UInterface::interface() {
 
     ImGui::Text("Camera");
     ImGui::Separator();
+    ImGui::SliderFloat("Speed", &get_settings().speed, 0.01f, 20.0f);
     ImGui::InputInt3("X/Y/Z", get_settings().coordinates, 0);
     ImGui::SliderFloat("FOV", &get_settings().fov, 0.0f, 360.0f);
     ImGui::SliderFloat("Aspect", &get_settings().aspect, 0.0f, 1.0f);

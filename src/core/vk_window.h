@@ -17,6 +17,9 @@ public:
     double get_time();
     VkExtent2D get_framebuffer_size();
 
+    static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    std::function<void(int key, int scancode, int action, int mods)> on_key;
+
 private:
     bool framebufferResized = false;
 

@@ -32,3 +32,10 @@ VkExtent2D Window::get_framebuffer_size() {
     glfwGetFramebufferSize(_window, &width, &height);
     return VkExtent2D{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
 }
+
+void Window::glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    auto* const _this = static_cast<Window*>(glfwGetWindowUserPointer(window));
+    if (_this->on_key) {
+        return _this->on_key(key, scancode, action, mods);
+    }
+}

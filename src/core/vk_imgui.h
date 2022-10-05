@@ -18,10 +18,11 @@ struct Settings final {
 
     // Camera
     int coordinates[3];
-    float fov; // 0 - 360
-    float aspect; // 0 - 1
-    float z_near; // 0 - 1000, valeurs a la louche
-    float z_far; // 0 - 1000, valeurs a la louche
+    float speed {0.01f};
+    float fov{70.f}; // 0 - 360
+    float aspect {1700.f / 1200.f}; // 0 - 1
+    float z_near {0.1f}; // 0 - 1000, valeurs a la louche
+    float z_far {200.0f}; // 0 - 1000, valeurs a la louche
 };
 
 class UInterface final {

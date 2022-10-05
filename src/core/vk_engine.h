@@ -131,6 +131,8 @@ public:
     void load_images();
 
 private:
+    bool _reset {false};
+
     void init_vulkan();
 
     void init_window();

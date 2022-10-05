@@ -87,9 +87,11 @@ void VulkanEngine::init_interface() {
 
 void VulkanEngine::init_camera() {
     _camera = new Camera{};
-    _camera->set_flip_y(true);
+    _camera->inverse(true);
     _camera->set_position({ 0.f, -6.f, -10.f });
     _camera->set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+
+    _window->on_key = [this](int key, int scancode, int action, int mods) {_camera->on_key(key, scancode, action, mods);};
 }
 
 void VulkanEngine::init_swapchain() {
@@ -266,9 +268,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     Material* lastMaterial = nullptr;
 
     GPUCameraData camData;
-    camData.proj = _camera->perspective;
-    camData.view = _camera->view;
-    camData.viewproj = _camera->perspective * _camera->view;
+    camData.proj = _camera->get_projection_matrix();
+    camData.view = _camera->get_view_matrix();
+    camData.viewproj = _camera->get_projection_matrix() * _camera->get_view_matrix();
 
     void* data;
     vmaMapMemory(_device->_allocator, get_current_frame().cameraBuffer._allocation, &data);
@@ -379,7 +381,9 @@ Statistics VulkanEngine::monitoring() {
     return stats;
 }
 
-void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
+void VulkanEngine::render(int imageIndex) {
+    Statistics stats = monitoring();
+
     // --- Command Buffer
     VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, 0));
 
@@ -393,8 +397,6 @@ void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
 
     // -- Clear value
     VkClearValue clearValue;
-//    float flash = abs(sin(_frameNumber / 120.f));
-//    clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
     clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
     VkClearValue depthValue;
     depthValue.depthStencil.depth = 1.0f;
@@ -407,8 +409,11 @@ void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
     vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     // Camera
-    _camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near, _ui->get_settings().z_far);
-    _camera->set_position({_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2]});
+
+    _camera->set_speed(_ui->get_settings().speed);
+    _reset = _camera->update_camera(1. / stats.FrameRate);
+    //_camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near, _ui->get_settings().z_far);
+    //_camera->set_position({_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2]});
 
     // Load scene (if new)
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
@@ -418,7 +423,7 @@ void VulkanEngine::render(int imageIndex) { // ImDrawData* draw_data,
 
     draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _scene->_renderables.data(), _scene->_renderables.size());
 
-    Statistics stats = monitoring();
+
     _ui->render(get_current_frame()._commandBuffer->_mainCommandBuffer, stats);
 
     vkCmdEndRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer);
@@ -445,7 +450,7 @@ void VulkanEngine::run()
 {
     while(!glfwWindowShouldClose(_window->_window)) {
         glfwPollEvents();
-
+        glfwSetKeyCallback(_window->_window, Window::glfw_key_callback);
         if (glfwGetKey(_window->_window, GLFW_KEY_DOWN) == GLFW_PRESS) {
             if (glfwGetKey(_window->_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
                 _selectedShader += 1;
@@ -455,7 +460,6 @@ void VulkanEngine::run()
                 }
             }
         }
-
         draw();
     }
 
