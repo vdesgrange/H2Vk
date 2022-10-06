@@ -50,7 +50,6 @@ void VulkanEngine::init()
 {
     init_window();
     init_vulkan();
-    init_camera();
     init_swapchain();
     init_commands();
     init_default_renderpass();
@@ -60,8 +59,9 @@ void VulkanEngine::init()
     init_pipelines();
 	load_meshes();
     load_images();
-    init_scene();
     init_interface();
+    init_camera();
+    init_scene();
 
 	_isInitialized = true;
 }
@@ -91,9 +91,24 @@ void VulkanEngine::init_camera() {
     _camera->set_position({ 0.f, -6.f, -10.f });
     _camera->set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
-    _window->on_key = [this](int key, int scancode, int action, int mods) {_camera->on_key(key, scancode, action, mods);};
-    _window->on_cursor_position = [this](double xpos, double ypos) {_camera->on_cursor_position(xpos, ypos);};
-    _window->on_mouse_button = [this](int button, int action, int mods) {_camera->on_mouse_button(button, action, mods);};
+    _window->on_get_key = [this](int key, int action) {
+        _camera->on_key(key, action);
+    };
+
+//    _window->on_key = [this](int key, int scancode, int action, int mods) {
+//        if (_ui->want_capture_mouse()) return;
+//        _camera->on_key(key, scancode, action, mods);
+//    };
+
+    _window->on_cursor_position = [this](double xpos, double ypos) {
+        if (_ui->want_capture_mouse()) return;
+        _camera->on_cursor_position(xpos, ypos);
+    };
+
+    _window->on_mouse_button = [this](int button, int action, int mods) {
+        if (_ui->want_capture_mouse()) return;
+        _camera->on_mouse_button(button, action, mods);
+    };
 }
 
 void VulkanEngine::init_swapchain() {
@@ -452,19 +467,7 @@ void VulkanEngine::run()
 {
     while(!glfwWindowShouldClose(_window->_window)) {
         glfwPollEvents();
-        glfwSetKeyCallback(_window->_window, Window::glfw_key_callback);
-        // glfwSetCursorPosCallback(_window->_window, Window::glfw_cursor_position_callback);
-        //glfwSetMouseButtonCallback(_window->_window, Window::glfw_mouse_button_callback);
-
-        if (glfwGetKey(_window->_window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-            if (glfwGetKey(_window->_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-                _selectedShader += 1;
-                if(_selectedShader > 1)
-                {
-                    _selectedShader = 0;
-                }
-            }
-        }
+        Window::glfw_get_key(_window->_window);
         draw();
     }
 

@@ -39,6 +39,7 @@ public:
     void interface();
     void interface_statistics(const Statistics& statistics);
     void clean_up();
+    bool want_capture_mouse() const;
 
     Settings& get_settings() { return _settings; };
 

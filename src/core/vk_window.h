@@ -17,11 +17,13 @@ public:
     double get_time();
     VkExtent2D get_framebuffer_size();
 
+    static void glfw_get_key(GLFWwindow* window);
     static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
     static void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 
     std::function<void(int key, int scancode, int action, int mods)> on_key;
+    std::function<void(int key, int action)> on_get_key;
     std::function<void(int button, int action, int mods)> on_mouse_button;
     std::function<void(double xpos, double ypos)> on_cursor_position;
 

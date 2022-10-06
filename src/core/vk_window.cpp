@@ -11,6 +11,9 @@ Window::Window() {
 
     _window = glfwCreateWindow(CWIDTH, CHEIGHT, "Vulkan", nullptr, nullptr);
     glfwSetWindowUserPointer(_window, this);
+    // glfwSetKeyCallback(_window, glfw_key_callback); // avoid call back for continue action like key press
+    glfwSetCursorPosCallback(_window, glfw_cursor_position_callback);
+    glfwSetMouseButtonCallback(_window, glfw_mouse_button_callback);
     glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
 }
 
@@ -51,5 +54,17 @@ void Window::glfw_mouse_button_callback(GLFWwindow* window, int button, int acti
     auto* const _this = static_cast<Window*>(glfwGetWindowUserPointer(window));
     if (_this->on_mouse_button) {
         return _this->on_mouse_button(button, action, mods);
+    }
+}
+
+void Window::glfw_get_key(GLFWwindow* window) {
+    auto* const _this = static_cast<Window*>(glfwGetWindowUserPointer(window));
+    if (_this->on_get_key) {
+        _this->on_get_key(GLFW_KEY_UP, glfwGetKey(window, GLFW_KEY_UP));
+        _this->on_get_key(GLFW_KEY_DOWN, glfwGetKey(window, GLFW_KEY_DOWN));
+        _this->on_get_key(GLFW_KEY_RIGHT, glfwGetKey(window, GLFW_KEY_RIGHT));
+        _this->on_get_key(GLFW_KEY_LEFT, glfwGetKey(window, GLFW_KEY_LEFT));
+        _this->on_get_key(GLFW_KEY_SLASH, glfwGetKey(window, GLFW_KEY_SLASH));
+        _this->on_get_key(GLFW_KEY_RIGHT_SHIFT, glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT));
     }
 }

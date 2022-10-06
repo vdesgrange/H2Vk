@@ -114,8 +114,6 @@ public:
 
     PoolSize poolSize;
 
-    int _selectedShader{ 0 };
-
 	void init();
 
 	void cleanup();

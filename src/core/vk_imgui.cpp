@@ -165,3 +165,8 @@ void UInterface::interface_statistics(const Statistics& statistics) {
     }
     ImGui::End();
 }
+
+bool UInterface::want_capture_mouse() const
+{
+    return ImGui::GetIO().WantCaptureMouse;
+}
