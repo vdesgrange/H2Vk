@@ -18,6 +18,8 @@ public:
     const glm::mat4 get_mesh_matrix(glm::mat4 model);
 
     bool on_key(int key, int scancode, int action, int mods);
+    bool on_cursor_position(double xpos, double ypos);
+    bool on_mouse_button(int button, int action, int mods);
     bool update_camera(float delta);
 
     void set_position(glm::vec3 position);
@@ -43,6 +45,7 @@ private:
     glm::vec3 _right{ 1, 0, 0 };
     glm::vec3 _up{ 0, 1, 0};
     glm::vec3 _forward{ 0, 0, -1};
+    glm::vec2 _rotation{0, 0};
 
     bool leftAction {false};
     bool rightAction {false};
@@ -50,6 +53,9 @@ private:
     bool downAction {false};
     bool forwardAction {false};
     bool backwardAction {false};
+    bool mouseRight {false};
+    float mousePositionX{0};
+    float mousePositionY{0};
 
     void update_view();
 };

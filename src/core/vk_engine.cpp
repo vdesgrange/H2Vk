@@ -92,6 +92,8 @@ void VulkanEngine::init_camera() {
     _camera->set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
     _window->on_key = [this](int key, int scancode, int action, int mods) {_camera->on_key(key, scancode, action, mods);};
+    _window->on_cursor_position = [this](double xpos, double ypos) {_camera->on_cursor_position(xpos, ypos);};
+    _window->on_mouse_button = [this](int button, int action, int mods) {_camera->on_mouse_button(button, action, mods);};
 }
 
 void VulkanEngine::init_swapchain() {
@@ -412,7 +414,7 @@ void VulkanEngine::render(int imageIndex) {
 
     _camera->set_speed(_ui->get_settings().speed);
     _reset = _camera->update_camera(1. / stats.FrameRate);
-    //_camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near, _ui->get_settings().z_far);
+    _camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near, _ui->get_settings().z_far);
     //_camera->set_position({_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2]});
 
     // Load scene (if new)
@@ -451,6 +453,9 @@ void VulkanEngine::run()
     while(!glfwWindowShouldClose(_window->_window)) {
         glfwPollEvents();
         glfwSetKeyCallback(_window->_window, Window::glfw_key_callback);
+        // glfwSetCursorPosCallback(_window->_window, Window::glfw_cursor_position_callback);
+        //glfwSetMouseButtonCallback(_window->_window, Window::glfw_mouse_button_callback);
+
         if (glfwGetKey(_window->_window, GLFW_KEY_DOWN) == GLFW_PRESS) {
             if (glfwGetKey(_window->_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
                 _selectedShader += 1;

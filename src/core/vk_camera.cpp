@@ -5,20 +5,6 @@
 #include "vk_camera.h"
 #include <iostream>
 
-bool Camera::on_cursor()
-
-bool Camera::on_key(int key, int scancode, int action, int mods) {
-
-    switch(key) {
-        case GLFW_KEY_UP: forwardAction = action == GLFW_PRESS; return true;
-        case GLFW_KEY_DOWN: backwardAction = action == GLFW_PRESS; return true;
-        case GLFW_KEY_LEFT: leftAction = action == GLFW_PRESS; return true;
-        case GLFW_KEY_RIGHT: rightAction = action == GLFW_PRESS; return true;
-        case GLFW_KEY_SLASH: downAction = action == GLFW_PRESS; return true;
-        case GLFW_KEY_RIGHT_SHIFT: upAction = action == GLFW_PRESS; return true;
-        default: return false;
-    };
-}
 
 bool Camera::update_camera(float delta) {
     const auto d = delta * speed;
@@ -28,6 +14,9 @@ bool Camera::update_camera(float delta) {
     if (leftAction) position -= d * _right;
     if (upAction) position += d * _up;
     if (downAction) position -= d * _up;
+
+
+    this->set_rotation(_rotation.x / 360., _rotation.y / 360.);
 
     this->update_view();
     return forwardAction || backwardAction || rightAction || leftAction || upAction || downAction;
@@ -90,4 +79,37 @@ void Camera::inverse(bool flip) {
 
 void Camera::set_speed(float speed) {
     this->speed = speed;
+}
+
+bool Camera::on_key(int key, int scancode, int action, int mods) {
+
+    switch(key) {
+        case GLFW_KEY_UP: forwardAction = action == GLFW_PRESS; return true;
+        case GLFW_KEY_DOWN: backwardAction = action == GLFW_PRESS; return true;
+        case GLFW_KEY_LEFT: leftAction = action == GLFW_PRESS; return true;
+        case GLFW_KEY_RIGHT: rightAction = action == GLFW_PRESS; return true;
+        case GLFW_KEY_SLASH: downAction = action == GLFW_PRESS; return true;
+        case GLFW_KEY_RIGHT_SHIFT: upAction = action == GLFW_PRESS; return true;
+        default: return false;
+    };
+}
+
+bool Camera::on_cursor_position(double xpos, double ypos) {
+    const auto deltaX = static_cast<float>(xpos - mousePositionX);
+    const auto deltaY = static_cast<float>(ypos - mousePositionY);
+
+    if (mouseRight) {
+        _rotation += glm::vec2({deltaX, deltaY});
+    }
+
+    mousePositionX = xpos;
+    mousePositionY = ypos;
+}
+
+bool Camera::on_mouse_button(int button, int action, int mods) {
+
+    switch(button) {
+        case GLFW_MOUSE_BUTTON_RIGHT: mouseRight = action == GLFW_PRESS; return true;
+        default: return false;
+    };
 }

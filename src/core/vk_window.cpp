@@ -39,3 +39,17 @@ void Window::glfw_key_callback(GLFWwindow* window, int key, int scancode, int ac
         return _this->on_key(key, scancode, action, mods);
     }
 }
+
+void Window::glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+    auto* const _this = static_cast<Window*>(glfwGetWindowUserPointer(window));
+    if (_this->on_cursor_position) {
+        return _this->on_cursor_position(xpos, ypos);
+    }
+}
+
+void Window::glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    auto* const _this = static_cast<Window*>(glfwGetWindowUserPointer(window));
+    if (_this->on_mouse_button) {
+        return _this->on_mouse_button(button, action, mods);
+    }
+}
