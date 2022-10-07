@@ -106,6 +106,7 @@ Renderables SceneListing::cubeScene(Camera& camera, MeshManager* meshManager, Te
     RenderObject cubeObj;
     cubeObj.mesh = meshManager->get_mesh("cube");
     cubeObj.material = pipelineBuilder->get_material("defaultMesh");
+    cubeObj.transformMatrix = glm::mat4(1.f);
     renderables.push_back(cubeObj);
 
     return renderables;
