@@ -1,6 +1,10 @@
 .idea/
 /build
 /bin
+assets/Main/
 cmake-build-debug/
 /shaders/*.spv
 /src/shaders/*.spv
+.DS_Store
+/src/.DS_Store
+/assets/.DS_Store
