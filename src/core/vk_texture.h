@@ -13,6 +13,7 @@ namespace vkutil {
 }
 
 struct Texture final {
+    int32_t index;
     AllocatedImage image;
     VkImageView imageView;
 };

@@ -12,7 +12,7 @@ find_library(LIBVULKAN1 libvulkan.1.dylib ~/VulkanSDK/1.3.204.1/macOS/lib/)
 find_library(LIBGLFW3 libglfw.3.3.dylib /usr/local/Cellar/glfw/3.3.6/lib/)
 find_library(GLM glm /usr/local/Cellar/glm/0.9.9.8/lib/)
 
-target_link_libraries(vulkan_guide vkbootstrap vma glm tinyobjloader imgui stb_image ${LIBVULKAN13} ${LIBVULKAN1} ${LIBGLFW3})
+target_link_libraries(vulkan_guide vkbootstrap vma glm tinyobjloader tinygltf imgui stb_image ${LIBVULKAN13} ${LIBVULKAN1} ${LIBGLFW3})
 target_link_libraries(vulkan_guide Tracy::TracyClient)
 # target_link_libraries(vulkan_guide Vulkan::Vulkan sdl2)
 

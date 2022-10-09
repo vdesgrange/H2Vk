@@ -6,6 +6,7 @@ add_library(glm INTERFACE)
 add_library(vma INTERFACE)
 add_library(stb_image INTERFACE)
 add_library(tinyobjloader STATIC)
+add_library(tinygltf STATIC)
 
 find_library(LIBVULKAN13 libvulkan.1.3.204.dylib ~/VulkanSDK/1.3.204.1/macOS/lib/)
 find_library(LIBVULKAN1 libvulkan.1.dylib ~/VulkanSDK/1.3.204.1/macOS/lib/)
@@ -23,12 +24,21 @@ target_link_libraries(vkbootstrap PUBLIC Vulkan::Vulkan $<$<BOOL:UNIX>:${CMAKE_D
 target_include_directories(vma INTERFACE vma)
 target_include_directories(glm INTERFACE glm)
 
-target_sources(tinyobjloader PRIVATE 
+target_sources(tinyobjloader PRIVATE
     tinyobjloader/tiny_obj_loader.h
     tinyobjloader/tiny_obj_loader.cc
     )
 
 target_include_directories(tinyobjloader PUBLIC tinyobjloader)
+
+target_sources(tinygltf PRIVATE
+        tinygltf/tiny_gltf.h
+        tinygltf/tiny_gltf.cc
+        )
+
+set(TINYGLTF_HEADER_ONLY ON CACHE INTERNAL "" FORCE)
+set(TINYGLTF_INSTALL OFF CACHE INTERNAL "" FORCE)
+target_include_directories(tinygltf PUBLIC tinygltf)
 
 add_library(sdl2 INTERFACE)
 
