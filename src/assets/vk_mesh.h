@@ -89,12 +89,18 @@ struct Textures {
 
 class Model final {
 public:
-    std::vector<Image> images;
-    std::vector<Textures> textures;
-    std::vector<Materials> materials;
-    std::vector<Node*> nodes;
+    std::vector<Image> _images;
+    std::vector<Textures> _textures;
+    std::vector<Materials> _materials;
+    std::vector<Node*> _nodes;
 
-    AllocatedBuffer vertices;
+    AllocatedBuffer _vertices;
+
+    struct {
+        uint32_t count;
+        AllocatedBuffer allocation;
+    } _indices;
+
 
     Model(Device& device) : _device(device) {};
     ~Model();
@@ -106,8 +112,8 @@ private:
     void load_image(tinygltf::Model& input);
     void load_texture(tinygltf::Model& input);
     void load_material(tinygltf::Model& input);
-    void load_scene(tinygltf::Model& input);
-    void load_node(const tinygltf::Node& node, tinygltf::Model &input);
+    void load_node(const tinygltf::Node& node, tinygltf::Model &input, Node* parent, std::vector<uint32_t> indexBuffer, std::vector<Vertex>& vertexBuffer);
+    void load_scene(tinygltf::Model& input, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
 };
 
 namespace std {
