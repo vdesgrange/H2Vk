@@ -77,7 +77,10 @@ struct Materials {
 };
 
 struct Image {
+    int32_t index;
     VkImage _image;
+    VkImageView imageView;
+    VkSampler imageSampler;
     VmaAllocation _allocation;
     VkDescriptorSet _descriptorSet;
 };
@@ -94,18 +97,24 @@ public:
     std::vector<Materials> _materials;
     std::vector<Node*> _nodes;
 
-    AllocatedBuffer _vertices;
+    AllocatedBuffer _vertexBuffer;
 
     struct {
         uint32_t count;
         AllocatedBuffer allocation;
-    } _indices;
+    } _indexBuffer;
 
 
     Model(Device& device) : _device(device) {};
     ~Model();
 
     bool load_from_gltf(const char *filename);
+    bool load_from_obj(const char* filename);
+    bool load_from_glb(const char *filename);
+
+    void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout);
+    void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout);
+
 private:
     const class Device& _device;
 

@@ -38,6 +38,7 @@ void Model::load_image(tinygltf::Model &input) {
             bufferSize = gltfImage.image.size();
         }
         // todo : load texture from image buffer
+        // _images[i]._textures.fromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height, vulkanDevice, copyQueue);
 
         if (deleteBuffer) {
             delete[] buffer;
@@ -192,6 +193,55 @@ void Model::load_scene(tinygltf::Model &input, std::vector<uint32_t>& indexBuffe
     }
 }
 
+void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout) {
+    if (node->mesh.primitives.size() > 0) {
+        glm::mat4 nodeMatrix = node->matrix;
+        Node* parent = node->parent;
+        while (parent) {
+            nodeMatrix = parent->matrix * nodeMatrix;
+            parent = parent->parent;
+        }
+
+        vkCmdPushConstants(nullptr, nullptr,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(glm::mat4),&nodeMatrix);
+        for (Primitive& primitive : node->mesh.primitives) {
+            if (primitive.indexCount > 0) {
+                // Get the texture index for this primitive
+                Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];
+                // Bind the descriptor for the current primitive's texture
+
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
+                vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+            }
+        }
+    }
+
+    for (auto& child : node->children) {
+        draw_node(child, commandBuffer, pipelineLayout);
+    }
+}
+
+void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout) {
+    VkDeviceSize offsets[1] = { 0 };
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBuffer._buffer, offsets);
+    vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.allocation._buffer, 0, VK_INDEX_TYPE_UINT32);
+    for (auto& node : _nodes) {
+        draw_node(node, commandBuffer, pipelineLayout);
+    }
+}
+
+bool Model::load_from_glb(const char *filename) {
+    tinygltf::Model input;
+    std::string err;
+    std::string warn;
+    tinygltf::TinyGLTF loader;
+
+    if (!loader.LoadBinaryFromFile(&input, &err, &warn, filename)) {
+        std::cerr << warn << std::endl;
+        std::cerr << err << std::endl;
+        return false;
+    }
+}
+
 bool Model::load_from_gltf(const char *filename) {
     tinygltf::Model input;
     tinygltf::TinyGLTF loader;
@@ -213,8 +263,60 @@ bool Model::load_from_gltf(const char *filename) {
 
     size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
     size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
+    this->_indexBuffer.count = static_cast<uint32_t>(indexBuffer.size());
 
-    this->_indices.count = static_cast<uint32_t>(indexBuffer.size());
+//    struct StagingBuffer {
+//        VkBuffer buffer;
+//        VkDeviceMemory memory;
+//    } vertexStaging, indexStaging;
+
+    return true;
+}
+
+bool Model::load_from_obj(const char *filename) {
+    std::unordered_map<Vertex, uint32_t> unique_vertices{};
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename, nullptr)) {
+        std::cerr << warn << std::endl;
+        std::cerr << err << std::endl;
+        return false;
+    }
+
+    std::vector<Vertex> vertexBuffer{};
+
+    for (const auto& shape : shapes) {
+        for (const auto& index : shape.mesh.indices) {
+            Vertex vertex{};
+
+            vertex.position = {
+                    attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2]
+            };
+
+            vertex.normal = {
+                    attrib.normals[3 * index.normal_index + 0],
+                    attrib.normals[3 * index.normal_index + 1],
+                    attrib.normals[3 * index.normal_index + 2],
+            };
+
+            vertex.color = vertex.normal; // glm::vec3(1.0f);
+
+            vertex.uv = {
+                    attrib.texcoords[2 * index.texcoord_index + 0], // ux
+                    1 - attrib.texcoords[2 * index.texcoord_index + 1], // uy, 1 - uy because of vulkan coords.
+            };
+
+            vertexBuffer.push_back(vertex);
+
+        }
+    }
+
+    size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
 
     return true;
 }
@@ -292,7 +394,6 @@ Mesh Mesh::cube() {
 
     return mesh;
 }
-
 
 VertexInputDescription Vertex::get_vertex_description()
 {
