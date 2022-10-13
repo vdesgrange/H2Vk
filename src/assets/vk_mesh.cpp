@@ -4,13 +4,14 @@
 
 #include "vk_mesh.h"
 #include "core/vk_device.h"
+#include "core/vk_buffer.h"
 
 Model::~Model() {
     for (auto node : _nodes) {
         delete node;
     }
 
-    vmaDestroyBuffer(_device._allocator, _vertices._buffer, _vertices._allocation);
+    vmaDestroyBuffer(_device._allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
 }
 
 void Model::load_image(tinygltf::Model &input) {
@@ -265,10 +266,21 @@ bool Model::load_from_gltf(const char *filename) {
     size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
     this->_indexBuffer.count = static_cast<uint32_t>(indexBuffer.size());
 
-//    struct StagingBuffer {
-//        VkBuffer buffer;
-//        VkDeviceMemory memory;
-//    } vertexStaging, indexStaging;
+    struct StagingBuffer {
+        VkBuffer buffer;
+        VkDeviceMemory memory;
+    } indexStaging;
+
+//    VK_CHECK_RESULT(vulkanDevice->createBuffer(
+//            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+//            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+//            vertexBufferSize,
+//            &vertexStaging.buffer,
+//            &vertexStaging.memory,
+//            vertexBuffer.data()));
+
+    AllocatedBuffer vertexStaging = Buffer::create_buffer(_device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+
 
     return true;
 }
