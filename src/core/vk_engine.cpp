@@ -234,8 +234,8 @@ void VulkanEngine::load_images() {
 }
 
 void VulkanEngine::init_scene() {
-    _sceneListing = new SceneListing(_meshManager, _textureManager, _pipelineBuilder);
-    _scene = new Scene(*_meshManager, *_textureManager, *_pipelineBuilder);
+    _sceneListing = new SceneListing();
+    _scene = new Scene(*this, *_meshManager, *_textureManager, *_pipelineBuilder);
 
     // If texture not loaded here, it creates issues -> Must be loaded before binding (previously in load_images)
     _textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");

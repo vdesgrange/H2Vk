@@ -7,6 +7,7 @@
 #include <utility>
 #include <string>
 
+class VulkanEngine;
 class Camera;
 class Mesh;
 class Material;
@@ -14,6 +15,7 @@ class MeshManager;
 class TextureManager;
 class PipelineBuilder;
 class Device;
+class UploadContext;
 
 struct RenderObject {
     Mesh* mesh;
@@ -37,18 +39,14 @@ typedef std::vector<RenderObject> Renderables;
 
 class SceneListing final {
 public:
-    static const std::vector<std::pair<std::string, std::function<Renderables (Camera& camera, MeshManager* meshManager, TextureManager* textureManager, PipelineBuilder* pipelineBuilder)>>> scenes;
+    static const std::vector<std::pair<std::string, std::function<Renderables (Camera& camera, VulkanEngine* engine)>>> scenes;
 
-    SceneListing(MeshManager* meshManager, TextureManager* textureManager, PipelineBuilder* pipelineBuilder) : _meshManager(meshManager), _textureManager(textureManager), _pipelineBuilder(pipelineBuilder) {};
-    ~SceneListing();
-
-    static Renderables monkeyAndTriangles(Camera& camera, MeshManager* meshManager, TextureManager* textureManager, PipelineBuilder* pipelineBuilder);
-    static Renderables lostEmpire(Camera &camera, MeshManager* meshManager, TextureManager* textureManager,  PipelineBuilder* pipelineBuilder);
-    static Renderables cubeScene(Camera &camera, MeshManager* meshManager, TextureManager* textureManager,  PipelineBuilder* pipelineBuilder);
+    static Renderables monkeyAndTriangles(Camera& camera, VulkanEngine* engine);
+    static Renderables lostEmpire(Camera &camera, VulkanEngine* engine);
+    static Renderables cubeScene(Camera &camera, VulkanEngine* engine);
+    static Renderables sponza(Camera& camera, VulkanEngine* engine);
 
 private:
     static const class Device& _device;
     class MeshManager* _meshManager;
-    class TextureManager* _textureManager;
-    class PipelineBuilder* _pipelineBuilder;
 };

@@ -5,8 +5,8 @@
 #include "vk_texture.h"
 #include "vk_pipeline.h"
 
-Scene::Scene(MeshManager& meshManager, TextureManager& textureManager, PipelineBuilder& pipelineBuilder) :
- _meshManager(meshManager), _textureManager(textureManager), _pipelineBuilder(pipelineBuilder) {
+Scene::Scene(VulkanEngine& engine, MeshManager& meshManager, TextureManager& textureManager, PipelineBuilder& pipelineBuilder) :
+ _engine(engine), _meshManager(meshManager), _textureManager(textureManager), _pipelineBuilder(pipelineBuilder) {
 }
 
 void Scene::load_scene(int sceneIndex, Camera& camera) {
@@ -14,7 +14,7 @@ void Scene::load_scene(int sceneIndex, Camera& camera) {
         return;
     }
 
-    auto renderables = SceneListing::scenes[sceneIndex].second(camera, &_meshManager, &_textureManager, &_pipelineBuilder);
+    auto renderables = SceneListing::scenes[sceneIndex].second(camera, &_engine);
     _sceneIndex = sceneIndex;
     _renderables = renderables;
 }
