@@ -58,7 +58,7 @@ void MeshManager::load_meshes()
 
 void MeshManager::upload_mesh(Mesh& mesh)
 {
-    const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex);
+    const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex); // have
     //allocate vertex buffer
     VkBufferCreateInfo bufferInfo = {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

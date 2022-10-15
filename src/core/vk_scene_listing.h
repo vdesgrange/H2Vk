@@ -45,6 +45,7 @@ public:
     static Renderables lostEmpire(Camera &camera, VulkanEngine* engine);
     static Renderables cubeScene(Camera &camera, VulkanEngine* engine);
     static Renderables sponza(Camera& camera, VulkanEngine* engine);
+    static Renderables oldBridge(Camera& camera, VulkanEngine* engine);
 
 private:
     static const class Device& _device;

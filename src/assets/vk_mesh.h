@@ -17,6 +17,7 @@
 #include "core/vk_mesh_manager.h"
 
 class Device;
+class VulkanEngine;
 
 struct MeshPushConstants {
     glm::vec4 data;
@@ -107,7 +108,7 @@ public:
     } _indexBuffer;
 
 
-    Model(Device& device, UploadContext& uploadContext) : _device(device), _uploadContext(uploadContext) {};
+    Model(VulkanEngine& engine) : _engine(engine) {};
     ~Model();
 
     bool load_from_gltf(const char *filename);
@@ -118,8 +119,7 @@ public:
     void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout);
 
 private:
-    const class Device& _device;
-    const class UploadContext& _uploadContext;
+    class VulkanEngine& _engine;
 
     void load_image(tinygltf::Model& input);
     void load_texture(tinygltf::Model& input);

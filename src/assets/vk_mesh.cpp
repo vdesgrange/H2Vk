@@ -19,14 +19,15 @@ Model::~Model() {
         delete node;
     }
 
-    vmaDestroyBuffer(_device._allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
-    vmaDestroyBuffer(_device._allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
+    for (Image image : _images) {
+        vkDestroyImageView(_engine._device->_logicalDevice, image._imageView, nullptr);
+        vmaDestroyImage(_engine._device->_allocator, image._image, image._allocation);  // destroyImage + vmaFreeMemory
+        vkDestroySampler(_engine._device->_logicalDevice, image._sampler, nullptr);
+    }
+
+    vmaDestroyBuffer(_engine._device->_allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
+    vmaDestroyBuffer(_engine._device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
 }
-
-bool load_image_from_buffer(VulkanEngine* engine, Image& image, void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
-
-}
-
 
 void Model::load_image(tinygltf::Model &input) {
     _images.resize(input.images.size());
@@ -52,10 +53,9 @@ void Model::load_image(tinygltf::Model &input) {
             buffer = gltfImage.image.data(); // ou &gltfImage.image[0]
             bufferSize = gltfImage.image.size();
         }
-        // todo : load texture from image buffer
+
         // _images[i]._textures.fromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height, vulkanDevice, copyQueue);
         vkutil::load_image_from_buffer(_engine, buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM,   gltfImage.width,  gltfImage.height, _images[i]);
-
 
         if (deleteBuffer) {
             delete[] buffer;
@@ -296,12 +296,12 @@ bool Model::load_from_gltf(const char *filename) {
     size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
     this->_indexBuffer.count = static_cast<uint32_t>(indexBuffer.size());
 
-    AllocatedBuffer vertexStaging = Buffer::create_buffer(_device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    AllocatedBuffer vertexStaging = Buffer::create_buffer(*_engine._device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     void* data;
-    vmaMapMemory(_device._allocator, vertexStaging._allocation, &data);
+    vmaMapMemory(_engine._device->_allocator, vertexStaging._allocation, &data);
     memcpy(data, vertexBuffer.data(), static_cast<size_t>(vertexBufferSize)); // number of vertex
-    vmaUnmapMemory(_device._allocator, vertexStaging._allocation);
-    _vertexBuffer = Buffer::create_buffer(_device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+    vmaUnmapMemory(_engine._device->_allocator, vertexStaging._allocation);
+    _vertexBuffer = Buffer::create_buffer(*_engine._device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
     immediate_submit([=](VkCommandBuffer cmd) {
         VkBufferCopy copy;
         copy.dstOffset = 0;
@@ -310,12 +310,12 @@ bool Model::load_from_gltf(const char *filename) {
         vkCmdCopyBuffer(cmd, vertexStaging._buffer, _vertexBuffer._buffer, 1, &copy);
     });
 
-    AllocatedBuffer indexStaging = Buffer::create_buffer(_device, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    AllocatedBuffer indexStaging = Buffer::create_buffer(*_engine._device, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     void* data2;
-    vmaMapMemory(_device._allocator, indexStaging._allocation, &data);
+    vmaMapMemory(_engine._device->_allocator, indexStaging._allocation, &data);
     memcpy(data2, indexBuffer.data(), static_cast<size_t>(indexBufferSize));
-    vmaUnmapMemory(_device._allocator, indexStaging._allocation);
-    _indexBuffer.allocation = Buffer::create_buffer(_device, indexBufferSize,   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    vmaUnmapMemory(_engine._device->_allocator, indexStaging._allocation);
+    _indexBuffer.allocation = Buffer::create_buffer(*_engine._device, indexBufferSize,   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     immediate_submit([=](VkCommandBuffer cmd) {
         VkBufferCopy copy;
         copy.dstOffset = 0;
@@ -324,8 +324,8 @@ bool Model::load_from_gltf(const char *filename) {
         vkCmdCopyBuffer(cmd, indexStaging._buffer, _indexBuffer.allocation._buffer, 1, &copy);
     });
 
-    vmaDestroyBuffer(_device._allocator, vertexStaging._buffer, vertexStaging._allocation);
-    vmaDestroyBuffer(_device._allocator, indexStaging._buffer, indexStaging._allocation);
+    vmaDestroyBuffer(_engine._device->_allocator, vertexStaging._buffer, vertexStaging._allocation);
+    vmaDestroyBuffer(_engine._device->_allocator, indexStaging._buffer, indexStaging._allocation);
 
     return true;
 }
@@ -500,7 +500,7 @@ VertexInputDescription Vertex::get_vertex_description()
 }
 
 void Model::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function) {  // ATTENTION : DUPLICA
-    VkCommandBuffer cmd = _uploadContext._commandBuffer->_mainCommandBuffer;
+    VkCommandBuffer cmd = _engine._uploadContext._commandBuffer->_mainCommandBuffer;
     VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
@@ -508,10 +508,10 @@ void Model::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function
     VK_CHECK(vkEndCommandBuffer(cmd));
 
     VkSubmitInfo submitInfo = vkinit::submit_info(&cmd);
-    VK_CHECK(vkQueueSubmit(_device.get_graphics_queue(), 1, &submitInfo, _uploadContext._uploadFence->_fence));
+    VK_CHECK(vkQueueSubmit(_engine._device->get_graphics_queue(), 1, &submitInfo, _engine._uploadContext._uploadFence->_fence));
 
-    vkWaitForFences(_device._logicalDevice, 1, &_uploadContext._uploadFence->_fence, true, 9999999999);
-    vkResetFences(_device._logicalDevice, 1, &_uploadContext._uploadFence->_fence);
+    vkWaitForFences(_engine._device->_logicalDevice, 1, &_engine._uploadContext._uploadFence->_fence, true, 9999999999);
+    vkResetFences(_engine._device->_logicalDevice, 1, &_engine._uploadContext._uploadFence->_fence);
 
-    vkResetCommandPool(_device._logicalDevice, _uploadContext._commandPool->_commandPool, 0);
+    vkResetCommandPool(_engine._device->_logicalDevice, _engine._uploadContext._commandPool->_commandPool, 0);
 }

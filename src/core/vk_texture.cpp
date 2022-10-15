@@ -119,7 +119,6 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* file, Alloca
 }
 
 bool vkutil::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight, Image& outImage) {
-    VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
     VkBufferCreateInfo bufferInfo = {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -199,13 +198,17 @@ bool vkutil::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDevice
         VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
         vkCreateSampler(engine._device->_logicalDevice, &samplerInfo, nullptr, &newImage._sampler);
 
-        VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, newImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
+        VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(format, newImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
         vkCreateImageView(engine._device->_logicalDevice, &imageinfo, nullptr, &newImage._imageView);
+
+        // save imageLayout, imageView, sampler for later usage in descriptor?
     });
 
-    engine._mainDeletionQueue.push_function([=]() {
-        vmaDestroyImage(engine._device->_allocator, newImage._image, newImage._allocation);
-    });
+    // DESTRUCTION NOT HANDLED HERE - MUST BE DONE WHERE IMAGE IS USED
+    // For instance, Handled in vk_mesh destructor
+    //  engine._mainDeletionQueue.push_function([=]() {
+    //      vmaDestroyImage(engine._device->_allocator, newImage._image, newImage._allocation);
+    //  });
 
     vmaDestroyBuffer(engine._device->_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
     std::cout << "Texture loaded successfully " << std::endl;
