@@ -5,6 +5,14 @@
 #include "vk_mesh.h"
 #include "core/vk_device.h"
 #include "core/vk_buffer.h"
+#include "core/vk_initializers.h"
+#include "core/vk_helpers.h"
+#include "core/vk_command_buffer.h"
+#include "core/vk_command_pool.h"
+#include "core/vk_fence.h"
+#include "core/vk_engine.h"
+#include "core/vk_texture.h"
+
 
 Model::~Model() {
     for (auto node : _nodes) {
@@ -12,7 +20,13 @@ Model::~Model() {
     }
 
     vmaDestroyBuffer(_device._allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
+    vmaDestroyBuffer(_device._allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
 }
+
+bool load_image_from_buffer(VulkanEngine* engine, Image& image, void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
+
+}
+
 
 void Model::load_image(tinygltf::Model &input) {
     _images.resize(input.images.size());
@@ -40,6 +54,8 @@ void Model::load_image(tinygltf::Model &input) {
         }
         // todo : load texture from image buffer
         // _images[i]._textures.fromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height, vulkanDevice, copyQueue);
+        vkutil::load_image_from_buffer(_engine, buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM,   gltfImage.width,  gltfImage.height, _images[i]);
+
 
         if (deleteBuffer) {
             delete[] buffer;
@@ -203,7 +219,7 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
             parent = parent->parent;
         }
 
-        vkCmdPushConstants(nullptr, nullptr,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(glm::mat4),&nodeMatrix);
+        vkCmdPushConstants(commandBuffer, pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(glm::mat4),&nodeMatrix);
         for (Primitive& primitive : node->mesh.primitives) {
             if (primitive.indexCount > 0) {
                 // Get the texture index for this primitive
@@ -232,15 +248,29 @@ void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayou
 
 bool Model::load_from_glb(const char *filename) {
     tinygltf::Model input;
+    tinygltf::TinyGLTF loader;
     std::string err;
     std::string warn;
-    tinygltf::TinyGLTF loader;
+    std::vector<uint32_t> indexBuffer;
+    std::vector<Vertex> vertexBuffer;
 
     if (!loader.LoadBinaryFromFile(&input, &err, &warn, filename)) {
         std::cerr << warn << std::endl;
         std::cerr << err << std::endl;
         return false;
     }
+
+    this->load_image(input);
+    this->load_texture(input);
+    this->load_material(input);
+    this->load_scene(input, indexBuffer, vertexBuffer);
+
+    size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
+    size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
+    this->_indexBuffer.count = static_cast<uint32_t>(indexBuffer.size());
+
+
+    return true;
 }
 
 bool Model::load_from_gltf(const char *filename) {
@@ -266,21 +296,36 @@ bool Model::load_from_gltf(const char *filename) {
     size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
     this->_indexBuffer.count = static_cast<uint32_t>(indexBuffer.size());
 
-    struct StagingBuffer {
-        VkBuffer buffer;
-        VkDeviceMemory memory;
-    } indexStaging;
-
-//    VK_CHECK_RESULT(vulkanDevice->createBuffer(
-//            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-//            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-//            vertexBufferSize,
-//            &vertexStaging.buffer,
-//            &vertexStaging.memory,
-//            vertexBuffer.data()));
-
     AllocatedBuffer vertexStaging = Buffer::create_buffer(_device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    void* data;
+    vmaMapMemory(_device._allocator, vertexStaging._allocation, &data);
+    memcpy(data, vertexBuffer.data(), static_cast<size_t>(vertexBufferSize)); // number of vertex
+    vmaUnmapMemory(_device._allocator, vertexStaging._allocation);
+    _vertexBuffer = Buffer::create_buffer(_device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+    immediate_submit([=](VkCommandBuffer cmd) {
+        VkBufferCopy copy;
+        copy.dstOffset = 0;
+        copy.srcOffset = 0;
+        copy.size = vertexBufferSize;
+        vkCmdCopyBuffer(cmd, vertexStaging._buffer, _vertexBuffer._buffer, 1, &copy);
+    });
 
+    AllocatedBuffer indexStaging = Buffer::create_buffer(_device, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    void* data2;
+    vmaMapMemory(_device._allocator, indexStaging._allocation, &data);
+    memcpy(data2, indexBuffer.data(), static_cast<size_t>(indexBufferSize));
+    vmaUnmapMemory(_device._allocator, indexStaging._allocation);
+    _indexBuffer.allocation = Buffer::create_buffer(_device, indexBufferSize,   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    immediate_submit([=](VkCommandBuffer cmd) {
+        VkBufferCopy copy;
+        copy.dstOffset = 0;
+        copy.srcOffset = 0;
+        copy.size = indexBufferSize;
+        vkCmdCopyBuffer(cmd, indexStaging._buffer, _indexBuffer.allocation._buffer, 1, &copy);
+    });
+
+    vmaDestroyBuffer(_device._allocator, vertexStaging._buffer, vertexStaging._allocation);
+    vmaDestroyBuffer(_device._allocator, indexStaging._buffer, indexStaging._allocation);
 
     return true;
 }
@@ -454,3 +499,19 @@ VertexInputDescription Vertex::get_vertex_description()
     return description;
 }
 
+void Model::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function) {  // ATTENTION : DUPLICA
+    VkCommandBuffer cmd = _uploadContext._commandBuffer->_mainCommandBuffer;
+    VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
+    function(cmd);
+    VK_CHECK(vkEndCommandBuffer(cmd));
+
+    VkSubmitInfo submitInfo = vkinit::submit_info(&cmd);
+    VK_CHECK(vkQueueSubmit(_device.get_graphics_queue(), 1, &submitInfo, _uploadContext._uploadFence->_fence));
+
+    vkWaitForFences(_device._logicalDevice, 1, &_uploadContext._uploadFence->_fence, true, 9999999999);
+    vkResetFences(_device._logicalDevice, 1, &_uploadContext._uploadFence->_fence);
+
+    vkResetCommandPool(_device._logicalDevice, _uploadContext._commandPool->_commandPool, 0);
+}

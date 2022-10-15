@@ -14,6 +14,7 @@
 #include "tiny_obj_loader.h"
 #include "tiny_gltf.h"
 #include "core/vk_types.h"
+#include "core/vk_mesh_manager.h"
 
 class Device;
 
@@ -77,11 +78,12 @@ struct Materials {
 };
 
 struct Image {
-    int32_t index;
+    int32_t _index;
     VkImage _image;
-    VkImageView imageView;
-    VkSampler imageSampler;
+    VkImageView _imageView;
+    VkSampler _sampler;
     VmaAllocation _allocation;
+    VkDescriptorImageInfo _descriptor;
     VkDescriptorSet _descriptorSet;
 };
 
@@ -105,7 +107,7 @@ public:
     } _indexBuffer;
 
 
-    Model(Device& device) : _device(device) {};
+    Model(Device& device, UploadContext& uploadContext) : _device(device), _uploadContext(uploadContext) {};
     ~Model();
 
     bool load_from_gltf(const char *filename);
@@ -117,12 +119,15 @@ public:
 
 private:
     const class Device& _device;
+    const class UploadContext& _uploadContext;
 
     void load_image(tinygltf::Model& input);
     void load_texture(tinygltf::Model& input);
     void load_material(tinygltf::Model& input);
     void load_node(const tinygltf::Node& node, tinygltf::Model &input, Node* parent, std::vector<uint32_t> indexBuffer, std::vector<Vertex>& vertexBuffer);
     void load_scene(tinygltf::Model& input, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
+
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 };
 
 namespace std {
