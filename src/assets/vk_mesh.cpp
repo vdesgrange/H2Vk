@@ -12,27 +12,29 @@
 #include "core/vk_fence.h"
 #include "core/vk_engine.h"
 #include "core/vk_texture.h"
+#include "core/vk_descriptor_builder.h"
+#include "core/vk_camera.h"
 
 
-Model::~Model() {
-    for (auto node : _nodes) {
-        delete node;
-    }
+//Model::~Model() {
+//    for (auto node : _nodes) {
+//        delete node;
+//    }
+//
+//    for (Image image : _images) {
+//        vkDestroyImageView(_engine._device->_logicalDevice, image._imageView, nullptr);
+//        vmaDestroyImage(_engine._device->_allocator, image._image, image._allocation);  // destroyImage + vmaFreeMemory
+//        vkDestroySampler(_engine._device->_logicalDevice, image._sampler, nullptr);
+//    }
+//
+//    vmaDestroyBuffer(_engine._device->_allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
+//    vmaDestroyBuffer(_engine._device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
+//}
 
-    for (Image image : _images) {
-        vkDestroyImageView(_engine._device->_logicalDevice, image._imageView, nullptr);
-        vmaDestroyImage(_engine._device->_allocator, image._image, image._allocation);  // destroyImage + vmaFreeMemory
-        vkDestroySampler(_engine._device->_logicalDevice, image._sampler, nullptr);
-    }
-
-    vmaDestroyBuffer(_engine._device->_allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
-    vmaDestroyBuffer(_engine._device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
-}
-
-void Model::load_image(tinygltf::Model &input) {
+void Model::load_images(VulkanEngine& engine, tinygltf::Model &input) {
     _images.resize(input.images.size());
 
-    for (size_t i = 0; i < input.images.size(); i++) {
+    for (uint32_t i = 0; i < input.images.size(); i++) {
         tinygltf::Image& gltfImage = input.images[i];
         unsigned char* buffer = nullptr;
         VkDeviceSize bufferSize = 0;
@@ -43,7 +45,7 @@ void Model::load_image(tinygltf::Model &input) {
             buffer = new unsigned char[bufferSize];
             unsigned char* rgba = buffer;
             unsigned char* rgb = &gltfImage.image[0];
-            for (size_t i = 0; i < gltfImage.width * gltfImage.height; ++i) {
+            for (uint32_t j = 0; j < gltfImage.width * gltfImage.height; ++j) {
                 memcpy(rgba, rgb, sizeof(unsigned char) * 3);
                 rgba += 4;
                 rgb += 3;
@@ -55,7 +57,7 @@ void Model::load_image(tinygltf::Model &input) {
         }
 
         // _images[i]._textures.fromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height, vulkanDevice, copyQueue);
-        vkutil::load_image_from_buffer(_engine, buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM,   gltfImage.width,  gltfImage.height, _images[i]);
+        vkutil::load_image_from_buffer(engine, buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM,   gltfImage.width,  gltfImage.height, _images[i]);
 
         if (deleteBuffer) {
             delete[] buffer;
@@ -63,16 +65,16 @@ void Model::load_image(tinygltf::Model &input) {
     }
 }
 
-void Model::load_texture(tinygltf::Model &input) {
+void Model::load_textures(tinygltf::Model &input) {
     _textures.resize(input.textures.size());
-    for (size_t i = 0; i < input.textures.size(); i++) {
+    for (uint32_t i = 0; i < input.textures.size(); i++) {
         _textures[i].imageIndex = input.textures[i].source;
     }
 }
 
-void Model::load_material(tinygltf::Model &input) {
+void Model::load_materials(tinygltf::Model &input) {
     _materials.resize(input.materials.size());
-    for (size_t i = 0; i < input.materials.size(); i++) {
+    for (uint32_t i = 0; i < input.materials.size(); i++) {
         tinygltf::Material gltfMaterial = input.materials[i];
         if (gltfMaterial.values.find("baseColorFactor") != gltfMaterial.values.end()) {
             _materials[i].baseColorFactor = glm::make_vec4(gltfMaterial.values["baseColorFactor"].ColorFactor().data());
@@ -84,7 +86,7 @@ void Model::load_material(tinygltf::Model &input) {
     }
 }
 
-void Model::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node* parent, std::vector<uint32_t> indexBuffer, std::vector<Vertex>& vertexBuffer) {
+void Model::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer) {
     Node* node = new Node{};
     node->matrix = glm::mat4(1.f);
     node->parent = nullptr;
@@ -112,11 +114,11 @@ void Model::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node*
 
     if (iNode.mesh > -1) {
         const tinygltf::Mesh mesh = input.meshes[iNode.mesh];
-        for (size_t i = 0; i < mesh.primitives.size(); i++) {
+        for (uint32_t i = 0; i < mesh.primitives.size(); i++) {
             const tinygltf::Primitive& gltfPrimitive = mesh.primitives[i];
             uint32_t indexCount = 0;
-            uint32_t firstIndex = static_cast<uint32_t>(indexBuffer.size());
-            uint32_t vertexStart = static_cast<uint32_t>(vertexBuffer.size());
+            auto firstIndex = static_cast<uint32_t>(indexBuffer.size());
+            auto vertexStart = static_cast<uint32_t>(vertexBuffer.size());
 
             const float* positionBuffer = nullptr;
             const float* normalsBuffer = nullptr;
@@ -246,13 +248,43 @@ void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayou
     }
 }
 
-bool Model::load_from_glb(const char *filename) {
+void Model::descriptors(VulkanEngine& _engine) {
+
+    std::vector<VkDescriptorPoolSize> sizes = {
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(this->_images.size()) }
+    };
+
+    _camBuffer = Buffer::create_buffer(*_engine._device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    VkDescriptorBufferInfo camBInfo{};
+    camBInfo.buffer = _camBuffer._buffer; // frames[i]
+    camBInfo.offset = 0;
+    camBInfo.range = sizeof(GPUCameraData);
+
+    DescriptorBuilder::begin(*_engine._layoutCache, *_engine._allocator)
+        .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+        .build(_descriptorSet, _descriptorSetLayouts.matrices, sizes);
+
+    for (auto& image : this->_images) {
+        VkDescriptorImageInfo imageBInfo;
+        imageBInfo.sampler = image._sampler;
+        imageBInfo.imageView = image._imageView;
+        imageBInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        DescriptorBuilder::begin(*_engine._layoutCache, *_engine._allocator)
+                .bind_image(imageBInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, nullptr, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .build(image._descriptorSet, _descriptorSetLayouts.textures, sizes);
+    }
+}
+
+bool Model::load_from_glb(VulkanEngine& engine, const char *filename) {
     tinygltf::Model input;
     tinygltf::TinyGLTF loader;
     std::string err;
     std::string warn;
-    std::vector<uint32_t> indexBuffer;
-    std::vector<Vertex> vertexBuffer;
+//    std::vector<uint32_t> indexBuffer;
+//    std::vector<Vertex> vertexBuffer;
 
     if (!loader.LoadBinaryFromFile(&input, &err, &warn, filename)) {
         std::cerr << warn << std::endl;
@@ -260,26 +292,60 @@ bool Model::load_from_glb(const char *filename) {
         return false;
     }
 
-    this->load_image(input);
-    this->load_texture(input);
-    this->load_material(input);
-    this->load_scene(input, indexBuffer, vertexBuffer);
+    this->load_images(engine, input);
+    this->load_textures(input);
+    this->load_materials(input);
+    this->load_scene(input, _indexesBuffer, _verticesBuffer);
 
-    size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
-    size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
-    this->_indexBuffer.count = static_cast<uint32_t>(indexBuffer.size());
-
+    {
+//    size_t vertexBufferSize = _verticesBuffer.size() * sizeof(Vertex);
+//    size_t indexBufferSize = _indexesBuffer.size() * sizeof(uint32_t);
+//    this->_indexBuffer.count = static_cast<uint32_t>(_indexesBuffer.size());
+//
+//    AllocatedBuffer vertexStaging = Buffer::create_buffer(*_engine._device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+//    void* data;
+//    vmaMapMemory(_engine._device->_allocator, vertexStaging._allocation, &data);
+//    memcpy(data, _verticesBuffer.data(), static_cast<size_t>(vertexBufferSize)); // number of vertex
+//    vmaUnmapMemory(_engine._device->_allocator, vertexStaging._allocation);
+//    _vertexBuffer = Buffer::create_buffer(*_engine._device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+//    immediate_submit([=](VkCommandBuffer cmd) {
+//        VkBufferCopy copy;
+//        copy.dstOffset = 0;
+//        copy.srcOffset = 0;
+//        copy.size = vertexBufferSize;
+//        vkCmdCopyBuffer(cmd, vertexStaging._buffer, _vertexBuffer._buffer, 1, &copy);
+//    });
+//
+//
+//    AllocatedBuffer indexStaging = Buffer::create_buffer(*_engine._device, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+//    void* data2;
+//    vmaMapMemory(_engine._device->_allocator, indexStaging._allocation, &data2);
+//    memcpy(data2, _indexesBuffer.data(), static_cast<size_t>(indexBufferSize));
+//    vmaUnmapMemory(_engine._device->_allocator, indexStaging._allocation);
+//    _indexBuffer.allocation = Buffer::create_buffer(*_engine._device, indexBufferSize,   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+//    immediate_submit([=](VkCommandBuffer cmd) {
+//        VkBufferCopy copy;
+//        copy.dstOffset = 0;
+//        copy.srcOffset = 0;
+//        copy.size = indexBufferSize;
+//        vkCmdCopyBuffer(cmd, indexStaging._buffer, _indexBuffer.allocation._buffer, 1, &copy);
+//    });
+//
+//    vmaDestroyBuffer(_engine._device->_allocator, vertexStaging._buffer, vertexStaging._allocation);
+//    vmaDestroyBuffer(_engine._device->_allocator, indexStaging._buffer, indexStaging._allocation);
+    }
 
     return true;
 }
 
-bool Model::load_from_gltf(const char *filename) {
+bool Model::load_from_gltf(VulkanEngine& engine, const char *filename) {
+    VulkanEngine& _engine = engine;
     tinygltf::Model input;
     tinygltf::TinyGLTF loader;
     std::string err;
     std::string warn;
-    std::vector<uint32_t> indexBuffer;
-    std::vector<Vertex> vertexBuffer;
+//    std::vector<uint32_t> indexBuffer;
+//    std::vector<Vertex> vertexBuffer;
 
     if (!loader.LoadASCIIFromFile(&input, &err, &warn, filename)) {
         std::cerr << warn << std::endl;
@@ -287,45 +353,45 @@ bool Model::load_from_gltf(const char *filename) {
         return false;
     }
 
-    this->load_image(input);
-    this->load_texture(input);
-    this->load_material(input);
-    this->load_scene(input, indexBuffer, vertexBuffer);
+    this->load_images(engine, input);
+    this->load_textures(input);
+    this->load_materials(input);
+    this->load_scene(input, _indexesBuffer, _verticesBuffer);
 
-    size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
-    size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
-    this->_indexBuffer.count = static_cast<uint32_t>(indexBuffer.size());
-
-    AllocatedBuffer vertexStaging = Buffer::create_buffer(*_engine._device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    void* data;
-    vmaMapMemory(_engine._device->_allocator, vertexStaging._allocation, &data);
-    memcpy(data, vertexBuffer.data(), static_cast<size_t>(vertexBufferSize)); // number of vertex
-    vmaUnmapMemory(_engine._device->_allocator, vertexStaging._allocation);
-    _vertexBuffer = Buffer::create_buffer(*_engine._device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-    immediate_submit([=](VkCommandBuffer cmd) {
-        VkBufferCopy copy;
-        copy.dstOffset = 0;
-        copy.srcOffset = 0;
-        copy.size = vertexBufferSize;
-        vkCmdCopyBuffer(cmd, vertexStaging._buffer, _vertexBuffer._buffer, 1, &copy);
-    });
-
-    AllocatedBuffer indexStaging = Buffer::create_buffer(*_engine._device, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    void* data2;
-    vmaMapMemory(_engine._device->_allocator, indexStaging._allocation, &data);
-    memcpy(data2, indexBuffer.data(), static_cast<size_t>(indexBufferSize));
-    vmaUnmapMemory(_engine._device->_allocator, indexStaging._allocation);
-    _indexBuffer.allocation = Buffer::create_buffer(*_engine._device, indexBufferSize,   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    immediate_submit([=](VkCommandBuffer cmd) {
-        VkBufferCopy copy;
-        copy.dstOffset = 0;
-        copy.srcOffset = 0;
-        copy.size = indexBufferSize;
-        vkCmdCopyBuffer(cmd, indexStaging._buffer, _indexBuffer.allocation._buffer, 1, &copy);
-    });
-
-    vmaDestroyBuffer(_engine._device->_allocator, vertexStaging._buffer, vertexStaging._allocation);
-    vmaDestroyBuffer(_engine._device->_allocator, indexStaging._buffer, indexStaging._allocation);
+//    size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
+//    size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
+//    this->_indexBuffer.count = static_cast<uint32_t>(indexBuffer.size());
+//
+//    AllocatedBuffer vertexStaging = Buffer::create_buffer(*_engine._device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+//    void* data;
+//    vmaMapMemory(_engine._device->_allocator, vertexStaging._allocation, &data);
+//    memcpy(data, vertexBuffer.data(), static_cast<size_t>(vertexBufferSize)); // number of vertex
+//    vmaUnmapMemory(_engine._device->_allocator, vertexStaging._allocation);
+//    _vertexBuffer = Buffer::create_buffer(*_engine._device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+//    immediate_submit(engine, [=](VkCommandBuffer cmd) {
+//        VkBufferCopy copy;
+//        copy.dstOffset = 0;
+//        copy.srcOffset = 0;
+//        copy.size = vertexBufferSize;
+//        vkCmdCopyBuffer(cmd, vertexStaging._buffer, _vertexBuffer._buffer, 1, &copy);
+//    });
+//
+//    AllocatedBuffer indexStaging = Buffer::create_buffer(*_engine._device, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+//    void* data2;
+//    vmaMapMemory(_engine._device->_allocator, indexStaging._allocation, &data);
+//    memcpy(data2, indexBuffer.data(), static_cast<size_t>(indexBufferSize));
+//    vmaUnmapMemory(_engine._device->_allocator, indexStaging._allocation);
+//    _indexBuffer.allocation = Buffer::create_buffer(*_engine._device, indexBufferSize,   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+//    immediate_submit(engine, [=](VkCommandBuffer cmd) {
+//        VkBufferCopy copy;
+//        copy.dstOffset = 0;
+//        copy.srcOffset = 0;
+//        copy.size = indexBufferSize;
+//        vkCmdCopyBuffer(cmd, indexStaging._buffer, _indexBuffer.allocation._buffer, 1, &copy);
+//    });
+//
+//    vmaDestroyBuffer(_engine._device->_allocator, vertexStaging._buffer, vertexStaging._allocation);
+//    vmaDestroyBuffer(_engine._device->_allocator, indexStaging._buffer, indexStaging._allocation);
 
     return true;
 }
@@ -499,7 +565,7 @@ VertexInputDescription Vertex::get_vertex_description()
     return description;
 }
 
-void Model::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function) {  // ATTENTION : DUPLICA
+void Model::immediate_submit(VulkanEngine& _engine, std::function<void(VkCommandBuffer cmd)>&& function) {  // ATTENTION : DUPLICA
     VkCommandBuffer cmd = _engine._uploadContext._commandBuffer->_mainCommandBuffer;
     VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
