@@ -121,8 +121,8 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     camera.set_position({ 0.f, -6.f, -10.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
-    Model sponza = Model(*engine);
-    sponza.load_from_gltf("../assets/sponza/NewSponza_Main_Blender_glTF.gltf");
+    Model sponza{};
+    sponza.load_from_gltf(*engine, "../assets/sponza/NewSponza_Main_Blender_glTF.gltf");
 
     return renderables;
 }
@@ -134,8 +134,17 @@ Renderables SceneListing::oldBridge(Camera& camera, VulkanEngine* engine) {
     camera.set_position({ 0.f, -6.f, -10.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
-    Model sponza = Model(*engine);
-    sponza.load_from_glb("../assets/old_brick_bridge/old_brick_bridge.glb");
+    // Model oldBridge(*engine);
+    Model oldBridge{};
+    oldBridge.load_from_glb(*engine, "../assets/old_brick_bridge/old_brick_bridge.glb");
+    engine->_meshManager->upload_mesh(oldBridge);
+    engine->_meshManager->_models["oldBridge"] = oldBridge;
+
+    RenderObject map;
+    map.model = engine->_meshManager->get_model("oldBridge");
+    map.material = engine->_pipelineBuilder->get_material("texturedMesh");
+    map.transformMatrix = glm::translate(glm::mat4(1.f), glm::vec3{ 5,-10,0 });
+    renderables.push_back(map);
 
     return renderables;
 }
