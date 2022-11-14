@@ -37,11 +37,19 @@ struct Vertex {
     glm::vec2 uv;
 
     bool operator==(const Vertex& other) const {
-        return position == other.position && color == other.color && normal == other.normal && uv == other.uv;
+        return position == other.position && color == other.color && uv == other.uv; // && normal == other.normal
     }
 
     static VertexInputDescription get_vertex_description();
 };
+
+namespace std {
+    template<> struct hash<Vertex> {
+        size_t operator()(Vertex const& vertex) const {
+            return ((hash<glm::vec3>()(vertex.position) ^ (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^(hash<glm::vec2>()(vertex.uv) << 1);
+        }
+    };
+}
 
 struct Node;
 
@@ -57,6 +65,7 @@ public:
     AllocatedBuffer _vertexBuffer;
     std::vector<Primitive> primitives;
 
+    void draw(VkCommandBuffer& commandBuffer);
     static Mesh cube();
     bool load_from_obj(const char* filename);
 };
@@ -140,10 +149,3 @@ private:
     void immediate_submit(VulkanEngine& _engine, std::function<void(VkCommandBuffer cmd)>&& function);
 };
 
-namespace std {
-    template<> struct hash<Vertex> {
-        size_t operator()(Vertex const& vertex) const {
-            return ((hash<glm::vec3>()(vertex.position) ^ (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^(hash<glm::vec3>()(vertex.normal) << 1);
-        }
-    };
-}

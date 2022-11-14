@@ -283,8 +283,6 @@ bool Model::load_from_glb(VulkanEngine& engine, const char *filename) {
     tinygltf::TinyGLTF loader;
     std::string err;
     std::string warn;
-//    std::vector<uint32_t> indexBuffer;
-//    std::vector<Vertex> vertexBuffer;
 
     if (!loader.LoadBinaryFromFile(&input, &err, &warn, filename)) {
         std::cerr << warn << std::endl;
@@ -409,37 +407,41 @@ bool Model::load_from_obj(const char *filename) {
         return false;
     }
 
-    std::vector<Vertex> vertexBuffer{};
+    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
             Vertex vertex{};
-
             vertex.position = {
                     attrib.vertices[3 * index.vertex_index + 0],
                     attrib.vertices[3 * index.vertex_index + 1],
                     attrib.vertices[3 * index.vertex_index + 2]
             };
-
-            vertex.normal = {
+            vertex.normal = glm::normalize(glm::vec3({
                     attrib.normals[3 * index.normal_index + 0],
                     attrib.normals[3 * index.normal_index + 1],
                     attrib.normals[3 * index.normal_index + 2],
-            };
-
-            vertex.color = vertex.normal; // glm::vec3(1.0f);
-
-            vertex.uv = {
+            }));
+            vertex.uv = glm::make_vec2(glm::vec2({
                     attrib.texcoords[2 * index.texcoord_index + 0], // ux
                     1 - attrib.texcoords[2 * index.texcoord_index + 1], // uy, 1 - uy because of vulkan coords.
-            };
+            }));
+            vertex.color = glm::vec3({
+                attrib.colors[3 * size_t(index.vertex_index) + 0],
+                attrib.colors[3 * size_t(index.vertex_index) + 1],
+                attrib.colors[3 * size_t(index.vertex_index) + 2]
+            });
 
-            vertexBuffer.push_back(vertex);
+            if (uniqueVertices.count(vertex) == 0) {
+                uniqueVertices[vertex] = static_cast<uint32_t>(_verticesBuffer.size());
+                _verticesBuffer.push_back(vertex);
+            }
+
+            _indexesBuffer.push_back(uniqueVertices[vertex]);
+            // _verticesBuffer.push_back(vertex);
 
         }
     }
-
-    size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
 
     return true;
 }
