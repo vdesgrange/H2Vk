@@ -10,7 +10,6 @@
 class VulkanEngine;
 class Camera;
 class Mesh;
-class Model;
 class Material;
 class MeshManager;
 class TextureManager;
@@ -20,7 +19,6 @@ class UploadContext;
 
 struct RenderObject {
     Mesh* mesh;
-    Model* model;
     Material* material;
     glm::mat4 transformMatrix;
 };

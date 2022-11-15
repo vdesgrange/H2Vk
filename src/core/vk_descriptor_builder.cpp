@@ -25,7 +25,7 @@ DescriptorBuilder& DescriptorBuilder::bind_image(VkDescriptorImageInfo& iInfo, V
     VkDescriptorSetLayoutBinding bind = vkinit::descriptor_set_layout_binding(type, stageFlags, binding);
     _bindings.push_back(bind);
 
-    VkWriteDescriptorSet write = vkinit::write_descriptor_image(type, dst, &iInfo, binding); // dstSet handled in build
+    VkWriteDescriptorSet write = vkinit::write_descriptor_image(type, dst, &iInfo, binding);
     _writes.push_back(write);
 
     return *this;
