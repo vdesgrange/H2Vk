@@ -100,44 +100,34 @@ public:
     std::vector<Materials> _materials;
     std::vector<Node*> _nodes;
 
-    std::vector<uint32_t> _indexesBuffer;
-    std::vector<Vertex> _verticesBuffer;
+    AllocatedBuffer _vertexBuffer;
 
     struct {
         uint32_t count;
         AllocatedBuffer allocation;
     } _indexBuffer;
-    AllocatedBuffer _vertexBuffer;
-    AllocatedBuffer _camBuffer;
 
-    struct { // must move out of model
-        VkDescriptorSetLayout matrices;
-        VkDescriptorSetLayout textures;
-    } _descriptorSetLayouts;
-    VkDescriptorSet _descriptorSet; // must move out of model
 
-//    Model();
-//    Model(VulkanEngine& engine) : _engine(engine) {};
-//    ~Model();
+    Model(VulkanEngine& engine) : _engine(engine) {};
+    ~Model();
 
-    bool load_from_gltf(VulkanEngine& engine, const char *filename);
+    bool load_from_gltf(const char *filename);
     bool load_from_obj(const char* filename);
-    bool load_from_glb(VulkanEngine& engine, const char *filename);
+    bool load_from_glb(const char *filename);
 
     void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout);
     void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout);
-    void descriptors(VulkanEngine& _engine);
 
 private:
-    // class VulkanEngine& _engine;
+    class VulkanEngine& _engine;
 
-    void load_images(VulkanEngine& engine, tinygltf::Model& input);
-    void load_textures(tinygltf::Model& input);
-    void load_materials(tinygltf::Model& input);
-    void load_node(const tinygltf::Node& node, tinygltf::Model &input, Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
+    void load_image(tinygltf::Model& input);
+    void load_texture(tinygltf::Model& input);
+    void load_material(tinygltf::Model& input);
+    void load_node(const tinygltf::Node& node, tinygltf::Model &input, Node* parent, std::vector<uint32_t> indexBuffer, std::vector<Vertex>& vertexBuffer);
     void load_scene(tinygltf::Model& input, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
 
-    void immediate_submit(VulkanEngine& _engine, std::function<void(VkCommandBuffer cmd)>&& function);
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 };
 
 namespace std {

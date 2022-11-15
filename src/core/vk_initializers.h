@@ -6,7 +6,7 @@ namespace vkinit {
     VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule);
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info();
     VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info(VkPrimitiveTopology topology);
-    VkPipelineRasterizationStateCreateInfo rasterization_state_create_info(VkPolygonMode polygonMode, VkCullModeFlagBits cullMode = VK_CULL_MODE_NONE);
+    VkPipelineRasterizationStateCreateInfo rasterization_state_create_info(VkPolygonMode polygonMode);
     VkPipelineMultisampleStateCreateInfo multisampling_state_create_info();
     VkPipelineColorBlendAttachmentState color_blend_attachment_state();
     VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);

@@ -41,7 +41,7 @@ VkPipelineInputAssemblyStateCreateInfo vkinit::input_assembly_create_info(VkPrim
     return info;
 }
 
-VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(VkPolygonMode polygonMode, VkCullModeFlagBits cullMode) {
+VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(VkPolygonMode polygonMode) {
     /**
      *  Configuration for the fixed-function rasterization
      *  Enable or disable backface culling, set line width or wireframe drawing.
