@@ -2,10 +2,10 @@
 #include "vk_mesh_manager.h"
 #include "vk_pipeline.h"
 #include "vk_camera.h"
-#include "assets/vk_mesh.h"
 #include "vk_texture.h"
 #include "vk_helpers.h"
 #include "vk_engine.h"
+#include "assets/vk_mesh.h"
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
         {"Monkey and triangles", SceneListing::monkeyAndTriangles},
@@ -121,8 +121,8 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     camera.set_position({ 0.f, -6.f, -10.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
-    Model sponza = Model(*engine);
-    sponza.load_from_gltf("../assets/sponza/NewSponza_Main_Blender_glTF.gltf");
+//    Model sponza = Model{};
+//    sponza.load_from_gltf("../assets/sponza/NewSponza_Main_Blender_glTF.gltf");
 
     return renderables;
 }
@@ -134,8 +134,8 @@ Renderables SceneListing::oldBridge(Camera& camera, VulkanEngine* engine) {
     camera.set_position({ 0.f, -6.f, -10.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
-    Model sponza = Model(*engine);
-    sponza.load_from_glb("../assets/old_brick_bridge/old_brick_bridge.glb");
+    Model sponza{};
+    sponza.load_from_glb(*engine, "../assets/old_brick_bridge/old_brick_bridge.glb");
 
     return renderables;
 }
