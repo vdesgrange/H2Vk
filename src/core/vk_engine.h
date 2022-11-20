@@ -52,14 +52,20 @@ constexpr unsigned int FRAME_OVERLAP = 2;
 //    VkImageView imageView;
 //};
 
-struct PoolSize {
-    std::vector<VkDescriptorPoolSize> sizes = {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
-    };
-};
+//struct PoolSize {
+//    std::vector<VkDescriptorPoolSize> sizes = {
+//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
+//            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
+//            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
+//    };
+//};
+
+//std::vector<VkDescriptorPoolSize> sizes = {
+//        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+//        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(this->_images.size()) }
+//};
+
 
 struct FrameData {
     Semaphore* _presentSemaphore;
@@ -70,7 +76,7 @@ struct FrameData {
     CommandBuffer* _commandBuffer;
 
     AllocatedBuffer cameraBuffer;
-    VkDescriptorSet globalDescriptor;
+    VkDescriptorSet environmentDescriptor; // globalDescriptor
 
     AllocatedBuffer objectBuffer;
     VkDescriptorSet objectDescriptor;
@@ -101,9 +107,15 @@ public:
     DescriptorLayoutCache* _layoutCache;
     DescriptorAllocator* _allocator;
 
-    VkDescriptorSetLayout _globalSetLayout;
-    VkDescriptorSetLayout _objectSetLayout;
-    VkDescriptorSetLayout _singleTextureSetLayout;
+    struct { // must move out of model
+        VkDescriptorSetLayout environment;
+        VkDescriptorSetLayout matrices;
+        VkDescriptorSetLayout textures;
+    } _descriptorSetLayouts;
+
+//    VkDescriptorSetLayout _globalSetLayout;
+//    VkDescriptorSetLayout _objectSetLayout;
+//    VkDescriptorSetLayout _singleTextureSetLayout;
 
     DeletionQueue _mainDeletionQueue;
 
@@ -112,7 +124,7 @@ public:
     AllocatedBuffer _sceneParameterBuffer;
     UploadContext _uploadContext;
 
-    PoolSize poolSize;
+    // PoolSize poolSize;
 
 	void init();
 

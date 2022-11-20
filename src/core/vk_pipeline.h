@@ -25,16 +25,7 @@ public:
     VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
 
-    VkPipelineLayout _triPipelineLayout;
-    VkPipelineLayout _meshPipelineLayout;
-
-    VkPipeline _graphicsPipeline;
-    VkPipeline _redTrianglePipeline;
-    VkPipeline _meshPipeline;
-    VkPipeline _texturePipeline;
-
     std::vector<ShaderPass> _shaderPasses;
-
     std::unordered_map<std::string, Material> _materials;
 
     PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, std::vector<VkDescriptorSetLayout> setLayouts);
@@ -67,4 +58,6 @@ private:
     void scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts);
 
     void scene_lost_empire(std::vector<VkDescriptorSetLayout> setLayouts);
+
+    void scene_old_bridge(std::vector<VkDescriptorSetLayout> setLayouts);
 };

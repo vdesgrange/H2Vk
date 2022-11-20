@@ -15,7 +15,6 @@ MeshManager::MeshManager(const Device& device, UploadContext& uploadContext) : _
 };
 
 MeshManager::~MeshManager() {
-
     for (auto& it: _meshes) {
         vmaDestroyBuffer(_device._allocator,
                          it.second._vertexBuffer._buffer,
@@ -43,33 +42,33 @@ MeshManager::~MeshManager() {
 
 }
 
-void MeshManager::load_meshes()
-{
-    Mesh mesh{};
-    Mesh objMesh{};
-    Mesh lostEmpire{};
-
-    mesh._vertices.resize(3);
-
-    mesh._vertices[0].position = { 1.f, 1.f, 0.0f };
-    mesh._vertices[1].position = {-1.f, 1.f, 0.0f };
-    mesh._vertices[2].position = { 0.f,-1.f, 0.0f };
-
-    mesh._vertices[0].color = { 0.f, 1.f, 0.0f }; //pure green
-    mesh._vertices[1].color = { 0.f, 1.f, 0.0f }; //pure green
-    mesh._vertices[2].color = { 0.f, 1.f, 0.0f }; //pure green
-
-    objMesh.load_from_obj("../assets/monkey_smooth.obj");
-    lostEmpire.load_from_obj("../assets/lost_empire.obj");
-
-    upload_mesh(mesh);
-    upload_mesh(objMesh);
-    upload_mesh(lostEmpire);
-
-    _meshes["monkey"] = objMesh;
-    _meshes["triangle"] = mesh;
-    _meshes["empire"] = lostEmpire;
-}
+//void MeshManager::load_meshes()
+//{
+//    Mesh mesh{};
+//    Mesh objMesh{};
+//    Mesh lostEmpire{};
+//
+//    mesh._vertices.resize(3);
+//
+//    mesh._vertices[0].position = { 1.f, 1.f, 0.0f };
+//    mesh._vertices[1].position = {-1.f, 1.f, 0.0f };
+//    mesh._vertices[2].position = { 0.f,-1.f, 0.0f };
+//
+//    mesh._vertices[0].color = { 0.f, 1.f, 0.0f }; //pure green
+//    mesh._vertices[1].color = { 0.f, 1.f, 0.0f }; //pure green
+//    mesh._vertices[2].color = { 0.f, 1.f, 0.0f }; //pure green
+//
+//    objMesh.load_from_obj("../assets/monkey_smooth.obj");
+//    lostEmpire.load_from_obj("../assets/lost_empire.obj");
+//
+//    upload_mesh(mesh);
+//    upload_mesh(objMesh);
+//    upload_mesh(lostEmpire);
+//
+//    _meshes["monkey"] = objMesh;
+//    _meshes["triangle"] = mesh;
+//    _meshes["empire"] = lostEmpire;
+//}
 
 void MeshManager::upload_mesh(Mesh& mesh)
 {

@@ -6,12 +6,12 @@
 #include <fstream>
 #include "vk_helpers.h"
 #include "vk_initializers.h"
-#include "assets/vk_mesh.h"
 #include "vk_pipeline.h"
 #include "vk_window.h"
 #include "vk_device.h"
 #include "vk_renderpass.h"
 #include "vk_material.h"
+#include "assets/vk_mesh.h"
 
 /**
  * Graphics pipeline
@@ -50,6 +50,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
 
     this->scene_monkey_triangle(setLayouts);
     this->scene_lost_empire(setLayouts);
+    this->scene_old_bridge(setLayouts);
 
 }
 
@@ -189,6 +190,34 @@ void PipelineBuilder::scene_lost_empire(std::vector<VkDescriptorSetLayout> setLa
     }
 
     for (auto& shader : effect_tex.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+    }
+}
+
+void PipelineBuilder::scene_old_bridge(std::vector<VkDescriptorSetLayout> setLayouts) {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/tri_mesh.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/default_lit.frag.spv"},
+    };
+
+    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
+    this->_vertexInputInfo = vkinit::vertex_input_state_create_info();
+    this->_vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
+    this->_vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+    this->_vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
+    this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+
+    VkPushConstantRange push_constant;
+    push_constant.offset = 0;
+    push_constant.size = static_cast<uint32_t>(sizeof(MeshPushConstants));
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    ShaderEffect effect_mesh = this->build_effect(setLayouts, {push_constant}, modules);
+    ShaderPass pass = this->build_pass(&effect_mesh);
+    this->_shaderPasses.push_back(pass);
+    create_material(pass.pipeline, pass.pipelineLayout, "defaultMesh");
+
+    for (auto& shader : effect_mesh.shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }

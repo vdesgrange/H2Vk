@@ -162,21 +162,21 @@ void Model::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node*
             // glTF supports different component types of indices
             switch (accessor.componentType) {
                 case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT: {
-                    const uint32_t* buf = reinterpret_cast<const uint32_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
+                    auto buf = reinterpret_cast<const uint32_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
                     for (size_t index = 0; index < accessor.count; index++) {
                         indexBuffer.push_back(buf[index] + vertexStart);
                     }
                 break;
                 }
                 case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT: {
-                    const uint16_t* buf = reinterpret_cast<const uint16_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
+                    auto buf = reinterpret_cast<const uint16_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
                     for (size_t index = 0; index < accessor.count; index++) {
                         indexBuffer.push_back(buf[index] + vertexStart);
                     }
                 break;
                 }
                 case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE: {
-                    const uint8_t* buf = reinterpret_cast<const uint8_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
+                    auto buf = reinterpret_cast<const uint8_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
                     for (size_t index = 0; index < accessor.count; index++) {
                         indexBuffer.push_back(buf[index] + vertexStart);
                     }
@@ -203,16 +203,73 @@ void Model::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node*
 
 }
 
+void Model::load_node(tinyobj::attrib_t attrib, std::vector<tinyobj::shape_t>& shapes) {
+    Node* node = new Node{};
+    node->matrix = glm::mat4(1.f);
+    node->parent = nullptr;
+
+    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
+    for (const auto& shape : shapes) { // equivalent to list all primitive and children
+        auto firstIndex = static_cast<uint32_t>(_indexesBuffer.size());
+
+        const tinyobj::mesh_t mesh = shape.mesh;
+        for (const auto& index : mesh.indices) { // equivalent to loop over vertexCount
+            Vertex vertex{};
+
+            vertex.position = glm::vec3({
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            });
+
+            vertex.normal = glm::normalize(glm::vec3({
+                attrib.normals[3 * index.normal_index + 0],
+                attrib.normals[3 * index.normal_index + 1],
+                attrib.normals[3 * index.normal_index + 2]
+            }));
+
+            vertex.color = glm::vec3({
+                attrib.colors[3 * size_t(index.vertex_index) + 0],
+                attrib.colors[3 * size_t(index.vertex_index) + 1],
+                attrib.colors[3 * size_t(index.vertex_index) + 2]
+            });
+
+            vertex.uv = glm::make_vec2(glm::vec2({
+                attrib.texcoords[2 * index.texcoord_index + 0], // ux
+                1 - attrib.texcoords[2 * index.texcoord_index +1], // uy, 1 - uy because of vulkan coords
+            }));
+
+            if (uniqueVertices.count(vertex) == 0) {
+                uniqueVertices[vertex] = static_cast<uint32_t>(_verticesBuffer.size());
+                _verticesBuffer.push_back(vertex);
+            }
+
+            _indexesBuffer.push_back(uniqueVertices[vertex]); // push duplicate vertex or only new one ?
+        }
+
+        Primitive primitive{};
+        primitive.firstIndex = firstIndex;
+        primitive.indexCount = _indexesBuffer.size();
+        primitive.materialIndex = -1; // not used here?
+        node->mesh.primitives.push_back(primitive);
+    }
+
+    _nodes.push_back(node);
+
+
+}
+
 void Model::load_scene(tinygltf::Model &input, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer) {
     const tinygltf::Scene& scene = input.scenes[0];
-    for (size_t i = 0; i < scene.nodes.size(); i++) {
+    for (uint32_t i = 0; i < scene.nodes.size(); i++) {
         const tinygltf::Node node = input.nodes[scene.nodes[i]];
         this->load_node(node, input, nullptr, indexBuffer, vertexBuffer);
     }
 }
 
-void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout) {
-    if (node->mesh.primitives.size() > 0) {
+void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance) {
+    if (!node->mesh.primitives.empty()) {
         glm::mat4 nodeMatrix = node->matrix;
         Node* parent = node->parent;
         while (parent) {
@@ -223,28 +280,47 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
         vkCmdPushConstants(commandBuffer, pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(glm::mat4),&nodeMatrix);
         for (Primitive& primitive : node->mesh.primitives) {
             if (primitive.indexCount > 0) {
-                // Get the texture index for this primitive
-                Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];
-                // Bind the descriptor for the current primitive's texture
-
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
-                vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+                if (!_textures.empty() && primitive.materialIndex != -1) {
+                    // Get the texture index for this primitive
+                    Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];
+                    // Bind the descriptor for the current primitive's texture
+                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
+                }
+                vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance); // i
             }
         }
     }
 
     for (auto& child : node->children) {
-        draw_node(child, commandBuffer, pipelineLayout);
+        draw_node(child, commandBuffer, pipelineLayout, instance);
     }
 }
 
-void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout) {
-    VkDeviceSize offsets[1] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBuffer._buffer, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.allocation._buffer, 0, VK_INDEX_TYPE_UINT32);
-    for (auto& node : _nodes) {
-        draw_node(node, commandBuffer, pipelineLayout);
+void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind) {
+    if (bind) {
+        VkDeviceSize offsets[1] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBuffer._buffer, offsets);
+        vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.allocation._buffer, 0, VK_INDEX_TYPE_UINT32);
     }
+
+    for (auto& node : _nodes) {
+        draw_node(node, commandBuffer, pipelineLayout, instance);
+    }
+}
+
+void Model::draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, glm::mat4 transformMatrix, uint32_t instance, bool bind) {
+    if (bind) {
+        VkDeviceSize offsets[1] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBuffer._buffer, offsets);
+        vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.allocation._buffer, 0, VK_INDEX_TYPE_UINT32);
+    }
+
+    MeshPushConstants constants;
+    constants.render_matrix = transformMatrix;  // expected in draw_node() and node->matrix
+    vkCmdPushConstants(commandBuffer,pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(MeshPushConstants),&constants);
+
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(this->_indexesBuffer.size()), 1, 0, 0, instance);
+    // vkCmdDraw(commandBuffer, static_cast<uint32_t>(this->_verticesBuffer.size()), 1, 0, instance);
 }
 
 void Model::descriptors(VulkanEngine& engine) {
@@ -253,16 +329,16 @@ void Model::descriptors(VulkanEngine& engine) {
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(this->_images.size()) }
     };
 
-    _camBuffer = Buffer::create_buffer(*engine._device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-    VkDescriptorBufferInfo camBInfo{};
-    camBInfo.buffer = _camBuffer._buffer; // frames[i]
-    camBInfo.offset = 0;
-    camBInfo.range = sizeof(GPUCameraData);
-
-    DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
-        .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-        .build(_descriptorSet, _descriptorSetLayouts.matrices, sizes);
+//    _camBuffer = Buffer::create_buffer(*engine._device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+//
+//    VkDescriptorBufferInfo camBInfo{};
+//    camBInfo.buffer = _camBuffer._buffer; // frames[i]
+//    camBInfo.offset = 0;
+//    camBInfo.range = sizeof(GPUCameraData);
+//
+//    DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
+//        .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+//        .build(_descriptorSet, _descriptorSetLayouts.matrices, sizes);
 
     for (auto& image : this->_images) {
         VkDescriptorImageInfo imageBInfo;
@@ -272,7 +348,7 @@ void Model::descriptors(VulkanEngine& engine) {
 
         DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
             .bind_image(imageBInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, nullptr, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .build(image._descriptorSet, _descriptorSetLayouts.textures, sizes);
+            .build(image._descriptorSet, engine._descriptorSetLayouts.textures, sizes);
     }
 }
 
@@ -281,8 +357,6 @@ bool Model::load_from_glb(VulkanEngine& engine, const char *filename) {
     tinygltf::TinyGLTF loader;
     std::string err;
     std::string warn;
-    std::vector<uint32_t> indexBuffer;
-    std::vector<Vertex> vertexBuffer;
 
     if (!loader.LoadBinaryFromFile(&input, &err, &warn, filename)) {
         std::cerr << warn << std::endl;
@@ -293,12 +367,7 @@ bool Model::load_from_glb(VulkanEngine& engine, const char *filename) {
     this->load_image(engine, input);
     this->load_texture(input);
     this->load_material(input);
-    this->load_scene(input, indexBuffer, vertexBuffer);
-
-    size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
-    size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
-    this->_indexBuffer.count = static_cast<uint32_t>(indexBuffer.size());
-
+    this->load_scene(input, _indexesBuffer, _verticesBuffer);
 
     return true;
 }
@@ -361,11 +430,11 @@ bool Model::load_from_gltf(VulkanEngine& engine, const char *filename) {
 }
 
 bool Model::load_from_obj(const char *filename) {
-    std::unordered_map<Vertex, uint32_t> unique_vertices{};
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
-    std::string warn, err;
+    std::string err;
+    std::string warn;
 
     if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename, nullptr)) {
         std::cerr << warn << std::endl;
@@ -373,37 +442,7 @@ bool Model::load_from_obj(const char *filename) {
         return false;
     }
 
-    std::vector<Vertex> vertexBuffer{};
-
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Vertex vertex{};
-
-            vertex.position = {
-                    attrib.vertices[3 * index.vertex_index + 0],
-                    attrib.vertices[3 * index.vertex_index + 1],
-                    attrib.vertices[3 * index.vertex_index + 2]
-            };
-
-            vertex.normal = {
-                    attrib.normals[3 * index.normal_index + 0],
-                    attrib.normals[3 * index.normal_index + 1],
-                    attrib.normals[3 * index.normal_index + 2],
-            };
-
-            vertex.color = vertex.normal; // glm::vec3(1.0f);
-
-            vertex.uv = {
-                    attrib.texcoords[2 * index.texcoord_index + 0], // ux
-                    1 - attrib.texcoords[2 * index.texcoord_index + 1], // uy, 1 - uy because of vulkan coords.
-            };
-
-            vertexBuffer.push_back(vertex);
-
-        }
-    }
-
-    size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
+    this->load_node(attrib, shapes);
 
     return true;
 }

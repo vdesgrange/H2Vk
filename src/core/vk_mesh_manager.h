@@ -27,7 +27,7 @@ public:
     MeshManager(const Device& device, UploadContext& uploadContext);
     ~MeshManager();
 
-    void load_meshes();
+    // void load_meshes();
     void upload_mesh(Mesh& mesh);
     void upload_mesh(Model& mesh);
     Mesh* get_mesh(const std::string &name);
