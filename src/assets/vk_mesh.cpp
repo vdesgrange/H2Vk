@@ -347,7 +347,7 @@ void Model::descriptors(VulkanEngine& engine) {
         imageBInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
-            .bind_image(imageBInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, nullptr, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .bind_image(imageBInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
             .build(image._descriptorSet, engine._descriptorSetLayouts.textures, sizes);
     }
 }

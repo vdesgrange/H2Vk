@@ -113,10 +113,6 @@ public:
         VkDescriptorSetLayout textures;
     } _descriptorSetLayouts;
 
-//    VkDescriptorSetLayout _globalSetLayout;
-//    VkDescriptorSetLayout _objectSetLayout;
-//    VkDescriptorSetLayout _singleTextureSetLayout;
-
     DeletionQueue _mainDeletionQueue;
 
     Camera* _camera;
@@ -167,7 +163,9 @@ private:
 
     void init_sync_structures();
 
-    void init_descriptors();
+    void init_descriptors(); // can be call before choice of model
+
+    void setup_descriptors(); // when switching model
 
     void init_pipelines();
 

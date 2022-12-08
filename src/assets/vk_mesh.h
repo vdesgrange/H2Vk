@@ -87,11 +87,18 @@ struct Materials {
 struct Image {
     int32_t _index;
     VkImage _image;
-    VkImageView _imageView;
-    VkSampler _sampler;
+    VkSampler _sampler;  // duplicate?
+    VkImageView _imageView;  // duplicate?
+    VkImageLayout _imageLayout; // duplicate?
     VmaAllocation _allocation;
     VkDescriptorImageInfo _descriptor;
-    VkDescriptorSet _descriptorSet;
+    VkDescriptorSet _descriptorSet; // access texture from the fragment shader
+
+    void updateDescriptor() {
+        _descriptor.sampler = _sampler;
+        _descriptor.imageView = _imageView;
+        _descriptor.imageLayout = _imageLayout;
+    }
 };
 
 struct Textures {

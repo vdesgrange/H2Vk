@@ -201,7 +201,8 @@ bool vkutil::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDevice
         VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(format, newImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
         vkCreateImageView(engine._device->_logicalDevice, &imageinfo, nullptr, &newImage._imageView);
 
-        // save imageLayout, imageView, sampler for later usage in descriptor?
+
+        newImage.updateDescriptor(); // update descriptor with sample, imageView, imageLayout
     });
 
     // DESTRUCTION NOT HANDLED HERE - MUST BE DONE WHERE IMAGE IS USED

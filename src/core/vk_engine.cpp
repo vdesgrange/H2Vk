@@ -163,8 +163,6 @@ void VulkanEngine::init_descriptors() {
             { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
     };
-//        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-//        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(this->_images.size()) }
 
     _layoutCache = new DescriptorLayoutCache(*_device);  // ok
     _allocator = new DescriptorAllocator(*_device);  // ok
@@ -190,6 +188,7 @@ void VulkanEngine::init_descriptors() {
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
                 .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
                 .bind_buffer(sceneBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .layout(_descriptorSetLayouts.environment)
                 .build(_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes); // _globalSetLayout
 
         // === Object ===
@@ -204,6 +203,7 @@ void VulkanEngine::init_descriptors() {
 
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_buffer(objectsBInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+            .layout(_descriptorSetLayouts.matrices)
             .build(_frames[i].objectDescriptor, _descriptorSetLayouts.matrices, poolSizes); // _objectSetLayout
     }
 
@@ -211,7 +211,6 @@ void VulkanEngine::init_descriptors() {
     DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
             .layout(_descriptorSetLayouts.textures); // _singleTextureSetLayout
-
 
     // === Clean up ===
     _mainDeletionQueue.push_function([&]() {
@@ -227,18 +226,61 @@ void VulkanEngine::init_descriptors() {
     });
 }
 
-FrameData& VulkanEngine::get_current_frame()
-{
-    return _frames[_frameNumber % FRAME_OVERLAP];
+void VulkanEngine::setup_descriptors(){
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
+    };
+
+    for (auto &renderable: _scene->_renderables) {
+        for (auto &image: renderable.model->_images) {
+            DescriptorBuilder::begin(*_layoutCache, *_allocator)
+            .bind_image(image._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .layout(_descriptorSetLayouts.textures)
+            .build(image._descriptorSet, _descriptorSetLayouts.textures, poolSizes);
+        }
+    }
 }
 
 void VulkanEngine::init_pipelines() {
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
     _pipelineBuilder = new PipelineBuilder(*_window, *_device, *_renderPass, setLayouts);
 
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
+    };
+
+    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+    VkSampler blockySampler; // add cache for sampler
+    vkCreateSampler(_device->_logicalDevice, &samplerInfo, nullptr, &blockySampler);
+    _samplerManager->_loadedSampler["blocky_sampler"] = blockySampler;
+
+    Material* texturedMat =	_pipelineBuilder->get_material("texturedMesh");
+
+    VkDescriptorImageInfo imageBufferInfo;
+    imageBufferInfo.sampler = _samplerManager->_loadedSampler["blocky_sampler"];
+    imageBufferInfo.imageView = _textureManager->_loadedTextures["empire_diffuse"].imageView;
+    imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    DescriptorBuilder::begin(*_layoutCache, *_allocator)
+            .bind_image(imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .build(texturedMat->textureSet, _descriptorSetLayouts.textures, poolSizes);
+
+
     // move to scene listing as well? Only usage
     // std::vector<VkDescriptorSetLayout> setLayouts = {_globalSetLayout, _objectSetLayout, _singleTextureSetLayout};
 }
+
+FrameData& VulkanEngine::get_current_frame()
+{
+    return _frames[_frameNumber % FRAME_OVERLAP];
+}
+
 
 void VulkanEngine::load_meshes() {
     _meshManager = new MeshManager(*_device, _uploadContext); // move to sceneListing ?
@@ -256,21 +298,7 @@ void VulkanEngine::init_scene() {
     // If texture not loaded here, it creates issues -> Must be loaded before binding (previously in load_images)
     _textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
 
-//    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
-//    VkSampler blockySampler; // add cache for sampler
-//    vkCreateSampler(_device->_logicalDevice, &samplerInfo, nullptr, &blockySampler);
-//    _samplerManager->_loadedSampler["blocky_sampler"] = blockySampler;
-
-//    Material* texturedMat =	_pipelineBuilder->get_material("texturedMesh");
-
-//    VkDescriptorImageInfo imageBufferInfo;
-//    imageBufferInfo.sampler = _samplerManager->_loadedSampler["blocky_sampler"];
-//    imageBufferInfo.imageView = _textureManager->_loadedTextures["empire_diffuse"].imageView;
-//    imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-//    DescriptorBuilder::begin(*_layoutCache, *_allocator)
-//            .bind_image(imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texturedMat->textureSet, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-//            .build(texturedMat->textureSet, _singleTextureSetLayout, poolSize.sizes);
+ // _singleTextureSetLayout
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -474,7 +502,7 @@ void VulkanEngine::render(int imageIndex) {
     // Load scene (if new)
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
         _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-        _renderables = _scene->_renderables; // useless ? _renderables is not used, only _scene->_renderables
+        setup_descriptors();
     }
 
     draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _scene->_renderables.data(), _scene->_renderables.size());
