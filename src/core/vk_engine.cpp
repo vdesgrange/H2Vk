@@ -248,6 +248,7 @@ void VulkanEngine::init_pipelines() {
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
     _pipelineBuilder = new PipelineBuilder(*_window, *_device, *_renderPass, setLayouts);
 
+//  === To uncomment if old empire is loaded ===
 //    std::vector<VkDescriptorPoolSize> poolSizes = {
 //            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
 //            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
@@ -387,15 +388,15 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
                 }
             }
 
-            MeshPushConstants constants;
-            constants.render_matrix = object.transformMatrix;
-
-            vkCmdPushConstants(commandBuffer,
-                               object.material->pipelineLayout,
-                               VK_SHADER_STAGE_VERTEX_BIT,
-                               0,
-                               sizeof(MeshPushConstants),
-                               &constants);
+//            MeshPushConstants constants;
+//            constants.render_matrix = object.transformMatrix;
+//
+//            vkCmdPushConstants(commandBuffer,
+//                               object.material->pipelineLayout,
+//                               VK_SHADER_STAGE_VERTEX_BIT,
+//                               0,
+//                               sizeof(MeshPushConstants),
+//                               &constants);
 
             if (object.mesh != lastMesh) {
                 VkDeviceSize offset = 0;

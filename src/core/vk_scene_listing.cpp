@@ -64,47 +64,6 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
         }
     }
 
-    // Upload mesh
-    //    Mesh mesh{};
-    //    Mesh objMesh{};
-    //
-    //    mesh._vertices.resize(3);
-    //
-    //    mesh._vertices[0].position = { 1.f, 1.f, 0.0f };
-    //    mesh._vertices[1].position = {-1.f, 1.f, 0.0f };
-    //    mesh._vertices[2].position = { 0.f,-1.f, 0.0f };
-    //
-    //    mesh._vertices[0].color = { 0.f, 1.f, 0.0f }; //pure green
-    //    mesh._vertices[1].color = { 0.f, 1.f, 0.0f }; //pure green
-    //    mesh._vertices[2].color = { 0.f, 1.f, 0.0f }; //pure green
-    //
-    //    objMesh.load_from_obj("../assets/monkey_smooth.obj");
-    //    engine->_meshManager->upload_mesh(mesh);
-    //    engine->_meshManager->upload_mesh(objMesh);
-    //
-    //    engine->_meshManager->_meshes["monkey"] = objMesh;
-    //    engine->_meshManager->_meshes["triangle"] = mesh;
-    //
-    //
-    //    // From init_scene
-    //    RenderObject monkey;
-    //    monkey.mesh = engine->_meshManager->get_mesh("monkey");
-    //    monkey.material = engine->_pipelineBuilder->get_material("defaultMesh");
-    //    monkey.transformMatrix = glm::mat4{ 1.0f };
-    //    renderables.push_back(monkey);
-    //
-    //    for (int x = -20; x <= 20; x++) {
-    //        for (int y = -20; y <= 20; y++) {
-    //            RenderObject tri;
-    //            tri.mesh = engine->_meshManager->get_mesh("triangle");
-    //            tri.material = engine->_pipelineBuilder->get_material("defaultMesh");
-    //            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
-    //            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
-    //            tri.transformMatrix = translation * scale;
-    //            renderables.push_back(tri);
-    //        }
-    //    }
-
     return renderables;
 }
 
@@ -127,31 +86,6 @@ Renderables SceneListing::lostEmpire(Camera& camera, VulkanEngine* engine) {
     lostEmpire.load_from_obj("../assets/lost_empire.obj");
     engine->_meshManager->upload_mesh(lostEmpire);
     engine->_meshManager->_models["empire"] = lostEmpire;
-
-//    Mesh lostEmpire{};
-//    lostEmpire.load_from_obj("../assets/lost_empire.obj");
-//    engine->_meshManager->upload_mesh(lostEmpire);
-//    engine->_meshManager->_meshes["empire"] = lostEmpire;
-
-    // Load texture -> important : rajouter hashage pour ne pas dupliquer les textures
-//    engine->_textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
-//    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
-//    VkSampler blockySampler; // add cache for sampler
-//    vkCreateSampler(engine->_device->_logicalDevice, &samplerInfo, nullptr, &blockySampler);
-//    engine->_samplerManager->_loadedSampler["blocky_sampler"] = blockySampler;
-//
-//    Material* texturedMat =	engine->_pipelineBuilder->get_material("texturedMesh");
-//
-//    VkDescriptorImageInfo imageBufferInfo;
-//    imageBufferInfo.sampler = engine->_samplerManager->_loadedSampler["blocky_sampler"];
-//    imageBufferInfo.imageView = engine->_textureManager->_loadedTextures["empire_diffuse"].imageView;
-//    imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-//
-//    DescriptorBuilder::begin(*engine->_layoutCache, *engine->_allocator)
-//            .bind_image(imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texturedMat->textureSet, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-//            .build(texturedMat->textureSet, engine->_descriptorSetLayouts.textures, poolSizes);
-
-//    // Shaders - to do
 
     // From init_scene
     RenderObject map;

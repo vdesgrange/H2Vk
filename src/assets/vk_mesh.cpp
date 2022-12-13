@@ -277,8 +277,9 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
             nodeMatrix = parent->matrix * nodeMatrix;
             parent = parent->parent;
         }
-
         vkCmdPushConstants(commandBuffer, pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(glm::mat4),&nodeMatrix);
+        // vkCmdPushConstants(commandBuffer,pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(MeshPushConstants),&constants);
+
         for (Primitive& primitive : node->mesh.primitives) {
             if (primitive.indexCount > 0) {
 //                if (!_textures.empty() && primitive.materialIndex != -1) {
@@ -318,9 +319,9 @@ void Model::draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineL
         vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.allocation._buffer, 0, VK_INDEX_TYPE_UINT32);
     }
 
-    MeshPushConstants constants;
-    constants.render_matrix = transformMatrix;  // expected in draw_node() and node->matrix
-    vkCmdPushConstants(commandBuffer,pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(MeshPushConstants),&constants);
+    // MeshPushConstants constants;
+    // constants.render_matrix = transformMatrix;  // expected in draw_node() and node->matrix
+    // vkCmdPushConstants(commandBuffer,pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(MeshPushConstants),&constants);
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(this->_indexesBuffer.size()), 1, 0, 0, instance);
     // vkCmdDraw(commandBuffer, static_cast<uint32_t>(this->_verticesBuffer.size()), 1, 0, instance);
