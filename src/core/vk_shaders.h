@@ -5,14 +5,13 @@
 #include <vector>
 
 struct ShaderEffect {
-    VkPipelineLayout pipelineLayout;
-    std::vector<VkDescriptorSetLayout> setLayouts;
-
-    struct ShaderStage {
+    struct ShaderStage { // Temporary structure used by VkPipelineShaderStageCreateInfo
         VkShaderModule shaderModule;
         VkShaderStageFlagBits flags;
     };
 
+    VkPipelineLayout pipelineLayout;
+    std::vector<VkDescriptorSetLayout> setLayouts;
     std::vector<ShaderStage> shaderStages;
 };
 

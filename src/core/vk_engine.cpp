@@ -188,8 +188,8 @@ void VulkanEngine::init_descriptors() {
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
                 .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
                 .bind_buffer(sceneBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-                .layout(_descriptorSetLayouts.environment)
-                .build(_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes); // _globalSetLayout
+                .layout(_descriptorSetLayouts.environment) // use reference instead?
+                .build(_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 
         // === Object ===
         const uint32_t MAX_OBJECTS = 10000;
@@ -203,14 +203,14 @@ void VulkanEngine::init_descriptors() {
 
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_buffer(objectsBInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-            .layout(_descriptorSetLayouts.matrices)
-            .build(_frames[i].objectDescriptor, _descriptorSetLayouts.matrices, poolSizes); // _objectSetLayout
+            .layout(_descriptorSetLayouts.matrices) // use reference instead?
+            .build(_frames[i].objectDescriptor, _descriptorSetLayouts.matrices, poolSizes);
     }
 
     // === Texture ===
     DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .layout(_descriptorSetLayouts.textures); // _singleTextureSetLayout
+            .layout(_descriptorSetLayouts.textures); // use reference instead?
 
     // === Clean up ===
     _mainDeletionQueue.push_function([&]() {
@@ -248,39 +248,35 @@ void VulkanEngine::init_pipelines() {
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
     _pipelineBuilder = new PipelineBuilder(*_window, *_device, *_renderPass, setLayouts);
 
-    std::vector<VkDescriptorPoolSize> poolSizes = {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
-    };
-
-    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
-    VkSampler blockySampler; // add cache for sampler
-    vkCreateSampler(_device->_logicalDevice, &samplerInfo, nullptr, &blockySampler);
-    _samplerManager->_loadedSampler["blocky_sampler"] = blockySampler;
-
-    Material* texturedMat =	_pipelineBuilder->get_material("texturedMesh");
-
-    VkDescriptorImageInfo imageBufferInfo;
-    imageBufferInfo.sampler = _samplerManager->_loadedSampler["blocky_sampler"];
-    imageBufferInfo.imageView = _textureManager->_loadedTextures["empire_diffuse"].imageView;
-    imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-    DescriptorBuilder::begin(*_layoutCache, *_allocator)
-            .bind_image(imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .build(texturedMat->textureSet, _descriptorSetLayouts.textures, poolSizes);
-
-
-    // move to scene listing as well? Only usage
-    // std::vector<VkDescriptorSetLayout> setLayouts = {_globalSetLayout, _objectSetLayout, _singleTextureSetLayout};
+//    std::vector<VkDescriptorPoolSize> poolSizes = {
+//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
+//            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
+//            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
+//    };
+//
+//    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+//    VkSampler blockySampler; // add cache for sampler
+//    vkCreateSampler(_device->_logicalDevice, &samplerInfo, nullptr, &blockySampler);
+//    _samplerManager->_loadedSampler["blocky_sampler"] = blockySampler;
+//
+//    Material* texturedMat =	_pipelineBuilder->get_material("texturedMesh");
+//
+//    VkDescriptorImageInfo imageBufferInfo;
+//    imageBufferInfo.sampler = _samplerManager->_loadedSampler["blocky_sampler"];
+//    imageBufferInfo.imageView = _textureManager->_loadedTextures["empire_diffuse"].imageView;
+//    imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//
+//    DescriptorBuilder::begin(*_layoutCache, *_allocator)
+//            .bind_image(imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+//            //.layout(_descriptorSetLayouts.textures)
+//            .build(texturedMat->textureSet, _descriptorSetLayouts.textures, poolSizes);
 }
 
 FrameData& VulkanEngine::get_current_frame()
 {
     return _frames[_frameNumber % FRAME_OVERLAP];
 }
-
 
 void VulkanEngine::load_meshes() {
     _meshManager = new MeshManager(*_device, _uploadContext); // move to sceneListing ?
@@ -298,7 +294,6 @@ void VulkanEngine::init_scene() {
     // If texture not loaded here, it creates issues -> Must be loaded before binding (previously in load_images)
     _textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
 
- // _singleTextureSetLayout
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -319,8 +314,8 @@ void VulkanEngine::recreate_swap_chain() {
     init_swapchain();
     init_default_renderpass();
     init_framebuffers();
-    init_pipelines();
     init_scene();
+    init_pipelines();
 }
 
 void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
@@ -378,6 +373,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
             object.model->draw_obj(commandBuffer, object.material->pipelineLayout, object.transformMatrix, i, object.model != lastModel);
             // object.model->draw(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
             lastModel = bind ?  object.model : lastModel;
+
         } else {
             if (object.material != lastMaterial) {
                 vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
@@ -493,7 +489,6 @@ void VulkanEngine::render(int imageIndex) {
     vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     // Camera
-
     _camera->set_speed(_ui->get_settings().speed);
     _reset = _camera->update_camera(1. / stats.FrameRate);
     _camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near, _ui->get_settings().z_far);

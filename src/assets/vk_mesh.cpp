@@ -229,11 +229,12 @@ void Model::load_node(tinyobj::attrib_t attrib, std::vector<tinyobj::shape_t>& s
                 attrib.normals[3 * index.normal_index + 2]
             }));
 
-            vertex.color = glm::vec3({
-                attrib.colors[3 * size_t(index.vertex_index) + 0],
-                attrib.colors[3 * size_t(index.vertex_index) + 1],
-                attrib.colors[3 * size_t(index.vertex_index) + 2]
-            });
+            vertex.color = vertex.normal;
+//            vertex.color = glm::vec3({ // to get color represented by the normal
+//                attrib.colors[3 * index.vertex_index + 0],
+//                attrib.colors[3 * index.vertex_index + 1],
+//                attrib.colors[3 * index.vertex_index + 2]
+//            });
 
             vertex.uv = glm::make_vec2(glm::vec2({
                 attrib.texcoords[2 * index.texcoord_index + 0], // ux
@@ -280,12 +281,14 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
         vkCmdPushConstants(commandBuffer, pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(glm::mat4),&nodeMatrix);
         for (Primitive& primitive : node->mesh.primitives) {
             if (primitive.indexCount > 0) {
-                if (!_textures.empty() && primitive.materialIndex != -1) {
-                    // Get the texture index for this primitive
-                    Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];
-                    // Bind the descriptor for the current primitive's texture
-                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
-                }
+//                if (!_textures.empty() && primitive.materialIndex != -1) {
+//                    // Get the texture index for this primitive
+//                    Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];
+//                    // Bind the descriptor for the current primitive's texture
+//                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
+//                }
+                Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
                 vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance); // i
             }
         }
@@ -323,34 +326,34 @@ void Model::draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineL
     // vkCmdDraw(commandBuffer, static_cast<uint32_t>(this->_verticesBuffer.size()), 1, 0, instance);
 }
 
-void Model::descriptors(VulkanEngine& engine) {
-    std::vector<VkDescriptorPoolSize> sizes = {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(this->_images.size()) }
-    };
-
-//    _camBuffer = Buffer::create_buffer(*engine._device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+//void Model::descriptors(VulkanEngine& engine) {
+//    std::vector<VkDescriptorPoolSize> sizes = {
+//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+//            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(this->_images.size()) }
+//    };
 //
-//    VkDescriptorBufferInfo camBInfo{};
-//    camBInfo.buffer = _camBuffer._buffer; // frames[i]
-//    camBInfo.offset = 0;
-//    camBInfo.range = sizeof(GPUCameraData);
+////    _camBuffer = Buffer::create_buffer(*engine._device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+////
+////    VkDescriptorBufferInfo camBInfo{};
+////    camBInfo.buffer = _camBuffer._buffer; // frames[i]
+////    camBInfo.offset = 0;
+////    camBInfo.range = sizeof(GPUCameraData);
+////
+////    DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
+////        .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+////        .build(_descriptorSet, _descriptorSetLayouts.matrices, sizes);
 //
-//    DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
-//        .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-//        .build(_descriptorSet, _descriptorSetLayouts.matrices, sizes);
-
-    for (auto& image : this->_images) {
-        VkDescriptorImageInfo imageBInfo;
-        imageBInfo.sampler = image._sampler;
-        imageBInfo.imageView = image._imageView;
-        imageBInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-        DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
-            .bind_image(imageBInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .build(image._descriptorSet, engine._descriptorSetLayouts.textures, sizes);
-    }
-}
+//    for (auto& image : this->_images) {
+//        VkDescriptorImageInfo imageBInfo;
+//        imageBInfo.sampler = image._sampler;
+//        imageBInfo.imageView = image._imageView;
+//        imageBInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//
+//        DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
+//            .bind_image(imageBInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+//            .build(image._descriptorSet, engine._descriptorSetLayouts.textures, sizes);
+//    }
+//}
 
 bool Model::load_from_glb(VulkanEngine& engine, const char *filename) {
     tinygltf::Model input;
@@ -511,8 +514,8 @@ Mesh Mesh::cube() {
             Vertex vertex{};
             vertex.position = {(d & 1) * 2 - 1, (d & 2) - 1, (d & 4) / 2 - 1};
             vertex.normal = {face[4], face[5], face[6]};
-            vertex.color = {0, 255, 0};
             vertex.uv = {j & 1, (j & 2) / 2};
+            vertex.color = {0, 255, 0};
 
             mesh._vertices.push_back(vertex);
         }
@@ -547,24 +550,24 @@ VertexInputDescription Vertex::get_vertex_description()
     normalAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
     normalAttribute.offset = offsetof(Vertex, normal);
 
-    //Color will be stored at Location 2
-    VkVertexInputAttributeDescription colorAttribute = {};
-    colorAttribute.binding = 0;
-    colorAttribute.location = 2;
-    colorAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-    colorAttribute.offset = offsetof(Vertex, color);
-
-    //UV will be stored at Location 3
+    //UV will be stored at Location 2
     VkVertexInputAttributeDescription  uvAttribute = {};
     uvAttribute.binding = 0;
-    uvAttribute.location = 3;
+    uvAttribute.location = 2;
     uvAttribute.format = VK_FORMAT_R32G32_SFLOAT;
     uvAttribute.offset = offsetof(Vertex, uv);
 
+    //Color will be stored at Location 3
+    VkVertexInputAttributeDescription colorAttribute = {};
+    colorAttribute.binding = 0;
+    colorAttribute.location = 3;
+    colorAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+    colorAttribute.offset = offsetof(Vertex, color);
+
     description.attributes.push_back(positionAttribute);
     description.attributes.push_back(normalAttribute);
-    description.attributes.push_back(colorAttribute);
     description.attributes.push_back(uvAttribute);
+    description.attributes.push_back(colorAttribute);
     return description;
 }
 

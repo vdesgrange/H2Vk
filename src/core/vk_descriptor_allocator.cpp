@@ -1,5 +1,6 @@
 #include "vk_descriptor_allocator.h"
 #include "vk_device.h"
+#include <iostream>
 
 DescriptorAllocator::~DescriptorAllocator() {
     for (auto p : freePools) {
@@ -42,8 +43,10 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* descriptor, VkDescriptorSetL
         usedPools.push_back(_currentPool);
         result = vkAllocateDescriptorSets(_device._logicalDevice, &info, descriptor);
         if (result == VK_SUCCESS){
+            std::cout << "reallocate success" << std::endl;
             return true;
         }
+        std::cout << "reallocate fail" << std::endl;
     }
 
     return false;

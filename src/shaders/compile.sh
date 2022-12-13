@@ -1,9 +1,8 @@
 #!/bin/bash
 
-glslc shader_base.vert -o shader_base.vert.spv
-glslc shader_base.frag -o shader_base.frag.spv
-glslc default_lit.frag -o default_lit.frag.spv
-glslc red_shader_base.vert -o red_shader_base.vert.spv
-glslc red_shader_base.frag -o red_shader_base.frag.spv
-glslc tri_mesh.vert -o tri_mesh.vert.spv
+glslc triangle.vert -o triangle.vert.spv
+glslc scene.frag -o scene.frag.spv
+glslc mesh.vert -o mesh.vert.spv
 glslc texture_lig.frag -o texture_lig.frag.spv
+glslc model_mesh.vert -o model_mesh.vert.spv
+glslc model_mesh.frag -o model_mesh.frag.spv
