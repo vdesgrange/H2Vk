@@ -58,13 +58,19 @@ struct Primitive {
     int32_t materialIndex;
 };
 
-class Mesh {
-public:
-    std::vector<Vertex> _vertices;
+//class Mesh {
+//public:
+//    // std::vector<Vertex> _vertices;
+//
+//    std::vector<Primitive> primitives;
+//
+//    // AllocatedBuffer _vertexBuffer;
+//    // static Mesh cube();
+//    // bool load_from_obj(const char* filename);
+//};
+
+struct Mesh {
     std::vector<Primitive> primitives;
-    AllocatedBuffer _vertexBuffer;
-    static Mesh cube();
-    bool load_from_obj(const char* filename);
 };
 
 struct Node {
@@ -82,16 +88,18 @@ struct Node {
 struct Materials {
     glm::vec4 baseColorFactor = glm::vec4(1.0f);
     uint32_t baseColorTextureIndex;
+    uint32_t normalTextureIndex;
 };
 
 struct Image {
-    int32_t _index;
+    // int32_t _index;
     VkImage _image;
-    VkSampler _sampler;  // duplicate?
-    VkImageView _imageView;  // duplicate?
     VkImageLayout _imageLayout; // duplicate?
     VmaAllocation _allocation;
+    VkImageView _imageView;  // duplicate?
     VkDescriptorImageInfo _descriptor;
+    VkSampler _sampler;  // duplicate?
+
     VkDescriptorSet _descriptorSet; // access texture from the fragment shader
 
     void updateDescriptor() {
@@ -138,9 +146,9 @@ public:
 private:
     // class VulkanEngine& _engine;
 
-    void load_image(VulkanEngine& _engine, tinygltf::Model& input);
-    void load_texture(tinygltf::Model& input);
-    void load_material(tinygltf::Model& input);
+    void load_images(VulkanEngine& _engine, tinygltf::Model& input);
+    void load_textures(tinygltf::Model& input);
+    void load_materials(tinygltf::Model& input);
     void load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
     void load_scene(tinygltf::Model& input, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
     //void load_shape(tinyobj::attrib_t attrib, std::vector<tinyobj::shape_t>& shapes);

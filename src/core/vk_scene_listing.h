@@ -34,7 +34,7 @@ struct GPUSceneData {
 };
 
 struct GPUObjectData {
-    glm::mat4 modelMatrix;
+    glm::mat4 model;
 };
 
 typedef std::vector<RenderObject> Renderables;
@@ -46,8 +46,9 @@ public:
     static Renderables monkeyAndTriangles(Camera& camera, VulkanEngine* engine);
     static Renderables lostEmpire(Camera &camera, VulkanEngine* engine);
     static Renderables cubeScene(Camera &camera, VulkanEngine* engine);
-    static Renderables sponza(Camera& camera, VulkanEngine* engine);
     static Renderables oldBridge(Camera& camera, VulkanEngine* engine);
+    static Renderables karibu(Camera& camera, VulkanEngine* engine);
+    static Renderables damagedHelmet(Camera& camera, VulkanEngine* engine);
 
 private:
     static const class Device& _device;

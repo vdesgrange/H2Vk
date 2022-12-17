@@ -10,11 +10,12 @@
 #include "vk_descriptor_builder.h"
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
-        {"Monkey and triangles", SceneListing::monkeyAndTriangles},
+//        {"Monkey and triangles", SceneListing::monkeyAndTriangles},
 //        {"Lost empire", SceneListing::lostEmpire},
 //        {"Swimming pool", SceneListing::cubeScene},
-//        {"Sponza", SceneListing::sponza},
-        {"Old bridge", SceneListing::oldBridge},
+//        {"Old bridge", SceneListing::oldBridge},
+        {"Karibu", SceneListing::karibu},
+        {"DamagedHelmet", SceneListing::damagedHelmet},
 };
 
 Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engine) {
@@ -39,7 +40,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     engine->_meshManager->_models["triangle"] = triangleModel;
 
     Model monkeyModel{};
-    monkeyModel.load_from_obj("../assets/monkey_smooth.obj");
+    monkeyModel.load_from_obj("../assets/monkey/monkey_smooth.obj");
     for (auto& node : monkeyModel._nodes) {
         node->matrix =  glm::mat4{ 1.0f };
     }
@@ -83,7 +84,7 @@ Renderables SceneListing::lostEmpire(Camera& camera, VulkanEngine* engine) {
 
     // Upload mesh
     Model lostEmpire{};
-    lostEmpire.load_from_obj("../assets/lost_empire.obj");
+    lostEmpire.load_from_obj("../assets/lost_empire/lost_empire.obj");
     engine->_meshManager->upload_mesh(lostEmpire);
     engine->_meshManager->_models["empire"] = lostEmpire;
 
@@ -101,32 +102,19 @@ Renderables SceneListing::lostEmpire(Camera& camera, VulkanEngine* engine) {
 Renderables SceneListing::cubeScene(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
-    camera.inverse(true);
-    camera.set_position({ 0.f, -6.f, -10.f });
-    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
-
-    Mesh cube = Mesh::cube();
-    engine->_meshManager->upload_mesh(cube);
-    engine->_meshManager->_meshes["cube"] = cube;
-
-    RenderObject cubeObj;
-    cubeObj.mesh = engine->_meshManager->get_mesh("cube");
-    cubeObj.material = engine->_pipelineBuilder->get_material("defaultMesh");
-    cubeObj.transformMatrix = glm::mat4(1.f);
-    renderables.push_back(cubeObj);
-
-    return renderables;
-}
-
-Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
-    Renderables renderables{};
-
-    camera.inverse(true);
-    camera.set_position({ 0.f, -6.f, -10.f });
-    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
-
-//    Model sponza = Model{};
-//    sponza.load_from_gltf("../assets/sponza/NewSponza_Main_Blender_glTF.gltf");
+//    camera.inverse(true);
+//    camera.set_position({ 0.f, -6.f, -10.f });
+//    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+//
+//    Mesh cube = Mesh::cube();
+//    engine->_meshManager->upload_mesh(cube);
+//    engine->_meshManager->_meshes["cube"] = cube;
+//
+//    RenderObject cubeObj;
+//    cubeObj.mesh = engine->_meshManager->get_mesh("cube");
+//    cubeObj.material = engine->_pipelineBuilder->get_material("defaultMesh");
+//    cubeObj.transformMatrix = glm::mat4(1.f);
+//    renderables.push_back(cubeObj);
 
     return renderables;
 }
@@ -140,6 +128,7 @@ Renderables SceneListing::oldBridge(Camera& camera, VulkanEngine* engine) {
 
     Model oldBridgeModel{};
     oldBridgeModel.load_from_glb(*engine, "../assets/old_brick_bridge/old_brick_bridge.glb");
+    // oldBridgeModel.load_from_gltf(*engine, "../assets/old_brick_bridge/old_brick_bridge/scene.gltf");
     engine->_meshManager->upload_mesh(oldBridgeModel);
     engine->_meshManager->_models["oldBridge"] = oldBridgeModel;
 
@@ -149,6 +138,49 @@ Renderables SceneListing::oldBridge(Camera& camera, VulkanEngine* engine) {
     oldBridge.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(oldBridge);
 
+
+    return renderables;
+}
+
+Renderables SceneListing::karibu(Camera& camera, VulkanEngine* engine) {
+    Renderables renderables{};
+
+    camera.inverse(true);
+    camera.set_position({ 0.f, -6.f, -10.f });
+    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+
+    Model karibuModel{};
+    karibuModel.load_from_glb(*engine, "../assets/karibu_hippo_zanzibar/karibu_hippo_zanzibar.glb");
+    engine->_meshManager->upload_mesh(karibuModel);
+    engine->_meshManager->_models["karibu"] = karibuModel;
+
+    RenderObject karibu;
+    karibu.model = engine->_meshManager->get_model("karibu");
+    karibu.material = engine->_pipelineBuilder->get_material("defaultMesh");
+    karibu.transformMatrix = glm::mat4{ 1.0f };
+    renderables.push_back(karibu);
+
+
+    return renderables;
+}
+
+Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
+    Renderables renderables{};
+
+    camera.inverse(true);
+    camera.set_position({ 0.f, -6.f, -10.f });
+    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+
+    Model helmetModel{};
+    helmetModel.load_from_glb(*engine, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");
+    engine->_meshManager->upload_mesh(helmetModel);
+    engine->_meshManager->_models["helmet"] = helmetModel;
+
+    RenderObject helmet;
+    helmet.model = engine->_meshManager->get_model("helmet");
+    helmet.material = engine->_pipelineBuilder->get_material("defaultMesh");
+    helmet.transformMatrix = glm::mat4{ 1.0f };
+    renderables.push_back(helmet);
 
     return renderables;
 }

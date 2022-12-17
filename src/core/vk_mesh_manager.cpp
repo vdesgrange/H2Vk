@@ -15,11 +15,11 @@ MeshManager::MeshManager(const Device& device, UploadContext& uploadContext) : _
 };
 
 MeshManager::~MeshManager() {
-    for (auto& it: _meshes) {
-        vmaDestroyBuffer(_device._allocator,
-                         it.second._vertexBuffer._buffer,
-                         it.second._vertexBuffer._allocation);
-    }
+//    for (auto& it: _meshes) {
+//        vmaDestroyBuffer(_device._allocator,
+//                         it.second._vertexBuffer._buffer,
+//                         it.second._vertexBuffer._allocation);
+//    }
 
     for (auto& it: _models) {
         for (auto node : it.second._nodes) {
@@ -72,45 +72,45 @@ MeshManager::~MeshManager() {
 
 void MeshManager::upload_mesh(Mesh& mesh)
 {
-    const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex); // have
-    //allocate vertex buffer
-    VkBufferCreateInfo bufferInfo = {};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = bufferSize;
-    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT; // VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-
-    //let the VMA library know that this data should be writeable by CPU, but also readable by GPU
-    VmaAllocationCreateInfo vmaallocInfo = {};
-    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-    vmaallocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
-    AllocatedBuffer stagingBuffer;
-    VkResult result = vmaCreateBuffer(_device._allocator, &bufferInfo, &vmaallocInfo,
-                                      &stagingBuffer._buffer,
-                                      &stagingBuffer._allocation,
-                                      nullptr);
-
-
-    VK_CHECK(result);
-    void* data;
-    vmaMapMemory(_device._allocator, stagingBuffer._allocation, &data);
-    memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
-    vmaUnmapMemory(_device._allocator, stagingBuffer._allocation);
-
-
-    AllocatedBuffer newBuffer = Buffer::create_buffer(_device, bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-    mesh._vertexBuffer._buffer = newBuffer._buffer;
-    mesh._vertexBuffer._allocation = newBuffer._allocation;
-
-    immediate_submit([=](VkCommandBuffer cmd) {
-        VkBufferCopy copy;
-        copy.dstOffset = 0;
-        copy.srcOffset = 0;
-        copy.size = bufferSize;
-        vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
-    });
-
-    vmaDestroyBuffer(_device._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+//    const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex); // have
+//    //allocate vertex buffer
+//    VkBufferCreateInfo bufferInfo = {};
+//    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+//    bufferInfo.size = bufferSize;
+//    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT; // VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+//
+//    //let the VMA library know that this data should be writeable by CPU, but also readable by GPU
+//    VmaAllocationCreateInfo vmaallocInfo = {};
+//    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+//    vmaallocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+//
+//    AllocatedBuffer stagingBuffer;
+//    VkResult result = vmaCreateBuffer(_device._allocator, &bufferInfo, &vmaallocInfo,
+//                                      &stagingBuffer._buffer,
+//                                      &stagingBuffer._allocation,
+//                                      nullptr);
+//
+//
+//    VK_CHECK(result);
+//    void* data;
+//    vmaMapMemory(_device._allocator, stagingBuffer._allocation, &data);
+//    memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
+//    vmaUnmapMemory(_device._allocator, stagingBuffer._allocation);
+//
+//
+//    AllocatedBuffer newBuffer = Buffer::create_buffer(_device, bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+//    mesh._vertexBuffer._buffer = newBuffer._buffer;
+//    mesh._vertexBuffer._allocation = newBuffer._allocation;
+//
+//    immediate_submit([=](VkCommandBuffer cmd) {
+//        VkBufferCopy copy;
+//        copy.dstOffset = 0;
+//        copy.srcOffset = 0;
+//        copy.size = bufferSize;
+//        vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
+//    });
+//
+//    vmaDestroyBuffer(_device._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 }
 
 void MeshManager::upload_mesh(Model& mesh) {

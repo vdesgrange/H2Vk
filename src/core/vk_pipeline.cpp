@@ -55,10 +55,11 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
 
-    this->scene_monkey_triangle(setLayouts);
-    this->scene_lost_empire(setLayouts);
+    // this->scene_monkey_triangle(setLayouts);
+    // this->scene_lost_empire(setLayouts);
     // this->scene_old_bridge(setLayouts);
-
+    this->scene_karibu_hippo(setLayouts);
+    this->scene_damaged_helmet(setLayouts);
 }
 
 PipelineBuilder::~PipelineBuilder() {
@@ -243,13 +244,45 @@ void PipelineBuilder::scene_lost_empire(std::vector<VkDescriptorSetLayout> setLa
 void PipelineBuilder::scene_old_bridge(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene_tex.frag.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
     };
 
 //    VkPushConstantRange push_constant;
 //    push_constant.offset = 0;
 //    push_constant.size = static_cast<uint32_t>(sizeof(MeshPushConstants));
 //    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
+    ShaderPass pass = this->build_pass(&effect_mesh);
+    this->_shaderPasses.push_back(pass);
+    create_material(pass.pipeline, pass.pipelineLayout, "defaultMesh");
+
+    for (auto& shader : effect_mesh.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+    }
+}
+
+void PipelineBuilder::scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setLayouts) {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
+    };
+
+    ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
+    ShaderPass pass = this->build_pass(&effect_mesh);
+    this->_shaderPasses.push_back(pass);
+    create_material(pass.pipeline, pass.pipelineLayout, "defaultMesh");
+
+    for (auto& shader : effect_mesh.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+    }
+}
+
+void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts) {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
+    };
 
     ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
     ShaderPass pass = this->build_pass(&effect_mesh);

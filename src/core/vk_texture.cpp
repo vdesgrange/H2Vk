@@ -178,15 +178,18 @@ bool vkutil::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDevice
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
 
         VkBufferImageCopy copyRegion = {};
-        copyRegion.bufferOffset = 0;
-        copyRegion.bufferRowLength = 0;
-        copyRegion.bufferImageHeight = 0;
         copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         copyRegion.imageSubresource.mipLevel = 0;
         copyRegion.imageSubresource.baseArrayLayer = 0;
         copyRegion.imageSubresource.layerCount = 1;
         copyRegion.imageExtent = imageExtent;
+        copyRegion.bufferOffset = 0;
+        copyRegion.bufferRowLength = 0;
+        copyRegion.bufferImageHeight = 0;
         vkCmdCopyBufferToImage(cmd, stagingBuffer._buffer, newImage._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+        // Change texture image layout to shader read after all mip levels have been copied
+        newImage._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
         imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -197,10 +200,8 @@ bool vkutil::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDevice
 
         VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
         vkCreateSampler(engine._device->_logicalDevice, &samplerInfo, nullptr, &newImage._sampler);
-
         VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(format, newImage._image, VK_IMAGE_ASPECT_COLOR_BIT);
         vkCreateImageView(engine._device->_logicalDevice, &imageinfo, nullptr, &newImage._imageView);
-
 
         newImage.updateDescriptor(); // update descriptor with sample, imageView, imageLayout
     });

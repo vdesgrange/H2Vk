@@ -39,7 +39,7 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* descriptor, VkDescriptorSetL
     }
 
     if (reallocate) {
-        _currentPool = getPool(sizes, 0, 1000);
+        _currentPool = getPool(sizes, 0, 100);
         usedPools.push_back(_currentPool);
         result = vkAllocateDescriptorSets(_device._logicalDevice, &info, descriptor);
         if (result == VK_SUCCESS){
@@ -61,7 +61,13 @@ void DescriptorAllocator::resetPools() {
     _currentPool = VK_NULL_HANDLE;
 }
 
-VkDescriptorPool DescriptorAllocator::getPool(std::vector<VkDescriptorPoolSize> sizes, VkDescriptorPoolCreateFlags flags, uint32_t count) {
+VkDescriptorPool DescriptorAllocator::getPool(std::vector<VkDescriptorPoolSize> poolSizes, VkDescriptorPoolCreateFlags flags, uint32_t count) {
+    std::vector<VkDescriptorPoolSize> sizes;
+    sizes.reserve(poolSizes.size());
+    for (auto sz : poolSizes) {
+        sizes.push_back({ sz.type, uint32_t(sz.descriptorCount * count) });
+    }
+
     if (freePools.size() > 0) {
         VkDescriptorPool pool = freePools.back();
         freePools.pop_back();

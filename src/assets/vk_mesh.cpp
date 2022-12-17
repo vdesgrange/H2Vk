@@ -30,7 +30,7 @@
 //    vmaDestroyBuffer(_engine._device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
 //}
 
-void Model::load_image(VulkanEngine& engine, tinygltf::Model &input) {
+void Model::load_images(VulkanEngine& engine, tinygltf::Model &input) {
     _images.resize(input.images.size());
 
     for (uint32_t i = 0; i < input.images.size(); i++) {
@@ -64,15 +64,16 @@ void Model::load_image(VulkanEngine& engine, tinygltf::Model &input) {
     }
 }
 
-void Model::load_texture(tinygltf::Model &input) {
+void Model::load_textures(tinygltf::Model &input) {
     _textures.resize(input.textures.size());
     for (uint32_t i = 0; i < input.textures.size(); i++) {
         _textures[i].imageIndex = input.textures[i].source;
     }
 }
 
-void Model::load_material(tinygltf::Model &input) {
+void Model::load_materials(tinygltf::Model &input) {
     _materials.resize(input.materials.size());
+
     for (uint32_t i = 0; i < input.materials.size(); i++) {
         tinygltf::Material gltfMaterial = input.materials[i];
         if (gltfMaterial.values.find("baseColorFactor") != gltfMaterial.values.end()) {
@@ -82,6 +83,10 @@ void Model::load_material(tinygltf::Model &input) {
         if (gltfMaterial.values.find("baseColorTexture") != gltfMaterial.values.end()) {
             _materials[i].baseColorTextureIndex = gltfMaterial.values["baseColorTexture"].TextureIndex();
         }
+
+        if (gltfMaterial.additionalValues.find("normalTexture") != gltfMaterial.additionalValues.end()) {
+            _materials[i].normalTextureIndex = gltfMaterial.additionalValues["normalTexture"].TextureIndex();
+        }
     }
 }
 
@@ -90,21 +95,21 @@ void Model::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node*
     node->matrix = glm::mat4(1.f);
     node->parent = nullptr;
 
+    if (iNode.translation.size() == 3) {
+        node->matrix = glm::translate(node->matrix, glm::vec3(glm::make_vec3(iNode.translation.data())));
+    }
+
+    if (iNode.rotation.size() == 4) {
+        glm::quat q = glm::make_quat(iNode.rotation.data());
+        node->matrix *= glm::mat4(q);
+    }
+
+    if (iNode.scale.size() == 3) {
+        node->matrix = glm::scale(node->matrix, glm::vec3(glm::make_vec3(iNode.scale.data())));
+    }
+
     if (iNode.matrix.size() == 16) {
         node->matrix = glm::make_mat4x4(iNode.matrix.data());
-    } else {
-        if (iNode.translation.size() == 3) {
-            node->matrix = glm::translate(node->matrix, glm::vec3(glm::make_vec3(iNode.translation.data())));
-        }
-
-        if (iNode.rotation.size() == 4) {
-            glm::quat q = glm::make_quat(iNode.rotation.data());
-            node->matrix *= glm::mat4(q);
-        }
-
-        if (iNode.scale.size() == 3) {
-            node->matrix = glm::scale(node->matrix, glm::vec3(glm::make_vec3(iNode.scale.data())));
-        }
     }
 
     for (auto const& idx : iNode.children) {
@@ -113,6 +118,7 @@ void Model::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node*
 
     if (iNode.mesh > -1) {
         const tinygltf::Mesh mesh = input.meshes[iNode.mesh];
+
         for (uint32_t i = 0; i < mesh.primitives.size(); i++) {
             const tinygltf::Primitive& gltfPrimitive = mesh.primitives[i];
             uint32_t indexCount = 0;
@@ -146,10 +152,11 @@ void Model::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node*
 
             for (size_t v = 0; v < vertexCount; v++) {
                 Vertex vert{};
-                vert.position = glm::vec4(glm::make_vec3(&positionBuffer[v * 3]), 1.0f);
+                // vert.position = glm::vec4(glm::make_vec3(&positionBuffer[v * 3]), 1.0f);
+                vert.position = glm::vec3(glm::make_vec3(&positionBuffer[v * 3]));
                 vert.normal = glm::normalize(glm::vec3(normalsBuffer ? glm::make_vec3(&normalsBuffer[v * 3]) : glm::vec3(0.0f)));
-                vert.uv = texCoordsBuffer ? glm::make_vec2(&texCoordsBuffer[v * 2]) : glm::vec3(0.0f);
-                vert.color = glm::vec3(1.0f);
+                vert.uv = texCoordsBuffer ? glm::make_vec2(&texCoordsBuffer[v * 2]) : glm::vec2(0.0f); // glm::vec3(0.0f)
+                vert.color = glm::vec3(0.f);
                 vertexBuffer.push_back(vert);
             }
 
@@ -258,7 +265,6 @@ void Model::load_node(tinyobj::attrib_t attrib, std::vector<tinyobj::shape_t>& s
 
     _nodes.push_back(node);
 
-
 }
 
 void Model::load_scene(tinygltf::Model &input, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer) {
@@ -277,19 +283,25 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
             nodeMatrix = parent->matrix * nodeMatrix;
             parent = parent->parent;
         }
-        vkCmdPushConstants(commandBuffer, pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(glm::mat4),&nodeMatrix);
-        // vkCmdPushConstants(commandBuffer,pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(MeshPushConstants),&constants);
+
+//        void* objectData;
+//        vmaMapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation, &objectData);
+//        GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
+//        objectSSBO[instance].model = nodeMatrix;
+//        vmaUnmapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation);
+
+         // vkCmdPushConstants(commandBuffer, pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(glm::mat4),&nodeMatrix);
+        // vkCmdPush Constants(commandBuffer,pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(MeshPushConstants),&constants);
 
         for (Primitive& primitive : node->mesh.primitives) {
             if (primitive.indexCount > 0) {
-//                if (!_textures.empty() && primitive.materialIndex != -1) {
-//                    // Get the texture index for this primitive
-//                    Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];
-//                    // Bind the descriptor for the current primitive's texture
-//                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
-//                }
-                Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
+                if (!_textures.empty() && primitive.materialIndex != -1) { // handle non-gltf meshes
+                    // Get the texture index for this primitive
+                    Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];
+                    // Bind the descriptor for the current primitive's texture
+                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
+                    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
+                }
                 vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance); // i
             }
         }
@@ -368,9 +380,9 @@ bool Model::load_from_glb(VulkanEngine& engine, const char *filename) {
         return false;
     }
 
-    this->load_image(engine, input);
-    this->load_texture(input);
-    this->load_material(input);
+    this->load_images(engine, input);
+    this->load_textures(input);
+    this->load_materials(input);
     this->load_scene(input, _indexesBuffer, _verticesBuffer);
 
     return true;
@@ -390,9 +402,9 @@ bool Model::load_from_gltf(VulkanEngine& engine, const char *filename) {
         return false;
     }
 
-    this->load_image(engine, input);
-    this->load_texture(input);
-    this->load_material(input);
+    this->load_images(engine, input);
+    this->load_textures(input);
+    this->load_materials(input);
     this->load_scene(input, _indexesBuffer, _verticesBuffer);
 
 //    size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
@@ -451,79 +463,79 @@ bool Model::load_from_obj(const char *filename) {
     return true;
 }
 
-bool Mesh::load_from_obj(const char *filename) {
-    std::unordered_map<Vertex, uint32_t> unique_vertices{};
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn, err;
+// bool Mesh::load_from_obj(const char *filename) {
+//    std::unordered_map<Vertex, uint32_t> unique_vertices{};
+//    tinyobj::attrib_t attrib;
+//    std::vector<tinyobj::shape_t> shapes;
+//    std::vector<tinyobj::material_t> materials;
+//    std::string warn, err;
+//
+//    if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename, nullptr)) {
+//        std::cerr << warn << std::endl;
+//        std::cerr << err << std::endl;
+//        return false;
+//    }
+//
+//    for (const auto& shape : shapes) {
+//        for (const auto& index : shape.mesh.indices) {
+//            Vertex vertex{};
+//
+//            vertex.position = {
+//                    attrib.vertices[3 * index.vertex_index + 0],
+//                    attrib.vertices[3 * index.vertex_index + 1],
+//                    attrib.vertices[3 * index.vertex_index + 2]
+//            };
+//
+//            vertex.normal = {
+//                    attrib.normals[3 * index.normal_index + 0],
+//                    attrib.normals[3 * index.normal_index + 1],
+//                    attrib.normals[3 * index.normal_index + 2],
+//            };
+//
+//            vertex.color = vertex.normal;
+//
+//            vertex.uv = {
+//                    attrib.texcoords[2 * index.texcoord_index + 0], // ux
+//                    1 - attrib.texcoords[2 * index.texcoord_index + 1], // uy, 1 - uy because of vulkan coords.
+//            };
+//
+//            _vertices.push_back(vertex);
+//
+//        }
+//    }
+//
+//    return true;
+//}
 
-    if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename, nullptr)) {
-        std::cerr << warn << std::endl;
-        std::cerr << err << std::endl;
-        return false;
-    }
-
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Vertex vertex{};
-
-            vertex.position = {
-                    attrib.vertices[3 * index.vertex_index + 0],
-                    attrib.vertices[3 * index.vertex_index + 1],
-                    attrib.vertices[3 * index.vertex_index + 2]
-            };
-
-            vertex.normal = {
-                    attrib.normals[3 * index.normal_index + 0],
-                    attrib.normals[3 * index.normal_index + 1],
-                    attrib.normals[3 * index.normal_index + 2],
-            };
-
-            vertex.color = vertex.normal;
-
-            vertex.uv = {
-                    attrib.texcoords[2 * index.texcoord_index + 0], // ux
-                    1 - attrib.texcoords[2 * index.texcoord_index + 1], // uy, 1 - uy because of vulkan coords.
-            };
-
-            _vertices.push_back(vertex);
-
-        }
-    }
-
-    return true;
-}
-
-Mesh Mesh::cube() {
-    Mesh mesh{};
-
-    const std::array<std::array<int, 7>, 6> cube_faces = {{
-    {0, 4, 2, 6, -1, 0, 0}, // -x
-    {1, 3, 5, 7, +1, 0, 0}, // +x
-    {0, 1, 4, 5, 0, -1, 0}, // -y
-    {2, 6, 3, 7, 0, +1, 0}, // +y
-    {0, 2, 1, 3, 0, 0, -1}, // -z
-    {4, 5, 6, 7, 0, 0, +1} // +z
-    }};
-
-    for (int i = 0; i < cube_faces.size(); i++) {
-        std::array<int, 7> face = cube_faces[i];
-        for (int j = 0; j < 4; j++) {
-            int d = face[j];
-
-            Vertex vertex{};
-            vertex.position = {(d & 1) * 2 - 1, (d & 2) - 1, (d & 4) / 2 - 1};
-            vertex.normal = {face[4], face[5], face[6]};
-            vertex.uv = {j & 1, (j & 2) / 2};
-            vertex.color = {0, 255, 0};
-
-            mesh._vertices.push_back(vertex);
-        }
-    }
-
-    return mesh;
-}
+//Mesh Mesh::cube() {
+//    Mesh mesh{};
+//
+//    const std::array<std::array<int, 7>, 6> cube_faces = {{
+//    {0, 4, 2, 6, -1, 0, 0}, // -x
+//    {1, 3, 5, 7, +1, 0, 0}, // +x
+//    {0, 1, 4, 5, 0, -1, 0}, // -y
+//    {2, 6, 3, 7, 0, +1, 0}, // +y
+//    {0, 2, 1, 3, 0, 0, -1}, // -z
+//    {4, 5, 6, 7, 0, 0, +1} // +z
+//    }};
+//
+//    for (int i = 0; i < cube_faces.size(); i++) {
+//        std::array<int, 7> face = cube_faces[i];
+//        for (int j = 0; j < 4; j++) {
+//            int d = face[j];
+//
+//            Vertex vertex{};
+//            vertex.position = {(d & 1) * 2 - 1, (d & 2) - 1, (d & 4) / 2 - 1};
+//            vertex.normal = {face[4], face[5], face[6]};
+//            vertex.uv = {j & 1, (j & 2) / 2};
+//            vertex.color = {0, 255, 0};
+//
+//            mesh._vertices.push_back(vertex);
+//        }
+//    }
+//
+//    return mesh;
+//}
 
 VertexInputDescription Vertex::get_vertex_description()
 {

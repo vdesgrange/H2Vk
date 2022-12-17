@@ -14,6 +14,7 @@ namespace vkutil {
     bool load_image_from_buffer(VulkanEngine &engine, void *buffer, VkDeviceSize bufferSize, VkFormat format,
                                         uint32_t texWidth, uint32_t texHeight, Image &outImage);
 }
+
 struct Texture final {
     int32_t index;
     AllocatedImage image;

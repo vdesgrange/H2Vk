@@ -60,4 +60,8 @@ private:
     void scene_lost_empire(std::vector<VkDescriptorSetLayout> setLayouts);
 
     void scene_old_bridge(std::vector<VkDescriptorSetLayout> setLayouts);
+
+    void scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setLayouts);
+
+    void scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts);
 };

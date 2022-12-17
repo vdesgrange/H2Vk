@@ -161,7 +161,7 @@ void VulkanEngine::init_descriptors() {
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
             { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 20 }
     };
 
     _layoutCache = new DescriptorLayoutCache(*_device);  // ok
@@ -227,14 +227,21 @@ void VulkanEngine::init_descriptors() {
 }
 
 void VulkanEngine::setup_descriptors(){
-    std::vector<VkDescriptorPoolSize> poolSizes = {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
-    };
+//    std::vector<VkDescriptorPoolSize> poolSizes = {
+//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
+//            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
+//            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 20 }
+//    };
 
     for (auto &renderable: _scene->_renderables) {
+        std::vector<VkDescriptorPoolSize> poolSizes = {
+                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
+                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>( renderable.model->_images.size() ) }
+        };
+
         for (auto &image: renderable.model->_images) {
             DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_image(image._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
@@ -293,8 +300,7 @@ void VulkanEngine::init_scene() {
     _scene = new Scene(*this, *_meshManager, *_textureManager, *_pipelineBuilder);
 
     // If texture not loaded here, it creates issues -> Must be loaded before binding (previously in load_images)
-    _textureManager->load_texture("../assets/lost_empire-RGBA.png", "empire_diffuse");
-
+    _textureManager->load_texture("../assets/lost_empire/lost_empire-RGBA.png", "empire_diffuse");
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -324,29 +330,33 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     Model* lastModel = nullptr;
     Material* lastMaterial = nullptr;
 
-    // === Camera & Object(?) ===
+    // === Camera & Objects & Environment ===
+
     GPUCameraData camData;
     camData.proj = _camera->get_projection_matrix();
     camData.view = _camera->get_view_matrix();
     camData.viewproj = _camera->get_projection_matrix() * _camera->get_view_matrix();
 
+    // Camera : write into the buffer by copying the render matrices from camera object into it
     void* data;
     vmaMapMemory(_device->_allocator, get_current_frame().cameraBuffer._allocation, &data);
     memcpy(data, &camData, sizeof(GPUCameraData));
     vmaUnmapMemory(_device->_allocator, get_current_frame().cameraBuffer._allocation);
 
+    // Objects : write into the buffer by copying the render matrices from our render objects into it
     void* objectData;
     vmaMapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation, &objectData);
     GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
     for (int i = 0; i < count; i++) {
         RenderObject& object = first[i];
-        objectSSBO[i].modelMatrix = object.transformMatrix;
+        objectSSBO[i].model = object.transformMatrix;
     }
     vmaUnmapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation);
 
-    // === Ambiance ===
+    // Environment : write scene data into environment buffer
     float framed = (_frameNumber / 120.f);
     _sceneParameters.ambientColor = { sin(framed),0,cos(framed),1 };
+
     char* sceneData;
     vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
     int frameIndex = _frameNumber % FRAME_OVERLAP;
@@ -354,6 +364,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
     vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
 
+    // === Drawing ===
     for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
         RenderObject& object = first[i]; // Take the scene/object
 
@@ -362,11 +373,17 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
                 vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
                 lastMaterial = object.material;
                 uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
+                // Camera & Environment data descriptor : uniform buffer :  slot 0, Camera : bind 0, Scene : bind 1
                 vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
+                // Object data descriptor : buffer std140 : slot 1, bind 0
                 vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
 
+                for (auto &image: object.model->_images) {
+                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &image._descriptorSet, 0, nullptr);
+                }
+
                 if (object.material->textureSet != VK_NULL_HANDLE) {
-                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &object.material->textureSet, 0, nullptr);
+                    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &object.material->textureSet, 0, nullptr);
                 }
             }
 
@@ -398,13 +415,13 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
 //                               sizeof(MeshPushConstants),
 //                               &constants);
 
-            if (object.mesh != lastMesh) {
-                VkDeviceSize offset = 0;
-                vkCmdBindVertexBuffers(commandBuffer, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
-                lastMesh = object.mesh;
-            }
+//            if (object.mesh != lastMesh) {
+//                VkDeviceSize offset = 0;
+//                vkCmdBindVertexBuffers(commandBuffer, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
+//                lastMesh = object.mesh;
+//            }
 
-            vkCmdDraw(commandBuffer, static_cast<uint32_t>(object.mesh->_vertices.size()), 1, 0, 1);
+            // vkCmdDraw(commandBuffer, static_cast<uint32_t>(object.mesh->_vertices.size()), 1, 0, 1);
         }
 
     }
