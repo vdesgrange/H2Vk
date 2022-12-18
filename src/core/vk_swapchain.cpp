@@ -45,14 +45,14 @@ SwapChain::SwapChain(Window& window, const Device& device) {
     VmaAllocationCreateInfo imageAllocInfo{};
     imageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     imageAllocInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    vmaCreateImage(device._allocator, &imageInfo, &imageAllocInfo, &_depthImage._image, &_depthImage._allocation, nullptr);
+    vmaCreateImage(device._allocator, &imageInfo, &imageAllocInfo, &_depthImage, &_depthAllocation, nullptr);
 
-    VkImageViewCreateInfo viewInfo = vkinit::imageview_create_info(_depthFormat, _depthImage._image, VK_IMAGE_ASPECT_DEPTH_BIT);
+    VkImageViewCreateInfo viewInfo = vkinit::imageview_create_info(_depthFormat, _depthImage, VK_IMAGE_ASPECT_DEPTH_BIT);
     VK_CHECK(vkCreateImageView(device._logicalDevice, &viewInfo, nullptr, &_depthImageView));
 
     _swapChainDeletionQueue.push_function([=]() {
         vkDestroyImageView(device._logicalDevice, _depthImageView, nullptr);
-        vmaDestroyImage(device._allocator, _depthImage._image, _depthImage._allocation);
+        vmaDestroyImage(device._allocator, _depthImage, _depthAllocation);
         vkDestroySwapchainKHR(device._logicalDevice, _swapchain, nullptr);
     });
 }

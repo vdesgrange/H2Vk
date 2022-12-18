@@ -7,12 +7,9 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtx/hash.hpp"
 #include <vector>
-#include <array>
 #include <iostream>
-#include <unordered_map>
 
-#include "tiny_obj_loader.h"
-#include "tiny_gltf.h"
+#include "core/vk_texture.h"
 #include "core/vk_types.h"
 #include "core/vk_mesh_manager.h"
 
@@ -92,28 +89,29 @@ struct Materials {
 };
 
 struct Image {
-    // int32_t _index;
-    VkImage _image;
-    VkImageLayout _imageLayout; // duplicate?
-    VmaAllocation _allocation;
-    VkImageView _imageView;  // duplicate?
-    VkDescriptorImageInfo _descriptor;
-    VkSampler _sampler;  // duplicate?
+    Texture _texture;
+
+//    VkImage _image;
+//    VkImageLayout _imageLayout;
+//    VmaAllocation _allocation;
+//    VkImageView _imageView;
+//    VkSampler _sampler;
+//    VkDescriptorImageInfo _descriptor;
 
     VkDescriptorSet _descriptorSet; // access texture from the fragment shader
 
-    void updateDescriptor() {
-        _descriptor.sampler = _sampler;
-        _descriptor.imageView = _imageView;
-        _descriptor.imageLayout = _imageLayout;
-    }
+//    void updateDescriptor() {
+//        _descriptor.sampler = _sampler;
+//        _descriptor.imageView = _imageView;
+//        _descriptor.imageLayout = _imageLayout;
+//    }
 };
 
 struct Textures {
     int32_t imageIndex;
 };
 
-class Model final {
+class Model {
 public:
     std::vector<Image> _images;
     std::vector<Textures> _textures;
@@ -130,29 +128,13 @@ public:
     AllocatedBuffer _vertexBuffer;
     AllocatedBuffer _camBuffer;
 
-    // Model();
-    // Model(VulkanEngine& engine) : _engine(engine) {};
-    // ~Model();
-
-    bool load_from_gltf(VulkanEngine& engine, const char *filename);
-    bool load_from_obj(const char* filename);
-    bool load_from_glb(VulkanEngine& engine, const char *filename);
+    virtual bool load_model(VulkanEngine& engine, const char *filename) { return false; };
+    virtual void print_type() {};
 
     void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);
     void draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, glm::mat4 transformMatrix, uint32_t instance, bool bind=false);
     void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);
-    //void descriptors(VulkanEngine& engine);
 
-private:
-    // class VulkanEngine& _engine;
-
-    void load_images(VulkanEngine& _engine, tinygltf::Model& input);
-    void load_textures(tinygltf::Model& input);
-    void load_materials(tinygltf::Model& input);
-    void load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
-    void load_scene(tinygltf::Model& input, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);
-    //void load_shape(tinyobj::attrib_t attrib, std::vector<tinyobj::shape_t>& shapes);
-    void load_node(tinyobj::attrib_t attrib, std::vector<tinyobj::shape_t>& shapes);
-
+protected:
     void immediate_submit(VulkanEngine& engine, std::function<void(VkCommandBuffer cmd)>&& function);
 };

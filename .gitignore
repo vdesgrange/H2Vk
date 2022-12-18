@@ -1,7 +1,7 @@
 .idea/
 /build
 /bin
-assets/
+/assets/
 cmake-build-debug/
 /shaders/*.spv
 /src/shaders/*.spv

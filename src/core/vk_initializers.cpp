@@ -149,9 +149,6 @@ VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags f
 }
 
 VkImageViewCreateInfo vkinit::imageview_create_info(VkFormat format, VkImage image, VkImageAspectFlags flags) {
-    /**
-     * ImageView wraps Image with additional information
-     */
     VkImageViewCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     info.pNext = nullptr;

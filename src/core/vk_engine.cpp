@@ -244,7 +244,7 @@ void VulkanEngine::setup_descriptors(){
 
         for (auto &image: renderable.model->_images) {
             DescriptorBuilder::begin(*_layoutCache, *_allocator)
-            .bind_image(image._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .bind_image(image._texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
             .layout(_descriptorSetLayouts.textures)
             .build(image._descriptorSet, _descriptorSetLayouts.textures, poolSizes);
         }

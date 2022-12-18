@@ -27,9 +27,9 @@ MeshManager::~MeshManager() {
         }
 
         for (Image image : it.second._images) {
-            vkDestroyImageView(_device._logicalDevice, image._imageView, nullptr);
-            vmaDestroyImage(_device._allocator, image._image, image._allocation);  // destroyImage + vmaFreeMemory
-            vkDestroySampler(_device._logicalDevice, image._sampler, nullptr);
+            vkDestroyImageView(_device._logicalDevice, image._texture._imageView, nullptr);
+            vmaDestroyImage(_device._allocator, image._texture._image, image._texture._allocation);  // destroyImage + vmaFreeMemory
+            vkDestroySampler(_device._logicalDevice, image._texture._sampler, nullptr);
         }
 
         vmaDestroyBuffer(_device._allocator, it.second._vertexBuffer._buffer, it.second._vertexBuffer._allocation);

@@ -23,7 +23,9 @@ public:
 
     VkFormat _depthFormat;
     VkImageView _depthImageView; // VkImageView contains details about image. Must go through it before using VkImage.
-    AllocatedImage _depthImage;
+    // AllocatedImage _depthImageOld;
+    VkImage _depthImage;
+    VmaAllocation _depthAllocation;
 
     DeletionQueue _swapChainDeletionQueue;
 
