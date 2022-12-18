@@ -11,7 +11,7 @@
 #include "vk_device.h"
 #include "vk_renderpass.h"
 #include "vk_material.h"
-#include "assets/vk_mesh.h"
+#include "core/model/vk_mesh.h"
 
 /**
  * Graphics pipeline

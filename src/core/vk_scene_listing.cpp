@@ -1,15 +1,11 @@
 #include "vk_scene_listing.h"
-#include "vk_mesh_manager.h"
 #include "vk_pipeline.h"
 #include "vk_camera.h"
-#include "vk_texture.h"
-#include "vk_helpers.h"
 #include "vk_engine.h"
 #include "vk_device.h"
-#include "assets/vk_mesh.h"
-#include "assets/vk_gltf.h"
-#include "assets/vk_obj.h"
-#include "assets/vk_glb.h"
+#include "core/model/vk_mesh.h"
+#include "core/model/vk_obj.h"
+#include "core/model/vk_glb.h"
 #include "vk_descriptor_builder.h"
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
@@ -39,6 +35,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     triangleModel._verticesBuffer[2].color = { 0.f, 1.f, 0.0f }; //pure green
 
     triangleModel._indexesBuffer = {0, 1, 2};
+
     engine->_meshManager->upload_mesh(triangleModel);
     engine->_meshManager->_models["triangle"] = triangleModel;
 
@@ -155,8 +152,8 @@ Renderables SceneListing::karibu(Camera& camera, VulkanEngine* engine) {
     karibuModel.load_model(*engine, "../assets/karibu_hippo_zanzibar/karibu_hippo_zanzibar.glb");
     engine->_meshManager->upload_mesh(karibuModel);
     engine->_meshManager->_models["karibu"] = karibuModel;
-
-    engine->_meshManager->_models["karibu"].print_type();
+    // engine->_meshManager->_models["karibu"] = std::unique_ptr<Model>(&karibuModel);
+    // engine->_meshManager->_models["karibu"]->print_type();
 
     RenderObject karibu;
     karibu.model = engine->_meshManager->get_model("karibu");
@@ -179,7 +176,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     helmetModel.load_model(*engine, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");
     engine->_meshManager->upload_mesh(helmetModel);
     engine->_meshManager->_models["helmet"] = helmetModel;
-    engine->_meshManager->_models["helmet"].print_type();
+    // engine->_meshManager->_models["helmet"]->print_type();
 
     RenderObject helmet;
     helmet.model = engine->_meshManager->get_model("helmet");

@@ -2,6 +2,8 @@
 
 #include <glm/glm.hpp>
 #include "glm/gtc/matrix_transform.hpp"
+#include "core/model/vk_mesh.h"
+#include "vk_material.h"
 
 #include <vector>
 #include <utility>
@@ -23,6 +25,17 @@ struct RenderObject {
     Model* model;
     Material* material;
     glm::mat4 transformMatrix;
+
+//    ~RenderObject(){
+//        if ( model ) delete model;
+//        model = nullptr;
+//
+//        if ( mesh ) delete mesh;
+//        mesh = nullptr;
+//
+//        if ( material ) delete material;
+//        material = nullptr;
+//    }
 };
 
 struct GPUSceneData {

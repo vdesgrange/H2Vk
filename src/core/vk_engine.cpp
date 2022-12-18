@@ -12,7 +12,6 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
 #include "VkBootstrap.h"
@@ -29,7 +28,7 @@
 #include "vk_fence.h"
 #include "vk_mesh_manager.h"
 #include "vk_semaphore.h"
-#include "assets/vk_mesh.h"
+#include "core/model/vk_mesh.h"
 #include "vk_material.h"
 #include "vk_camera.h"
 #include "vk_pipeline.h"
@@ -227,13 +226,6 @@ void VulkanEngine::init_descriptors() {
 }
 
 void VulkanEngine::setup_descriptors(){
-//    std::vector<VkDescriptorPoolSize> poolSizes = {
-//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-//            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-//            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 20 }
-//    };
-
     for (auto &renderable: _scene->_renderables) {
         std::vector<VkDescriptorPoolSize> poolSizes = {
                 { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
@@ -390,7 +382,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
             bool bind = object.model != lastModel; // degueulasse sortir de la boucle de rendu
             object.model->draw_obj(commandBuffer, object.material->pipelineLayout, object.transformMatrix, i, object.model != lastModel);
             // object.model->draw(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
-            lastModel = bind ?  object.model : lastModel;
+            lastModel = bind ? object.model : lastModel;
 
         } else {
             if (object.material != lastMaterial) {
