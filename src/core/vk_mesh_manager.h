@@ -21,20 +21,19 @@ struct UploadContext {
 
 class MeshManager final {
 public:
-    std::unordered_map<std::string, Mesh> _meshes;
-    std::unordered_map<std::string, Model> _models; // std::unique_ptr<Model>
+    std::unordered_map<std::string, Mesh> _meshes {};
+    std::unordered_map<std::string, std::shared_ptr<Model>> _models {};
 
     MeshManager(const Device& device, UploadContext& uploadContext);
     ~MeshManager();
 
     void upload_mesh(Model& mesh);
     Mesh* get_mesh(const std::string &name);
-    Model* get_model(const std::string &name);
+    std::shared_ptr<Model> get_model(const std::string &name);
 
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
 private:
     const class Device& _device;
     UploadContext& _uploadContext;
-
 };

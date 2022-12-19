@@ -5,14 +5,8 @@
 
 #include "vk_types.h"
 
+class Device;
 class VulkanEngine;
-// struct Image;
-
-// namespace vkutil {
-    // bool load_image_from_file(VulkanEngine &engine, const char *file, AllocatedImage &outImage);
-//    bool load_image_from_buffer(VulkanEngine &engine, void *buffer, VkDeviceSize bufferSize, VkFormat format,
-//                                        uint32_t texWidth, uint32_t texHeight, Image &outImage);
-//}
 
 struct Texture {
 //    int32_t index;
@@ -35,6 +29,8 @@ struct Texture {
         _descriptor.imageView = _imageView;
         _descriptor.imageLayout = _imageLayout;
     }
+
+    void destroy(const Device& device);
 };
 
 class TextureManager final {

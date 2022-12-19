@@ -8,21 +8,62 @@
 #include "core/vk_engine.h"
 #include "core/vk_camera.h"
 
-//Model::~Model() {
-//    for (auto node : _nodes) {
-//        delete node;
-//    }
-//
-//    for (Image image : _images) {
-//        vkDestroyImageView(_engine._device->_logicalDevice, image._imageView, nullptr);
-//        vmaDestroyImage(_engine._device->_allocator, image._image, image._allocation);  // destroyImage + vmaFreeMemory
-//        vkDestroySampler(_engine._device->_logicalDevice, image._sampler, nullptr);
-//    }
-//
-//    vmaDestroyBuffer(_engine._device->_allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
-//    vmaDestroyBuffer(_engine._device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
-//}
 
+Model::Model(Device* device) : _device(device) {}
+
+Model::~Model() {
+    //this->destroy();
+}
+
+Model::Model(const Model& rhs) : _device(rhs._device) {
+    this->_images = rhs._images;
+    this->_textures = rhs._textures;
+    this->_materials = rhs._materials;
+
+    for (auto it : rhs._nodes) {
+        Node* node = new Node(*it);
+        this->_nodes.push_back(node);
+    }
+
+    this->_indexesBuffer = rhs._indexesBuffer;
+    this->_verticesBuffer = rhs._verticesBuffer;
+
+    this->_indexBuffer = rhs._indexBuffer;
+    this->_vertexBuffer = rhs._vertexBuffer;
+}
+
+Model& Model::operator=(const Model& rhs) {
+    this->_images = rhs._images;
+    this->_textures = rhs._textures;
+    this->_materials = rhs._materials;
+
+    for (auto it : rhs._nodes) {
+        this->_nodes.push_back(std::move(it));
+    }
+
+    this->_indexesBuffer = rhs._indexesBuffer;
+    this->_verticesBuffer = rhs._verticesBuffer;
+
+    this->_indexBuffer = rhs._indexBuffer;
+    this->_vertexBuffer = rhs._vertexBuffer;
+
+    this->_device = rhs._device;
+
+    return *this;
+}
+
+void Model::destroy() {
+    for (auto node : _nodes) {
+        delete node;
+    }
+
+    for (Image image : _images) {
+        image._texture.destroy(*_device);
+    }
+
+    vmaDestroyBuffer(_device->_allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
+    vmaDestroyBuffer(_device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
+}
 
 void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance) {
     if (!node->mesh.primitives.empty()) {
@@ -87,52 +128,6 @@ void Model::draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineL
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(this->_indexesBuffer.size()), 1, 0, 0, instance);
     // vkCmdDraw(commandBuffer, static_cast<uint32_t>(this->_verticesBuffer.size()), 1, 0, instance);
 }
-
-
-
-// bool Mesh::load_from_obj(const char *filename) {
-//    std::unordered_map<Vertex, uint32_t> unique_vertices{};
-//    tinyobj::attrib_t attrib;
-//    std::vector<tinyobj::shape_t> shapes;
-//    std::vector<tinyobj::material_t> materials;
-//    std::string warn, err;
-//
-//    if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename, nullptr)) {
-//        std::cerr << warn << std::endl;
-//        std::cerr << err << std::endl;
-//        return false;
-//    }
-//
-//    for (const auto& shape : shapes) {
-//        for (const auto& index : shape.mesh.indices) {
-//            Vertex vertex{};
-//
-//            vertex.position = {
-//                    attrib.vertices[3 * index.vertex_index + 0],
-//                    attrib.vertices[3 * index.vertex_index + 1],
-//                    attrib.vertices[3 * index.vertex_index + 2]
-//            };
-//
-//            vertex.normal = {
-//                    attrib.normals[3 * index.normal_index + 0],
-//                    attrib.normals[3 * index.normal_index + 1],
-//                    attrib.normals[3 * index.normal_index + 2],
-//            };
-//
-//            vertex.color = vertex.normal;
-//
-//            vertex.uv = {
-//                    attrib.texcoords[2 * index.texcoord_index + 0], // ux
-//                    1 - attrib.texcoords[2 * index.texcoord_index + 1], // uy, 1 - uy because of vulkan coords.
-//            };
-//
-//            _vertices.push_back(vertex);
-//
-//        }
-//    }
-//
-//    return true;
-//}
 
 //Mesh Mesh::cube() {
 //    Mesh mesh{};

@@ -55,31 +55,52 @@ struct Primitive {
     int32_t materialIndex;
 };
 
-//class Mesh {
-//public:
-//    // std::vector<Vertex> _vertices;
-//
-//    std::vector<Primitive> primitives;
-//
-//    // AllocatedBuffer _vertexBuffer;
-//    // static Mesh cube();
-//    // bool load_from_obj(const char* filename);
-//};
-
 struct Mesh {
     std::vector<Primitive> primitives;
 };
 
 struct Node {
-    Node* parent;
-    std::vector<Node*> children;
+    Node* parent;  // Node*
+    std::vector<Node*> children;  // Node*
     Mesh mesh;
     glm::mat4 matrix;
+
     ~Node() {
         for (auto& child : children) {
             delete child;
         }
     }
+
+//    Node(const Node& rhs) {
+//        if (rhs.parent != nullptr) {
+//            this->parent = new Node(rhs);
+//        }
+//        for (auto& child : rhs.children) {
+//            if (child != nullptr) {
+//                this->children.push_back(new Node(*child));
+//            }
+//        }
+//    }
+
+//    Node& operator=(const Node& rhs) {
+//        delete this->parent;
+//        for (auto& child : this->children) {
+//            delete child;
+//        }
+//
+//        if (rhs.parent != nullptr) {
+//            this->parent = new Node(rhs);
+//        }
+//
+//        for (auto& child : rhs.children) {
+//            if (child != nullptr) {
+//                this->children.push_back(new Node(*child));
+//            }
+//        }
+//
+//        return *this;
+//    }
+
 };
 
 struct Materials {
@@ -90,6 +111,7 @@ struct Materials {
 
 struct Image {
     Texture _texture;
+    VkDescriptorSet _descriptorSet; // access texture from the fragment shader
 
 //    VkImage _image;
 //    VkImageLayout _imageLayout;
@@ -97,8 +119,6 @@ struct Image {
 //    VkImageView _imageView;
 //    VkSampler _sampler;
 //    VkDescriptorImageInfo _descriptor;
-
-    VkDescriptorSet _descriptorSet; // access texture from the fragment shader
 
 //    void updateDescriptor() {
 //        _descriptor.sampler = _sampler;
@@ -113,28 +133,37 @@ struct Textures {
 
 class Model {
 public:
-    std::vector<Image> _images;
-    std::vector<Textures> _textures;
-    std::vector<Materials> _materials;
-    std::vector<Node*> _nodes;
+    std::vector<Image> _images {};
+    std::vector<Textures> _textures {};
+    std::vector<Materials> _materials {};
+    std::vector<Node*> _nodes {};
 
-    std::vector<uint32_t> _indexesBuffer;
-    std::vector<Vertex> _verticesBuffer;
+    std::vector<uint32_t> _indexesBuffer {};
+    std::vector<Vertex> _verticesBuffer {};
 
     struct {
-        uint32_t count;
-        AllocatedBuffer allocation;
-    } _indexBuffer;
-    AllocatedBuffer _vertexBuffer;
-    AllocatedBuffer _camBuffer;
+        uint32_t count {};
+        AllocatedBuffer allocation {};
+    } _indexBuffer {};
+    AllocatedBuffer _vertexBuffer {};
+
+    // Model() = delete;
+    Model(Device* device);
+    Model(const Model& rhs);
+    ~Model();
+    Model& operator=(const Model& rhs);
 
     virtual bool load_model(VulkanEngine& engine, const char *filename) { return false; };
     virtual void print_type() {};
 
+    void destroy();
     void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);
     void draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, glm::mat4 transformMatrix, uint32_t instance, bool bind=false);
     void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);
 
 protected:
     void immediate_submit(VulkanEngine& engine, std::function<void(VkCommandBuffer cmd)>&& function);
+
+private:
+    Device* _device {nullptr};
 };

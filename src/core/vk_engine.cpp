@@ -292,7 +292,7 @@ void VulkanEngine::init_scene() {
     _scene = new Scene(*this, *_meshManager, *_textureManager, *_pipelineBuilder);
 
     // If texture not loaded here, it creates issues -> Must be loaded before binding (previously in load_images)
-    _textureManager->load_texture("../assets/lost_empire/lost_empire-RGBA.png", "empire_diffuse");
+    // _textureManager->load_texture("../assets/lost_empire/lost_empire-RGBA.png", "empire_diffuse");
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -318,8 +318,8 @@ void VulkanEngine::recreate_swap_chain() {
 }
 
 void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
-    Mesh* lastMesh = nullptr;
-    Model* lastModel = nullptr;
+    // Mesh* lastMesh = nullptr;
+    std::shared_ptr<Model> lastModel = nullptr;
     Material* lastMaterial = nullptr;
 
     // === Camera & Objects & Environment ===
@@ -379,7 +379,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
                 }
             }
 
-            bool bind = object.model != lastModel; // degueulasse sortir de la boucle de rendu
+            bool bind = object.model.get() != lastModel.get(); // degueulasse sortir de la boucle de rendu
             object.model->draw_obj(commandBuffer, object.material->pipelineLayout, object.transformMatrix, i, object.model != lastModel);
             // object.model->draw(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
             lastModel = bind ? object.model : lastModel;

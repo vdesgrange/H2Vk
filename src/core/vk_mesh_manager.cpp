@@ -20,19 +20,9 @@ MeshManager::~MeshManager() {
 //    }
 
     for (auto& it: _models) {
-        for (auto node : it.second._nodes) {
-            delete node;
-        }
-
-        for (Image image : it.second._images) {
-            vkDestroyImageView(_device._logicalDevice, image._texture._imageView, nullptr);
-            vmaDestroyImage(_device._allocator, image._texture._image, image._texture._allocation);  // destroyImage + vmaFreeMemory
-            vkDestroySampler(_device._logicalDevice, image._texture._sampler, nullptr);
-        }
-
-        vmaDestroyBuffer(_device._allocator, it.second._vertexBuffer._buffer, it.second._vertexBuffer._allocation);
-        vmaDestroyBuffer(_device._allocator, it.second._indexBuffer.allocation._buffer, it.second._indexBuffer.allocation._allocation);
+        it.second->destroy(); // should be done by Model destructor
     }
+    // _models.clear()
 
     if (_uploadContext._commandPool != nullptr) {
         delete _uploadContext._commandPool;
@@ -77,13 +67,13 @@ void MeshManager::upload_mesh(Model& mesh) {
     vmaDestroyBuffer(_device._allocator, indexStaging._buffer, indexStaging._allocation);
 }
 
-Model* MeshManager::get_model(const std::string &name) {
+std::shared_ptr<Model> MeshManager::get_model(const std::string &name) {
     auto it = _models.find(name);
     if ( it == _models.end()) {
         return nullptr;
     } else {
-        return &(*it).second;
-        // return it->second.get();
+        // return &(*it).second;
+        return it->second;
     }
 }
 

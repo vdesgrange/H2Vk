@@ -21,17 +21,13 @@ class Device;
 class UploadContext;
 
 struct RenderObject {
-    Mesh* mesh;
-    Model* model;
+    std::shared_ptr<Model> model;
     Material* material;
     glm::mat4 transformMatrix;
 
 //    ~RenderObject(){
 //        if ( model ) delete model;
 //        model = nullptr;
-//
-//        if ( mesh ) delete mesh;
-//        mesh = nullptr;
 //
 //        if ( material ) delete material;
 //        material = nullptr;

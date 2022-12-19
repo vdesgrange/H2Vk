@@ -10,10 +10,15 @@
 #include <iostream>
 
 TextureManager::~TextureManager() {
-    for (auto const& it : _loadedTextures) {
-        vkDestroyImageView(_engine._device->_logicalDevice, it.second._imageView, nullptr);
-        // vmaDestroyImage done in load_image_from_file
+    for (auto& it : this->_loadedTextures) {
+        it.second.destroy(*(this->_engine._device));
     }
+
+//    this->_engine._mainDeletionQueue.push_function([=]() {
+//        for (auto& it : this->_loadedTextures) {
+//            it.second.destroy(*(this->_engine._device));
+//        }
+//    });
 }
 
 void TextureManager::load_texture(const char* file, std::string name) {
@@ -24,7 +29,21 @@ void TextureManager::load_texture(const char* file, std::string name) {
     VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
     vkCreateImageView(_engine._device->_logicalDevice, &imageinfo, nullptr, &texture._imageView);
 
-    _loadedTextures[name] = texture;
+    _loadedTextures.emplace(name, texture);
+}
+
+void Texture::destroy(const Device& device) {
+    if (this->_imageView) {
+        vkDestroyImageView(device._logicalDevice, this->_imageView, nullptr);
+    }
+
+    if (this->_image) {  // destroyImage + vmaFreeMemory
+        vmaDestroyImage(device._allocator, this->_image, this->_allocation);
+    }
+
+    if (this->_sampler) {
+        vkDestroySampler(device._logicalDevice, this->_sampler, nullptr);
+    }
 }
 
 bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
@@ -108,10 +127,6 @@ bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
 
         VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(format, this->_image, VK_IMAGE_ASPECT_COLOR_BIT);
         vkCreateImageView(engine._device->_logicalDevice, &imageinfo, nullptr, &this->_imageView);
-    });
-
-    engine._mainDeletionQueue.push_function([=]() {
-        vmaDestroyImage(engine._device->_allocator, this->_image, this->_allocation);
     });
 
     vmaDestroyBuffer(engine._device->_allocator, buffer._buffer, buffer._allocation);
@@ -206,12 +221,6 @@ bool Texture::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDevic
 
         this->updateDescriptor(); // update descriptor with sample, imageView, imageLayout
     });
-
-    // DESTRUCTION NOT HANDLED HERE - MUST BE DONE WHERE IMAGE IS USED
-    // For instance, Handled in vk_mesh destructor
-    //  engine._mainDeletionQueue.push_function([=]() {
-    //      vmaDestroyImage(engine._device->_allocator, newImage._image, newImage._allocation);
-    //  });
 
     vmaDestroyBuffer(engine._device->_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
     std::cout << "Texture loaded successfully " << std::endl;
