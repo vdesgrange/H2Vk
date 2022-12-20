@@ -5,7 +5,6 @@
 
 #include "VkBootstrap.h"
 
-
 class Device;
 class Mesh;
 class Model;
@@ -21,15 +20,13 @@ struct UploadContext {
 
 class MeshManager final {
 public:
-    std::unordered_map<std::string, Mesh> _meshes {};
-    std::unordered_map<std::string, std::shared_ptr<Model>> _models {};
+    std::unordered_map<std::string, std::shared_ptr<Model>> _models {}; // unique_ptr?
 
     MeshManager(const Device& device, UploadContext& uploadContext);
     ~MeshManager();
 
     void upload_mesh(Model& mesh);
-    Mesh* get_mesh(const std::string &name);
-    std::shared_ptr<Model> get_model(const std::string &name);
+    std::shared_ptr<Model> get_model(const std::string &name);  // Model* ?
 
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 

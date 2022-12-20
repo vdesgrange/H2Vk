@@ -289,7 +289,7 @@ void VulkanEngine::load_images() {
 
 void VulkanEngine::init_scene() {
     _sceneListing = new SceneListing();
-    _scene = new Scene(*this, *_meshManager, *_textureManager, *_pipelineBuilder);
+    _scene = new Scene(*this, *_meshManager);
 
     // If texture not loaded here, it creates issues -> Must be loaded before binding (previously in load_images)
     // _textureManager->load_texture("../assets/lost_empire/lost_empire-RGBA.png", "empire_diffuse");
@@ -318,7 +318,6 @@ void VulkanEngine::recreate_swap_chain() {
 }
 
 void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
-    // Mesh* lastMesh = nullptr;
     std::shared_ptr<Model> lastModel = nullptr;
     Material* lastMaterial = nullptr;
 

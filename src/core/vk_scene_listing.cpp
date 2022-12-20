@@ -11,7 +11,6 @@
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
 //        {"Monkey and triangles", SceneListing::monkeyAndTriangles},
 //        {"Lost empire", SceneListing::lostEmpire},
-//        {"Swimming pool", SceneListing::cubeScene},
 //        {"Old bridge", SceneListing::oldBridge},
         {"Karibu", SceneListing::karibu},
         {"DamagedHelmet", SceneListing::damagedHelmet},
@@ -69,13 +68,6 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
 }
 
 Renderables SceneListing::lostEmpire(Camera& camera, VulkanEngine* engine) {
-    std::vector<VkDescriptorPoolSize> poolSizes = {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
-    };
-
     Renderables renderables{};
 
     camera.inverse(true);
@@ -91,30 +83,9 @@ Renderables SceneListing::lostEmpire(Camera& camera, VulkanEngine* engine) {
     // From init_scene
     RenderObject map;
     map.model = engine->_meshManager->get_model("empire");
-    // map.mesh = engine->_meshManager->get_mesh("empire");
     map.material = engine->_pipelineBuilder->get_material("texturedMesh");
     map.transformMatrix = glm::translate(glm::mat4(1.f), glm::vec3{ 5,-10,0 });
     renderables.push_back(map);
-
-    return renderables;
-}
-
-Renderables SceneListing::cubeScene(Camera& camera, VulkanEngine* engine) {
-    Renderables renderables{};
-
-//    camera.inverse(true);
-//    camera.set_position({ 0.f, -6.f, -10.f });
-//    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
-//
-//    Mesh cube = Mesh::cube();
-//    engine->_meshManager->upload_mesh(cube);
-//    engine->_meshManager->_meshes["cube"] = cube;
-//
-//    RenderObject cubeObj;
-//    cubeObj.mesh = engine->_meshManager->get_mesh("cube");
-//    cubeObj.material = engine->_pipelineBuilder->get_material("defaultMesh");
-//    cubeObj.transformMatrix = glm::mat4(1.f);
-//    renderables.push_back(cubeObj);
 
     return renderables;
 }
@@ -137,7 +108,6 @@ Renderables SceneListing::oldBridge(Camera& camera, VulkanEngine* engine) {
     oldBridge.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(oldBridge);
 
-
     return renderables;
 }
 
@@ -152,15 +122,12 @@ Renderables SceneListing::karibu(Camera& camera, VulkanEngine* engine) {
     karibuModel->load_model(*engine, "../assets/karibu_hippo_zanzibar/karibu_hippo_zanzibar.glb");
     engine->_meshManager->upload_mesh(*karibuModel);
     engine->_meshManager->_models.emplace("karibu", std::shared_ptr<Model>(karibuModel));
-    // engine->_meshManager->_models["karibu"] = std::shared_ptr<Model>(&karibuModel);
-    // engine->_meshManager->_models["karibu"]->print_type();
 
     RenderObject karibu;
     karibu.model = engine->_meshManager->get_model("karibu");
     karibu.material = engine->_pipelineBuilder->get_material("defaultMesh");
     karibu.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(karibu);
-
 
     return renderables;
 }
@@ -176,8 +143,6 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     helmetModel->load_model(*engine, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");
     engine->_meshManager->upload_mesh(*helmetModel);
     engine->_meshManager->_models.emplace("helmet", std::shared_ptr<Model>(helmetModel));
-    // engine->_meshManager->_models["helmet"] = std::move(helmetModel);
-    // engine->_meshManager->_models["helmet"]->print_type();
 
     RenderObject helmet;
     helmet.model = engine->_meshManager->get_model("helmet");

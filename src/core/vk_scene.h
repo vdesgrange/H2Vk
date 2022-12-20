@@ -17,7 +17,7 @@ public:
     int _sceneIndex;
     Renderables _renderables;
 
-    Scene(VulkanEngine& engine, MeshManager& meshManager, TextureManager& textureManager, PipelineBuilder& pipelineBuilder);
+    Scene(VulkanEngine& engine, MeshManager& meshManager);
     ~Scene();
 
     void load_scene(int sceneIndex, Camera& camera);
@@ -25,6 +25,4 @@ public:
 private:
     VulkanEngine& _engine;
     MeshManager& _meshManager;
-    TextureManager& _textureManager;
-    PipelineBuilder& _pipelineBuilder;
 };

@@ -12,7 +12,7 @@
 Model::Model(Device* device) : _device(device) {}
 
 Model::~Model() {
-    //this->destroy();
+    // this->destroy(); // break for some reason
 }
 
 Model::Model(const Model& rhs) : _device(rhs._device) {
@@ -56,10 +56,14 @@ void Model::destroy() {
     for (auto node : _nodes) {
         delete node;
     }
+    // _nodes.clear();
 
     for (Image image : _images) {
         image._texture.destroy(*_device);
     }
+    _images.clear();
+    _materials.clear();
+    _textures.clear();
 
     vmaDestroyBuffer(_device->_allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
     vmaDestroyBuffer(_device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);

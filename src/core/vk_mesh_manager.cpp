@@ -13,16 +13,10 @@
 MeshManager::MeshManager(const Device& device, UploadContext& uploadContext) : _device(device), _uploadContext(uploadContext) {};
 
 MeshManager::~MeshManager() {
-//    for (auto& it: _meshes) {
-//        vmaDestroyBuffer(_device._allocator,
-//                         it.second._vertexBuffer._buffer,
-//                         it.second._vertexBuffer._allocation);
-//    }
-
     for (auto& it: _models) {
         it.second->destroy(); // should be done by Model destructor
     }
-    // _models.clear()
+    _models.clear();
 
     if (_uploadContext._commandPool != nullptr) {
         delete _uploadContext._commandPool;
@@ -36,6 +30,7 @@ void MeshManager::upload_mesh(Model& mesh) {
     mesh._indexBuffer.count = static_cast<uint32_t>(mesh._indexesBuffer.size());
 
     AllocatedBuffer vertexStaging = Buffer::create_buffer(_device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+
     void* data;
     vmaMapMemory(_device._allocator, vertexStaging._allocation, &data);
     memcpy(data, mesh._verticesBuffer.data(), static_cast<size_t>(vertexBufferSize)); // number of vertex
@@ -74,15 +69,6 @@ std::shared_ptr<Model> MeshManager::get_model(const std::string &name) {
     } else {
         // return &(*it).second;
         return it->second;
-    }
-}
-
-Mesh* MeshManager::get_mesh(const std::string &name) {
-    auto it = _meshes.find(name);
-    if ( it == _meshes.end()) {
-        return nullptr;
-    } else {
-        return &(*it).second;
     }
 }
 

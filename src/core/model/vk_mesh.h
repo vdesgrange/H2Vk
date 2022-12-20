@@ -112,19 +112,6 @@ struct Materials {
 struct Image {
     Texture _texture;
     VkDescriptorSet _descriptorSet; // access texture from the fragment shader
-
-//    VkImage _image;
-//    VkImageLayout _imageLayout;
-//    VmaAllocation _allocation;
-//    VkImageView _imageView;
-//    VkSampler _sampler;
-//    VkDescriptorImageInfo _descriptor;
-
-//    void updateDescriptor() {
-//        _descriptor.sampler = _sampler;
-//        _descriptor.imageView = _imageView;
-//        _descriptor.imageLayout = _imageLayout;
-//    }
 };
 
 struct Textures {
@@ -147,7 +134,7 @@ public:
     } _indexBuffer {};
     AllocatedBuffer _vertexBuffer {};
 
-    // Model() = delete;
+    Model() = delete;
     Model(Device* device);
     Model(const Model& rhs);
     ~Model();
@@ -159,9 +146,9 @@ public:
     void destroy();
     void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);
     void draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, glm::mat4 transformMatrix, uint32_t instance, bool bind=false);
-    void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);
 
 protected:
+    void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);
     void immediate_submit(VulkanEngine& engine, std::function<void(VkCommandBuffer cmd)>&& function);
 
 private:
