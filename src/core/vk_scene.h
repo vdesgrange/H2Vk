@@ -18,7 +18,6 @@ public:
     Renderables _renderables;
 
     Scene(VulkanEngine& engine, MeshManager& meshManager);
-    ~Scene();
 
     void load_scene(int sceneIndex, Camera& camera);
 

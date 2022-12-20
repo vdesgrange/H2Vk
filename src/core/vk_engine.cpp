@@ -14,34 +14,7 @@
 #include <glm/glm.hpp>
 #include <iostream>
 
-#include "VkBootstrap.h"
-#include "vk_mem_alloc.h"
 #include "vk_engine.h"
-#include "vk_initializers.h"
-#include "vk_window.h"
-#include "vk_device.h"
-#include "vk_swapchain.h"
-#include "vk_command_pool.h"
-#include "vk_command_buffer.h"
-#include "vk_renderpass.h"
-#include "vk_framebuffers.h"
-#include "vk_fence.h"
-#include "vk_mesh_manager.h"
-#include "vk_semaphore.h"
-#include "core/model/vk_mesh.h"
-#include "vk_material.h"
-#include "vk_camera.h"
-#include "vk_pipeline.h"
-#include "vk_buffer.h"
-#include "vk_texture.h"
-#include "vk_descriptor_builder.h"
-#include "vk_descriptor_cache.h"
-#include "vk_descriptor_allocator.h"
-#include "vk_imgui.h"
-#include "vk_scene_listing.h"
-#include "vk_scene.h"
-
-#include "imgui.h"
 
 using namespace std;
 
@@ -66,11 +39,11 @@ void VulkanEngine::init()
 }
 
 void VulkanEngine::init_window() {
-    _window = new Window();
+    _window = std::make_unique<class Window>();
 }
 
 void VulkanEngine::init_vulkan() {
-    _device = new Device(*_window);
+    _device = std::make_unique<class Device>(*_window);
     std::cout << "GPU has a minimum buffer alignment = " << _device->_gpuProperties.limits.minUniformBufferOffsetAlignment << std::endl;
 }
 
@@ -80,12 +53,12 @@ void VulkanEngine::init_interface() {
             .scene_index=0
     };
 
-    _ui = new UInterface(*this, settings);
+    _ui = std::make_unique<UInterface>(*this, settings);
     _ui->init_imgui();
 }
 
 void VulkanEngine::init_camera() {
-    _camera = new Camera{};
+    _camera = std::make_unique<Camera>();
     _camera->inverse(true);
     _camera->set_position({ 0.f, -6.f, -10.f });
     _camera->set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
@@ -111,7 +84,7 @@ void VulkanEngine::init_camera() {
 }
 
 void VulkanEngine::init_swapchain() {
-    _swapchain = new SwapChain(*_window, *_device);
+    _swapchain = std::unique_ptr<SwapChain>(new SwapChain(*_window, *_device));
 }
 
 void VulkanEngine::init_commands() {
@@ -128,11 +101,11 @@ void VulkanEngine::init_commands() {
 }
 
 void VulkanEngine::init_default_renderpass() {
-    _renderPass = new RenderPass(*_device, *_swapchain);
+    _renderPass = std::make_unique<class RenderPass>(*_device, *_swapchain);
 }
 
 void VulkanEngine::init_framebuffers() {
-    _frameBuffers = new FrameBuffers(*_window, *_device, *_swapchain, *_renderPass);
+    _frameBuffers = std::make_unique<FrameBuffers>(*_window, *_device, *_swapchain, *_renderPass);
 }
 
 void VulkanEngine::init_sync_structures() {
@@ -245,7 +218,7 @@ void VulkanEngine::setup_descriptors(){
 
 void VulkanEngine::init_pipelines() {
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
-    _pipelineBuilder = new PipelineBuilder(*_window, *_device, *_renderPass, setLayouts);
+    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_window, *_device, *_renderPass, setLayouts);
 
 //  === To uncomment if old empire is loaded ===
 //    std::vector<VkDescriptorPoolSize> poolSizes = {
@@ -279,17 +252,17 @@ FrameData& VulkanEngine::get_current_frame()
 }
 
 void VulkanEngine::load_meshes() {
-    _meshManager = new MeshManager(*_device, _uploadContext); // move to sceneListing ?
+    _meshManager = std::make_unique<MeshManager>(*_device, _uploadContext); // move to sceneListing ?
 }
 
 void VulkanEngine::load_images() {
-    _textureManager = new TextureManager(*this);
-    _samplerManager = new SamplerManager(*this);
+    _textureManager = std::make_unique<TextureManager>(*this);
+    _samplerManager = std::make_unique<SamplerManager>(*this);
 }
 
 void VulkanEngine::init_scene() {
-    _sceneListing = new SceneListing();
-    _scene = new Scene(*this, *_meshManager);
+    _sceneListing = std::make_unique<SceneListing>();
+    _scene = std::make_unique<Scene>(*this, *_meshManager);
 
     // If texture not loaded here, it creates issues -> Must be loaded before binding (previously in load_images)
     // _textureManager->load_texture("../assets/lost_empire/lost_empire-RGBA.png", "empire_diffuse");
@@ -305,10 +278,10 @@ void VulkanEngine::recreate_swap_chain() {
     vkDeviceWaitIdle(_device->_logicalDevice);
 
     _scene->_renderables.clear(); // Possible memory leak. Revoir comment gerer les scenes
-    delete _pipelineBuilder; // Revoir comment gerer pipeline avec scene.
-    delete _frameBuffers;
-    delete _renderPass;
-    delete _swapchain;
+    _pipelineBuilder.reset();  //    delete _pipelineBuilder; // Revoir comment gerer pipeline avec scene.
+    _frameBuffers.reset();  //    delete _frameBuffers;
+    _renderPass.reset();  //    delete _renderPass;
+    _swapchain.reset();  //    delete _swapchain;
 
     init_swapchain();
     init_default_renderpass();
@@ -552,14 +525,14 @@ void VulkanEngine::cleanup()
             _frames[i]._renderFence->wait(1000000000);
         }
 
-        delete _ui;
-        delete _samplerManager;
-        delete _textureManager;
-        delete _meshManager;
-        delete _pipelineBuilder;
-        delete _frameBuffers;
-        delete _renderPass;
-        delete _swapchain;
+        _ui.reset(); // delete _ui if normal pointer
+        _samplerManager.reset();
+        _textureManager.reset();
+        _meshManager.reset();
+        _pipelineBuilder.reset();
+        _frameBuffers.reset();
+        _renderPass.reset();
+        _swapchain.reset();
         _mainDeletionQueue.flush();
 
         // todo find a way to move this into vk_device without breaking swapchain
@@ -569,8 +542,8 @@ void VulkanEngine::cleanup()
         vkb::destroy_debug_utils_messenger(_device->_instance, _device->_debug_messenger);
         vkDestroyInstance(_device->_instance, nullptr);
 
-        delete _device;
-        delete _window;
+        _device.reset();
+        _window.reset();
         glfwTerminate();
     }
 }

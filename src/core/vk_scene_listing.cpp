@@ -23,7 +23,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     camera.set_position({ 0.f, -6.f, -10.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
-    ModelOBJ* triangleModel= new ModelOBJ(engine->_device);
+    ModelOBJ* triangleModel= new ModelOBJ(engine->_device.get());
     triangleModel->_verticesBuffer.resize(3);
     triangleModel->_verticesBuffer[0].position = { 1.f, 1.f, 0.0f };
     triangleModel->_verticesBuffer[1].position = {-1.f, 1.f, 0.0f };
@@ -38,7 +38,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     engine->_meshManager->upload_mesh(*triangleModel);
     engine->_meshManager->_models.emplace("triangle", std::shared_ptr<Model>(triangleModel));
 
-    ModelOBJ* monkeyModel = new ModelOBJ(engine->_device);
+    ModelOBJ* monkeyModel = new ModelOBJ(engine->_device.get());
     monkeyModel->load_model(*engine, "../assets/monkey/monkey_smooth.obj");
     for (auto& node : monkeyModel->_nodes) {
         node->matrix =  glm::mat4{ 1.0f };
@@ -75,7 +75,7 @@ Renderables SceneListing::lostEmpire(Camera& camera, VulkanEngine* engine) {
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
     // Upload mesh
-    ModelOBJ* lostEmpire = new ModelOBJ(engine->_device);
+    ModelOBJ* lostEmpire = new ModelOBJ(engine->_device.get());
     lostEmpire->load_model(*engine, "../assets/lost_empire/lost_empire.obj");
     engine->_meshManager->upload_mesh(*lostEmpire);
     engine->_meshManager->_models.emplace("empire", std::shared_ptr<Model>(lostEmpire));
@@ -97,7 +97,7 @@ Renderables SceneListing::oldBridge(Camera& camera, VulkanEngine* engine) {
     camera.set_position({ 0.f, -6.f, -10.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
-    ModelGLB* oldBridgeModel = new ModelGLB(engine->_device);
+    ModelGLB* oldBridgeModel = new ModelGLB(engine->_device.get());
     oldBridgeModel->load_model(*engine, "../assets/old_brick_bridge/old_brick_bridge.glb");
     engine->_meshManager->upload_mesh(*oldBridgeModel);
     engine->_meshManager->_models.emplace("oldBridge", std::shared_ptr<Model>(oldBridgeModel));
@@ -118,7 +118,7 @@ Renderables SceneListing::karibu(Camera& camera, VulkanEngine* engine) {
     camera.set_position({ 0.f, -6.f, -10.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
-    ModelGLB* karibuModel = new ModelGLB(engine->_device);
+    ModelGLB* karibuModel = new ModelGLB(engine->_device.get());
     karibuModel->load_model(*engine, "../assets/karibu_hippo_zanzibar/karibu_hippo_zanzibar.glb");
     engine->_meshManager->upload_mesh(*karibuModel);
     engine->_meshManager->_models.emplace("karibu", std::shared_ptr<Model>(karibuModel));
@@ -139,7 +139,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     camera.set_position({ 0.f, -6.f, -10.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
-    ModelGLB* helmetModel = new ModelGLB(engine->_device);
+    ModelGLB* helmetModel = new ModelGLB(engine->_device.get());
     helmetModel->load_model(*engine, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");
     engine->_meshManager->upload_mesh(*helmetModel);
     engine->_meshManager->_models.emplace("helmet", std::shared_ptr<Model>(helmetModel));
