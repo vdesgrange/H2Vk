@@ -17,7 +17,7 @@ struct UploadContext {
 
 class CommandBuffer final {
 public:
-    VkCommandBuffer _mainCommandBuffer;
+    VkCommandBuffer _commandBuffer;
 
     CommandBuffer(const Device& device, CommandPool& commandPool);
     ~CommandBuffer();

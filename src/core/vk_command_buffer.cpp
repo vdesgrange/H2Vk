@@ -20,11 +20,11 @@ CommandBuffer::CommandBuffer(const Device& device, CommandPool& commandPool) {
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocateInfo.pNext = nullptr;
 
-    VK_CHECK(vkAllocateCommandBuffers(device._logicalDevice, &allocateInfo, &_mainCommandBuffer));
+    VK_CHECK(vkAllocateCommandBuffers(device._logicalDevice, &allocateInfo, &_commandBuffer));
 }
 
 void CommandBuffer::immediate_submit(const Device& device, const UploadContext& ctx, std::function<void(VkCommandBuffer cmd)>&& function) {
-    VkCommandBuffer cmd = ctx._commandBuffer->_mainCommandBuffer;
+    VkCommandBuffer cmd = ctx._commandBuffer->_commandBuffer;
     VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));

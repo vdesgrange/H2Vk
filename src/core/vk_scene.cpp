@@ -1,13 +1,8 @@
 #include "vk_scene.h"
 #include "vk_scene_listing.h"
 #include "vk_camera.h"
-#include "vk_mesh_manager.h"
-#include "vk_texture.h"
-#include "vk_pipeline.h"
 
-Scene::Scene(VulkanEngine& engine, MeshManager& meshManager) :
- _engine(engine), _meshManager(meshManager) {
-}
+Scene::Scene(VulkanEngine& engine) : _engine(engine) {}
 
 void Scene::load_scene(int sceneIndex, Camera& camera) {
     if (sceneIndex == _sceneIndex) {

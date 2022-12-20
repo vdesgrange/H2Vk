@@ -3,12 +3,8 @@
 #include <vector>
 
 class VulkanEngine;
-class SceneListing;
-class MeshManager;
-class TextureManager;
-class PipelineBuilder;
-class Camera;
 struct RenderObject;
+class Camera;
 
 typedef std::vector<RenderObject> Renderables;
 
@@ -17,11 +13,10 @@ public:
     int _sceneIndex;
     Renderables _renderables;
 
-    Scene(VulkanEngine& engine, MeshManager& meshManager);
+    Scene(VulkanEngine& engine);
 
     void load_scene(int sceneIndex, Camera& camera);
 
 private:
     VulkanEngine& _engine;
-    MeshManager& _meshManager;
 };

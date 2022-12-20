@@ -67,11 +67,6 @@ void VulkanEngine::init_camera() {
         _camera->on_key(key, action);
     };
 
-//    _window->on_key = [this](int key, int scancode, int action, int mods) {
-//        if (_ui->want_capture_mouse()) return;
-//        _camera->on_key(key, scancode, action, mods);
-//    };
-
     _window->on_cursor_position = [this](double xpos, double ypos) {
         if (_ui->want_capture_mouse()) return;
         _camera->on_cursor_position(xpos, ypos);
@@ -262,7 +257,7 @@ void VulkanEngine::load_images() {
 
 void VulkanEngine::init_scene() {
     _sceneListing = std::make_unique<SceneListing>();
-    _scene = std::make_unique<Scene>(*this, *_meshManager);
+    _scene = std::make_unique<Scene>(*this);
 
     // If texture not loaded here, it creates issues -> Must be loaded before binding (previously in load_images)
     // _textureManager->load_texture("../assets/lost_empire/lost_empire-RGBA.png", "empire_diffuse");
@@ -447,47 +442,54 @@ void VulkanEngine::render(int imageIndex) {
     Statistics stats = monitoring();
 
     // --- Command Buffer
-    VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, 0));
+    VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, 0));
 
     VkCommandBufferBeginInfo cmdBeginInfo{};
     cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmdBeginInfo.pNext = nullptr;
-    cmdBeginInfo.pInheritanceInfo = nullptr; // VkCommandBufferInheritanceInfo for secondary cmd buff. defines states inheriting from primary cmd. buff.
+    cmdBeginInfo.pInheritanceInfo = nullptr;
     cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    VK_CHECK(vkBeginCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer, &cmdBeginInfo));
+    VK_CHECK(vkBeginCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, &cmdBeginInfo));
 
-    // -- Clear value
-    VkClearValue clearValue;
-    clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-    VkClearValue depthValue;
-    depthValue.depthStencil.depth = 1.0f;
-    std::array<VkClearValue, 2> clearValues = {clearValue, depthValue};
+    {
+        // -- Clear value
+        VkClearValue clearValue;
+        clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        VkClearValue depthValue;
+        depthValue.depthStencil.depth = 1.0f;
+        std::array<VkClearValue, 2> clearValues = {clearValue, depthValue};
 
-    // -- Render pass
-    VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass, _window->_windowExtent, _frameBuffers->_frameBuffers[imageIndex]);
-    renderPassInfo.clearValueCount = 2;
-    renderPassInfo.pClearValues = &clearValues[0];
-    vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        // -- Render pass
+        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass,
+                                                                             _window->_windowExtent,
+                                                                             _frameBuffers->_frameBuffers[imageIndex]);
+        renderPassInfo.clearValueCount = 2;
+        renderPassInfo.pClearValues = &clearValues[0];
 
-    // Camera
-    _camera->set_speed(_ui->get_settings().speed);
-    _reset = _camera->update_camera(1. / stats.FrameRate);
-    _camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near, _ui->get_settings().z_far);
-    //_camera->set_position({_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2]});
+        vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_commandBuffer, &renderPassInfo,
+                             VK_SUBPASS_CONTENTS_INLINE);
+        {
+            // Camera
+            _camera->set_speed(_ui->get_settings().speed);
+            _reset = _camera->update_camera(1. / stats.FrameRate);
+            _camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near,
+                                     _ui->get_settings().z_far);
+            // Scene
+            if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
+                _scene->load_scene(_ui->get_settings().scene_index, *_camera);
+                setup_descriptors();
+            }
+            // Draw
+            draw_objects(get_current_frame()._commandBuffer->_commandBuffer, _scene->_renderables.data(),
+                         _scene->_renderables.size());
+            // Interface
+            _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
+        }
+        vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);
 
-    // Load scene (if new)
-    if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
-        _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-        setup_descriptors();
     }
-
-    draw_objects(get_current_frame()._commandBuffer->_mainCommandBuffer, _scene->_renderables.data(), _scene->_renderables.size());
-
-    _ui->render(get_current_frame()._commandBuffer->_mainCommandBuffer, stats);
-
-    vkCmdEndRenderPass(get_current_frame()._commandBuffer->_mainCommandBuffer);
-    VK_CHECK(vkEndCommandBuffer(get_current_frame()._commandBuffer->_mainCommandBuffer));
+    VK_CHECK(vkEndCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer));
 
     // --- Submit queue
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -501,7 +503,7 @@ void VulkanEngine::render(int imageIndex) {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &get_current_frame()._commandBuffer->_mainCommandBuffer;
+    submitInfo.pCommandBuffers = &get_current_frame()._commandBuffer->_commandBuffer;
 
     VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, get_current_frame()._renderFence->_fence));
 }
