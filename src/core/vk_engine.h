@@ -6,7 +6,7 @@
 #include <fstream>
 #include <deque>
 #include <functional>
-#include <math.h>
+#include <cmath>
 
 #include "glm/gtc/matrix_transform.hpp"
 #include "vk_types.h"
@@ -15,6 +15,7 @@
 #include "vk_fence.h"
 #include "vk_mesh_manager.h"
 #include "vk_scene_listing.h"
+#include "vk_command_buffer.h"
 
 class Window;
 class Device;
@@ -47,26 +48,6 @@ struct Texture;
 const bool enableValidationLayers = true;
 constexpr unsigned int FRAME_OVERLAP = 2;
 
-//struct Texture {
-//    AllocatedImage image;
-//    VkImageView imageView;
-//};
-
-//struct PoolSize {
-//    std::vector<VkDescriptorPoolSize> sizes = {
-//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-//            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-//            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
-//    };
-//};
-
-//std::vector<VkDescriptorPoolSize> sizes = {
-//        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-//        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(this->_images.size()) }
-//};
-
-
 struct FrameData {
     Semaphore* _presentSemaphore;
     Semaphore* _renderSemaphore;
@@ -76,7 +57,7 @@ struct FrameData {
     CommandBuffer* _commandBuffer;
 
     AllocatedBuffer cameraBuffer;
-    VkDescriptorSet environmentDescriptor; // globalDescriptor
+    VkDescriptorSet environmentDescriptor;
 
     AllocatedBuffer objectBuffer;
     VkDescriptorSet objectDescriptor;
@@ -87,9 +68,9 @@ public:
 	bool _isInitialized{ false };
 	uint32_t _frameNumber {0};
     double _time = 0;
+    bool framebufferResized = false;
 
     Window* _window;
-    bool framebufferResized = false;
     Device* _device;
     SwapChain* _swapchain;
     RenderPass* _renderPass;
@@ -107,7 +88,7 @@ public:
     DescriptorLayoutCache* _layoutCache;
     DescriptorAllocator* _allocator;
 
-    struct { // must move out of model
+    struct {
         VkDescriptorSetLayout environment;
         VkDescriptorSetLayout matrices;
         VkDescriptorSetLayout textures;
@@ -120,59 +101,32 @@ public:
     AllocatedBuffer _sceneParameterBuffer;
     UploadContext _uploadContext;
 
-    // PoolSize poolSize;
-
 	void init();
-
 	void cleanup();
-
-    void recreate_swap_chain();
-
 	void draw();
-
 	void run();
-
-    void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
-
-    void load_images();
 
 private:
     bool _reset {false};
 
     void init_vulkan();
-
     void init_window();
-
     void init_interface();
-
     void init_scene();
-
     void init_camera();
-
-    VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities);
-
-    FrameData& get_current_frame();
-
     void init_swapchain();
-
     void init_commands();
-
     void init_default_renderpass();
-
     void init_framebuffers();
-
     void init_sync_structures();
-
     void init_descriptors(); // can be call before choice of model
-
     void setup_descriptors(); // when switching model
-
     void init_pipelines();
-
     void load_meshes();
-
+    void load_images();
+    void recreate_swap_chain();
+    void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
     void render(int imageIndex); // ImDrawData* draw_data,
-
     Statistics monitoring();
-
+    FrameData& get_current_frame();
 };

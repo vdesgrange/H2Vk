@@ -6,6 +6,14 @@
 
 class CommandPool;
 class Device;
+class Fence;
+class CommandBuffer;
+
+struct UploadContext {
+    Fence* _uploadFence;
+    CommandPool* _commandPool;
+    CommandBuffer* _commandBuffer;
+};
 
 class CommandBuffer final {
 public:
@@ -13,4 +21,6 @@ public:
 
     CommandBuffer(const Device& device, CommandPool& commandPool);
     ~CommandBuffer();
+
+    static void immediate_submit(const Device& device, const UploadContext& ctx, std::function<void(VkCommandBuffer cmd)>&& function);
 };

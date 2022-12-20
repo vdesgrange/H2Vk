@@ -24,42 +24,6 @@ bool ModelGLTF::load_model(VulkanEngine& engine, const char *filename) {
     this->load_textures(input);
     this->load_materials(input);
     this->load_scene(input, _indexesBuffer, _verticesBuffer);
-
-//    size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
-//    size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
-//    this->_indexBuffer.count = static_cast<uint32_t>(indexBuffer.size());
-//
-//    AllocatedBuffer vertexStaging = Buffer::create_buffer(engine._device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-//    void* data;
-//    vmaMapMemory(_engine._device->_allocator, vertexStaging._allocation, &data);
-//    memcpy(data, vertexBuffer.data(), static_cast<size_t>(vertexBufferSize)); // number of vertex
-//    vmaUnmapMemory(_engine._device->_allocator, vertexStaging._allocation);
-//    _vertexBuffer = Buffer::create_buffer(*_engine._device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-//    immediate_submit([=](VkCommandBuffer cmd) {
-//        VkBufferCopy copy;
-//        copy.dstOffset = 0;
-//        copy.srcOffset = 0;
-//        copy.size = vertexBufferSize;
-//        vkCmdCopyBuffer(cmd, vertexStaging._buffer, _vertexBuffer._buffer, 1, &copy);
-//    });
-//
-//    AllocatedBuffer indexStaging = Buffer::create_buffer(*_engine._device, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-//    void* data2;
-//    vmaMapMemory(engine._device->_allocator, indexStaging._allocation, &data);
-//    memcpy(data2, indexBuffer.data(), static_cast<size_t>(indexBufferSize));
-//    vmaUnmapMemory(engine._device->_allocator, indexStaging._allocation);
-//    _indexBuffer.allocation = Buffer::create_buffer(*_engine._device, indexBufferSize,   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-//    immediate_submit([=](VkCommandBuffer cmd) {
-//        VkBufferCopy copy;
-//        copy.dstOffset = 0;
-//        copy.srcOffset = 0;
-//        copy.size = indexBufferSize;
-//        vkCmdCopyBuffer(cmd, indexStaging._buffer, _indexBuffer.allocation._buffer, 1, &copy);
-//    });
-//
-//    vmaDestroyBuffer(engine._device->_allocator, vertexStaging._buffer, vertexStaging._allocation);
-//    vmaDestroyBuffer(engine._device->_allocator, indexStaging._buffer, indexStaging._allocation);
-
     return true;
 }
 

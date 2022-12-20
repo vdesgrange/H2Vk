@@ -149,7 +149,6 @@ public:
 
 protected:
     void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);
-    void immediate_submit(VulkanEngine& engine, std::function<void(VkCommandBuffer cmd)>&& function);
 
 private:
     Device* _device {nullptr};

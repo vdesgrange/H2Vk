@@ -6,6 +6,7 @@
 #include "vk_helpers.h"
 #include "vk_types.h"
 #include "vk_scene_listing.h"
+#include "vk_command_buffer.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
@@ -59,7 +60,7 @@ void UInterface::init_imgui() {
 
     ImGui_ImplVulkan_Init(&init_info, _engine._renderPass->_renderPass);
 
-    _engine._meshManager->immediate_submit([&](VkCommandBuffer cmd) {
+    CommandBuffer::immediate_submit(*_engine._device, _engine._uploadContext,[&](VkCommandBuffer cmd) {
         ImGui_ImplVulkan_CreateFontsTexture(cmd);
     });
 

@@ -1,14 +1,12 @@
 #include "VkBootstrap.h"
 
 #include "vk_mesh_manager.h"
-#include "vk_helpers.h"
 #include "vk_device.h"
-#include "core/model/vk_mesh.h"
 #include "vk_buffer.h"
-#include "vk_initializers.h"
 #include "vk_fence.h"
 #include "vk_command_buffer.h"
 #include "vk_command_pool.h"
+#include "core/model/vk_mesh.h"
 
 MeshManager::MeshManager(const Device& device, UploadContext& uploadContext) : _device(device), _uploadContext(uploadContext) {};
 
@@ -36,7 +34,7 @@ void MeshManager::upload_mesh(Model& mesh) {
     memcpy(data, mesh._verticesBuffer.data(), static_cast<size_t>(vertexBufferSize)); // number of vertex
     vmaUnmapMemory(_device._allocator, vertexStaging._allocation);
     mesh._vertexBuffer = Buffer::create_buffer(_device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-    immediate_submit([=](VkCommandBuffer cmd) {
+    CommandBuffer::immediate_submit(_device, _uploadContext, [=](VkCommandBuffer cmd) {
         VkBufferCopy copy;
         copy.dstOffset = 0;
         copy.srcOffset = 0;
@@ -50,7 +48,7 @@ void MeshManager::upload_mesh(Model& mesh) {
     memcpy(data2, mesh._indexesBuffer.data(), static_cast<size_t>(indexBufferSize));
     vmaUnmapMemory(_device._allocator, indexStaging._allocation);
     mesh._indexBuffer.allocation = Buffer::create_buffer(_device, indexBufferSize,   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    immediate_submit([=](VkCommandBuffer cmd) {
+    CommandBuffer::immediate_submit(_device, _uploadContext, [=](VkCommandBuffer cmd) {
         VkBufferCopy copy;
         copy.dstOffset = 0;
         copy.srcOffset = 0;
@@ -70,21 +68,4 @@ std::shared_ptr<Model> MeshManager::get_model(const std::string &name) {
         // return &(*it).second;
         return it->second;
     }
-}
-
-void MeshManager::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function) {
-    VkCommandBuffer cmd = _uploadContext._commandBuffer->_mainCommandBuffer;
-    VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-
-    VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-    function(cmd);
-    VK_CHECK(vkEndCommandBuffer(cmd));
-
-    VkSubmitInfo submitInfo = vkinit::submit_info(&cmd);
-    VK_CHECK(vkQueueSubmit(_device.get_graphics_queue(), 1, &submitInfo, _uploadContext._uploadFence->_fence));
-
-    vkWaitForFences(_device._logicalDevice, 1, &_uploadContext._uploadFence->_fence, true, 9999999999);
-    vkResetFences(_device._logicalDevice, 1, &_uploadContext._uploadFence->_fence);
-
-    vkResetCommandPool(_device._logicalDevice, _uploadContext._commandPool->_commandPool, 0);
 }

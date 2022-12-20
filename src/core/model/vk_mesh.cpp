@@ -1,8 +1,6 @@
 #include "vk_mesh.h"
 #include "core/vk_device.h"
 #include "core/vk_buffer.h"
-#include "core/vk_initializers.h"
-#include "core/vk_helpers.h"
 #include "core/vk_command_buffer.h"
 #include "core/vk_command_pool.h"
 #include "core/vk_engine.h"
@@ -56,7 +54,7 @@ void Model::destroy() {
     for (auto node : _nodes) {
         delete node;
     }
-    // _nodes.clear();
+    _nodes.clear();
 
     for (Image image : _images) {
         image._texture.destroy(*_device);
@@ -208,21 +206,4 @@ VertexInputDescription Vertex::get_vertex_description()
     description.attributes.push_back(uvAttribute);
     description.attributes.push_back(colorAttribute);
     return description;
-}
-
-void Model::immediate_submit(VulkanEngine& engine, std::function<void(VkCommandBuffer cmd)>&& function) {  // ATTENTION : DUPLICA
-    VkCommandBuffer cmd = engine._uploadContext._commandBuffer->_mainCommandBuffer;
-    VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-
-    VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-    function(cmd);
-    VK_CHECK(vkEndCommandBuffer(cmd));
-
-    VkSubmitInfo submitInfo = vkinit::submit_info(&cmd);
-    VK_CHECK(vkQueueSubmit(engine._device->get_graphics_queue(), 1, &submitInfo, engine._uploadContext._uploadFence->_fence));
-
-    vkWaitForFences(engine._device->_logicalDevice, 1, &engine._uploadContext._uploadFence->_fence, true, 9999999999);
-    vkResetFences(engine._device->_logicalDevice, 1, &engine._uploadContext._uploadFence->_fence);
-
-    vkResetCommandPool(engine._device->_logicalDevice, engine._uploadContext._commandPool->_commandPool, 0);
 }
