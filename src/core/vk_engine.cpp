@@ -273,10 +273,10 @@ void VulkanEngine::recreate_swap_chain() {
     vkDeviceWaitIdle(_device->_logicalDevice);
 
     _scene->_renderables.clear(); // Possible memory leak. Revoir comment gerer les scenes
-    _pipelineBuilder.reset();  //    delete _pipelineBuilder; // Revoir comment gerer pipeline avec scene.
-    _frameBuffers.reset();  //    delete _frameBuffers;
-    _renderPass.reset();  //    delete _renderPass;
-    _swapchain.reset();  //    delete _swapchain;
+    _pipelineBuilder.reset(); // Revoir comment gerer pipeline avec scene.
+    _frameBuffers.reset();
+    _renderPass.reset();
+    _swapchain.reset();
 
     init_swapchain();
     init_default_renderpass();
@@ -527,7 +527,8 @@ void VulkanEngine::cleanup()
             _frames[i]._renderFence->wait(1000000000);
         }
 
-        _ui.reset(); // delete _ui if normal pointer
+        _scene->_renderables.clear();
+        _ui.reset();
         _samplerManager.reset();
         _textureManager.reset();
         _meshManager.reset();
