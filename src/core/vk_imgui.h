@@ -2,6 +2,7 @@
 
 class VulkanEngine;
 
+#include <unordered_map>
 #include "VkBootstrap.h"
 #include "vk_types.h"
 
@@ -12,8 +13,6 @@ struct Statistics final
 };
 
 struct Settings final {
-    bool p_open;
-    bool p_overlay;
     int scene_index;
 
     // Camera
@@ -27,6 +26,7 @@ struct Settings final {
 
 class UInterface final {
 public:
+    std::unordered_map<std::string, bool> p_open;
     VkDescriptorPool _imguiPool;
 
     UInterface(VulkanEngine& engine, Settings settings);
@@ -35,9 +35,10 @@ public:
     void init_imgui();
     void new_frame();
     void render(VkCommandBuffer cmd, Statistics stats);
-    void demo();
-    void interface();
-    void interface_statistics(const Statistics& statistics);
+    void interface(Statistics statistics);
+    void scene_editor();
+    void texture_viewer();
+    void stats_viewer(const Statistics& statistics);
     void clean_up();
     bool want_capture_mouse() const;
 

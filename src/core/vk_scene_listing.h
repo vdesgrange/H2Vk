@@ -52,9 +52,9 @@ class SceneListing final {
 public:
     static const std::vector<std::pair<std::string, std::function<Renderables (Camera& camera, VulkanEngine* engine)>>> scenes;
 
+    static Renderables empty(Camera& camera, VulkanEngine* engine);
     static Renderables monkeyAndTriangles(Camera& camera, VulkanEngine* engine);
     static Renderables lostEmpire(Camera &camera, VulkanEngine* engine);
-    static Renderables cubeScene(Camera &camera, VulkanEngine* engine);
     static Renderables oldBridge(Camera& camera, VulkanEngine* engine);
     static Renderables karibu(Camera& camera, VulkanEngine* engine);
     static Renderables damagedHelmet(Camera& camera, VulkanEngine* engine);

@@ -48,11 +48,7 @@ void VulkanEngine::init_vulkan() {
 }
 
 void VulkanEngine::init_interface() {
-    Settings settings = Settings{
-            .p_open=true,
-            .scene_index=0
-    };
-
+    Settings settings = Settings{.scene_index=0};
     _ui = std::make_unique<UInterface>(*this, settings);
     _ui->init_imgui();
 }

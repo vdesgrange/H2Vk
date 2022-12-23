@@ -1,18 +1,21 @@
 #include "vk_imgui.h"
 #include "vk_engine.h"
 #include "vk_window.h"
-#include "vk_device.h"
-#include "vk_renderpass.h"
 #include "vk_helpers.h"
 #include "vk_types.h"
 #include "vk_scene_listing.h"
 #include "vk_command_buffer.h"
 
-#include "imgui.h"
+// #include "imgui.h"
+#include "imgui_internal.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
 
-UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine), _settings(settings) {};
+UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine), _settings(settings) {
+    this->p_open.emplace("scene_editor", false);
+    this->p_open.emplace("texture_viewer", false);
+    this->p_open.emplace("stats_viewer", false);
+};
 
 UInterface::~UInterface() {
     this->clean_up();
@@ -68,6 +71,9 @@ void UInterface::init_imgui() {
 }
 
 void UInterface::new_frame() {
+    auto& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -75,14 +81,10 @@ void UInterface::new_frame() {
 
 void UInterface::render(VkCommandBuffer cmd, Statistics statistics) {
     this->new_frame();
+    this->interface(statistics);
 
-    this->interface();
-    this->interface_statistics(statistics);
-
-    // It might be interesting to use a dedicated commandBuffer (not mainCommandBuffer).
-    ImGui::Render();
+    ImGui::Render();     // It might be interesting to use a dedicated commandBuffer (not mainCommandBuffer).
     ImDrawData* draw_data = ImGui::GetDrawData();
-
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 }
 
@@ -93,76 +95,111 @@ void UInterface::clean_up() {
     ImGui::DestroyContext();
 }
 
-void UInterface::demo() {
-    ImGui::ShowDemoWindow();
-    // ImGui::EndFrame(); // Call by ImGui::Render()
+void UInterface::interface(Statistics statistics) {
+    const auto& io = ImGui::GetIO();
+
+    // ImGui::ShowDemoWindow()
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("Tools")) {
+            ImGui::MenuItem("Scene editor", nullptr, &this->p_open["scene_editor"]);
+            ImGui::MenuItem("Texture viewer", nullptr, &this->p_open["texture_viewer"]);
+            ImGui::MenuItem("Statistics viewer", nullptr, &this->p_open["stats_viewer"]);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+
+    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        // ImGuiID dockspace_id = ImGui::DockSpaceOverViewport(viewport, ImGuiDockNodeFlags_NoDockingInCentralNode);
+
+        //ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
+        // ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight()));
+        ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2));
+        this->scene_editor();
+
+        // ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
+        // ImGui::SetNextWindowPos(ImVec2(0, viewport->Size.y / 2 + ImGui::GetFrameHeight()));
+        ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2 - ImGui::GetFrameHeight()));
+        this->texture_viewer();
+
+        this->stats_viewer(statistics);
+    }
 }
 
-void UInterface::interface() {
-    static bool p_open = false;
-
-    const auto window_flags = ImGuiWindowFlags_NoSavedSettings;
-
-    if (!ImGui::Begin("Settings", &get_settings().p_open, window_flags))
-    {
-        // Early out if the window is collapsed, as an optimization.
-        ImGui::End();
+void UInterface::scene_editor() {
+    if (!this->p_open["scene_editor"]) {
         return;
     }
 
-    std::vector<const char*> scenes;
-    for (const auto& scene : SceneListing::scenes) {
-        scenes.push_back(scene.first.c_str());
+    const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
+    if (ImGui::Begin("Scene editor", &this->p_open["scene_editor"], window_flags)) {
+        std::vector<const char*> scenes;
+        for (const auto& scene : SceneListing::scenes) {
+            scenes.push_back(scene.first.c_str());
+        }
+
+        ImGui::Text("Scene");
+        ImGui::Separator();
+        ImGui::PushItemWidth(-1);
+        ImGui::Combo("##SceneList", &get_settings().scene_index, scenes.data(), static_cast<int>(scenes.size()));
+        ImGui::PopItemWidth();
+        ImGui::NewLine();
+
+        ImGui::Text("Camera");
+        ImGui::Separator();
+        ImGui::SliderFloat("Speed", &get_settings().speed, 0.01f, 100.0f);
+        ImGui::InputInt3("X/Y/Z", get_settings().coordinates, 0);
+        ImGui::SliderFloat("FOV", &get_settings().fov, 0.0f, 360.0f);
+        ImGui::SliderFloat("Aspect", &get_settings().aspect, 0.0f, 1.0f);
+        ImGui::SliderFloat("Z-Near", &get_settings().z_near, 0.0f, 10.0f);
+        ImGui::SliderFloat("Z-Far", &get_settings().z_far, 0.0f, 500.0f);
+        ImGui::NewLine();
     }
 
-    ImGui::Text("Help");
-    ImGui::Separator();
-    ImGui::Checkbox("Enable Statistics.", &get_settings().p_overlay);
-
-    ImGui::Text("Scene");
-    ImGui::Separator();
-    ImGui::PushItemWidth(-1);
-    ImGui::Combo("##SceneList", &get_settings().scene_index, scenes.data(), static_cast<int>(scenes.size()));
-    ImGui::PopItemWidth();
-    ImGui::NewLine();
-
-    ImGui::Text("Camera");
-    ImGui::Separator();
-    ImGui::SliderFloat("Speed", &get_settings().speed, 0.01f, 100.0f);
-    ImGui::InputInt3("X/Y/Z", get_settings().coordinates, 0);
-    ImGui::SliderFloat("FOV", &get_settings().fov, 0.0f, 360.0f);
-    ImGui::SliderFloat("Aspect", &get_settings().aspect, 0.0f, 1.0f);
-    ImGui::SliderFloat("Z-Near", &get_settings().z_near, 0.0f, 10.0f);
-    ImGui::SliderFloat("Z-Far", &get_settings().z_far, 0.0f, 500.0f);
-    ImGui::NewLine();
-
     ImGui::End();
-
-    // ImGui::EndFrame(); // Call by ImGui::Render()
 }
 
-void UInterface::interface_statistics(const Statistics& statistics) {
-    if (!get_settings().p_overlay) {
+void UInterface::texture_viewer() {
+    if (!this->p_open["texture_viewer"]) {
+        return;
+    }
+
+    const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
+    if (ImGui::Begin("Texture viewer", &this->p_open["texture_viewer"], window_flags)) {
+        ImGui::Text("TO DO");
+    }
+    ImGui::End();
+}
+
+void UInterface::stats_viewer(const Statistics& statistics) {
+    if (!this->p_open["stats_viewer"]) {
         return;
     }
 
     const auto& io = ImGui::GetIO();
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+
     const float distance = 10.0f;
-    const ImVec2 pos = ImVec2(io.DisplaySize.x - distance, distance);
+    const ImVec2 pos = ImVec2(io.DisplaySize.x - distance, ImGui::GetFrameHeight());
     const ImVec2 posPivot = ImVec2(1.0f, 0.0f);
     ImGui::SetNextWindowPos(pos, ImGuiCond_Always, posPivot);
+    ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 5));
     ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
 
     const auto flags = ImGuiWindowFlags_AlwaysAutoResize |
             ImGuiWindowFlags_NoDecoration |
             ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoTitleBar |
             ImGuiWindowFlags_NoSavedSettings;
 
-    if (ImGui::Begin("Statistics", &get_settings().p_overlay, flags))
+    if (ImGui::Begin("Statistics viewer", &this->p_open["stats_viewer"], flags))
     {
-        ImGui::Text("Statistics (%dx%d):", statistics.FramebufferSize.width, statistics.FramebufferSize.height);
+        ImGui::Text("Statistics (%.0f x %.0f):", io.DisplayFramebufferScale.x * io.DisplaySize.x,  io.DisplayFramebufferScale.y * io.DisplaySize.y);
         ImGui::Separator();
-        ImGui::Text("Frame rate: %.1f fps", statistics.FrameRate);
+        ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::Text("%d vertices, %d indices ", io.MetricsRenderVertices, io.MetricsRenderIndices);
+        ImGui::Text("%d triangles", io.MetricsRenderIndices / 3);
     }
     ImGui::End();
 }

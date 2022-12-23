@@ -12,9 +12,14 @@ const std::vector<std::pair<std::string, std::function<Renderables(Camera& camer
 //        {"Monkey and triangles", SceneListing::monkeyAndTriangles},
 //        {"Lost empire", SceneListing::lostEmpire},
 //        {"Old bridge", SceneListing::oldBridge},
+        {"None", SceneListing::empty},
         {"Karibu", SceneListing::karibu},
         {"DamagedHelmet", SceneListing::damagedHelmet},
 };
+
+Renderables SceneListing::empty(Camera& camera, VulkanEngine* engine) {
+    return {};
+}
 
 Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
