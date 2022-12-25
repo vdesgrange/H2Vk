@@ -67,6 +67,12 @@ void Model::destroy() {
     vmaDestroyBuffer(_device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
 }
 
+VkDescriptorImageInfo Model::get_texture_descriptor(const size_t index)
+{
+    return _images[index]._texture._descriptor;
+}
+
+
 void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance) {
     if (!node->mesh.primitives.empty()) {
         glm::mat4 nodeMatrix = node->matrix;

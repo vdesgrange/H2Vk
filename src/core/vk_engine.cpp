@@ -198,11 +198,14 @@ void VulkanEngine::setup_descriptors(){
                 { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>( renderable.model->_images.size() ) }
         };
 
-        for (auto &image: renderable.model->_images) {
+//        for (auto &image: renderable.model->_images) {
+        for (auto &material: renderable.model->_materials) {
+            VkDescriptorImageInfo colorMap =  renderable.model->_images[material.baseColorTextureIndex]._texture._descriptor;
+            // VkDescriptorImageInfo colorMap = renderable.model->get_texture_descriptor(material.baseColorTextureIndex);
             DescriptorBuilder::begin(*_layoutCache, *_allocator)
-            .bind_image(image._texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0) // image._texture._descriptor
             .layout(_descriptorSetLayouts.textures)
-            .build(image._descriptorSet, _descriptorSetLayouts.textures, poolSizes);
+            .build(renderable.model->_images[material.baseColorTextureIndex]._descriptorSet, _descriptorSetLayouts.textures, poolSizes);
         }
     }
 }
@@ -333,8 +336,13 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
                 // Object data descriptor : buffer std140 : slot 1, bind 0
                 vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
 
-                for (auto &image: object.model->_images) {
-                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &image._descriptorSet, 0, nullptr);
+                //for (auto &image: object.model->_images) {
+                //    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &image._descriptorSet, 0, nullptr);
+                //}
+
+                for (auto &material: object.model->_materials) {
+                    VkDescriptorSet imgDescriptorSet = object.model->_images[material.baseColorTextureIndex]._descriptorSet;
+                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &imgDescriptorSet, 0, nullptr); // &image._descriptorSet
                 }
 
                 if (object.material->textureSet != VK_NULL_HANDLE) {

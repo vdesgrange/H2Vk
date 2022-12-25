@@ -9,10 +9,10 @@
 #include "vk_descriptor_builder.h"
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
+        {"None", SceneListing::empty},
 //        {"Monkey and triangles", SceneListing::monkeyAndTriangles},
 //        {"Lost empire", SceneListing::lostEmpire},
-//        {"Old bridge", SceneListing::oldBridge},
-        {"None", SceneListing::empty},
+        {"Old bridge", SceneListing::oldBridge},
         {"Karibu", SceneListing::karibu},
         {"DamagedHelmet", SceneListing::damagedHelmet},
 };
