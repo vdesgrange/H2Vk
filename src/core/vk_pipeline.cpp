@@ -55,7 +55,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
 
-    // this->scene_monkey_triangle(setLayouts);
+    this->scene_monkey_triangle(setLayouts);
     // this->scene_lost_empire(setLayouts);
     // this->scene_old_bridge(setLayouts);
     this->scene_karibu_hippo(setLayouts);
@@ -63,9 +63,13 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
 }
 
 PipelineBuilder::~PipelineBuilder() {
+//    for (const auto& item : this->_materials) {
+//        vkDestroyPipeline(_device._logicalDevice, item.second->pipeline, nullptr);
+//        vkDestroyPipelineLayout(_device._logicalDevice, item.second->pipelineLayout, nullptr);
+//    }
     _materials.clear();
 
-    // duplicate ?
+    // Duplicate with _materials
     for (const auto& item : this->_shaderPasses) {
         vkDestroyPipeline(_device._logicalDevice, item.pipeline, nullptr);
         vkDestroyPipelineLayout(_device._logicalDevice, item.pipelineLayout, nullptr);
@@ -194,31 +198,32 @@ bool PipelineBuilder::create_shader_module(const std::vector<uint32_t>& code, Vk
     return true;
 }
 
-Material* PipelineBuilder::create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name) {
-    Material mat(pipeline, pipelineLayout);
-    _materials[name] = mat;
-    return &_materials[name];
+std::shared_ptr<Material> PipelineBuilder::create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name) {
+    // Material mat(pipeline, pipelineLayout);
+    _materials.emplace(name, std::make_shared<Material>(pipeline, pipelineLayout));
+    return _materials[name];
 }
 
-Material* PipelineBuilder::get_material(const std::string &name) {
+std::shared_ptr<Material> PipelineBuilder::get_material(const std::string &name) {
     auto it = _materials.find(name);
     if ( it == _materials.end()) {
         return nullptr;
     } else {
-        return &(*it).second;
+        // return &(*it).second;
+        return it->second;
     }
 }
 
 void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules_mesh {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene.frag.spv"},
     };
 
-    ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules_mesh); // {push_constant}
+    ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules);
     ShaderPass pass_mesh = this->build_pass(&effect_mesh);
     this->_shaderPasses.push_back(pass_mesh);
-    create_material(pass_mesh.pipeline, pass_mesh.pipelineLayout, "defaultMesh");
+    create_material(pass_mesh.pipeline, pass_mesh.pipelineLayout, "monkeyMaterial");
 
     for (auto& shader : effect_mesh.shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
@@ -231,7 +236,7 @@ void PipelineBuilder::scene_lost_empire(std::vector<VkDescriptorSetLayout> setLa
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
     };
 
-    ShaderEffect effect_tex = this->build_effect(setLayouts, {}, modules_texture); // {push_constant}
+    ShaderEffect effect_tex = this->build_effect(setLayouts, {}, modules_texture);
     ShaderPass pass_tex = this->build_pass(&effect_tex);
     this->_shaderPasses.push_back(pass_tex);
     create_material(pass_tex.pipeline, pass_tex.pipelineLayout, "texturedMesh");
@@ -268,10 +273,10 @@ void PipelineBuilder::scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setL
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
     };
 
-    ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
+    ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules);
     ShaderPass pass = this->build_pass(&effect_mesh);
     this->_shaderPasses.push_back(pass);
-    create_material(pass.pipeline, pass.pipelineLayout, "defaultMesh");
+    create_material(pass.pipeline, pass.pipelineLayout, "karibuMaterial");
 
     for (auto& shader : effect_mesh.shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
@@ -287,7 +292,7 @@ void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> se
     ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
     ShaderPass pass = this->build_pass(&effect_mesh);
     this->_shaderPasses.push_back(pass);
-    create_material(pass.pipeline, pass.pipelineLayout, "defaultMesh");
+    create_material(pass.pipeline, pass.pipelineLayout, "helmetMaterial");
 
     for (auto& shader : effect_mesh.shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);

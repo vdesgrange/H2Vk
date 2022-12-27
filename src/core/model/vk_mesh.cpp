@@ -82,25 +82,16 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
             parent = parent->parent;
         }
 
-//        void* objectData;
-//        vmaMapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation, &objectData);
-//        GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
-//        objectSSBO[instance].model = nodeMatrix;
-//        vmaUnmapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation);
-
-         // vkCmdPushConstants(commandBuffer, pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(glm::mat4),&nodeMatrix);
-        // vkCmdPush Constants(commandBuffer,pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(MeshPushConstants),&constants);
-
         for (Primitive& primitive : node->mesh.primitives) {
             if (primitive.indexCount > 0) {
                 if (!_textures.empty() && primitive.materialIndex != -1) { // handle non-gltf meshes
-                    // Get the texture index for this primitive
-                    Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];
-                    // Bind the descriptor for the current primitive's texture
-                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
-                    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
+                    Materials material = _materials[primitive.materialIndex];
+                    // Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];  // Get the texture index for this primitive
+
+                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[material.baseColorTextureIndex]._descriptorSet, 0, nullptr);
+                    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
                 }
-                vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance); // i
+                vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance);
             }
         }
     }
@@ -122,19 +113,14 @@ void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayou
     }
 }
 
-void Model::draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, glm::mat4 transformMatrix, uint32_t instance, bool bind) {
+void Model::draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind) {
     if (bind) {
         VkDeviceSize offsets[1] = {0};
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBuffer._buffer, offsets);
         vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.allocation._buffer, 0, VK_INDEX_TYPE_UINT32);
     }
 
-    // MeshPushConstants constants;
-    // constants.render_matrix = transformMatrix;  // expected in draw_node() and node->matrix
-    // vkCmdPushConstants(commandBuffer,pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(MeshPushConstants),&constants);
-
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(this->_indexesBuffer.size()), 1, 0, 0, instance);
-    // vkCmdDraw(commandBuffer, static_cast<uint32_t>(this->_verticesBuffer.size()), 1, 0, instance);
 }
 
 //Mesh Mesh::cube() {

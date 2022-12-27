@@ -198,12 +198,14 @@ void VulkanEngine::setup_descriptors(){
                 { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>( renderable.model->_images.size() ) }
         };
 
-//        for (auto &image: renderable.model->_images) {
         for (auto &material: renderable.model->_materials) {
             VkDescriptorImageInfo colorMap =  renderable.model->_images[material.baseColorTextureIndex]._texture._descriptor;
+            // VkDescriptorImageInfo normalMap =  renderable.model->_images[material.normalTextureIndex]._texture._descriptor;
+
             // VkDescriptorImageInfo colorMap = renderable.model->get_texture_descriptor(material.baseColorTextureIndex);
             DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0) // image._texture._descriptor
+            // .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
             .layout(_descriptorSetLayouts.textures)
             .build(renderable.model->_images[material.baseColorTextureIndex]._descriptorSet, _descriptorSetLayouts.textures, poolSizes);
         }
@@ -286,7 +288,7 @@ void VulkanEngine::recreate_swap_chain() {
 
 void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
     std::shared_ptr<Model> lastModel = nullptr;
-    Material* lastMaterial = nullptr;
+    std::shared_ptr<Material> lastMaterial = nullptr;
 
     // === Camera & Objects & Environment ===
 
@@ -326,67 +328,27 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
         RenderObject& object = first[i]; // Take the scene/object
 
-        if (object.model != nullptr) { // tmp
-            if (object.material != lastMaterial) {
-                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
-                lastMaterial = object.material;
-                uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
-                // Camera & Environment data descriptor : uniform buffer :  slot 0, Camera : bind 0, Scene : bind 1
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
-                // Object data descriptor : buffer std140 : slot 1, bind 0
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
+        if (object.material != lastMaterial) { // Same material = (shaders/pipeline/descriptors) for multiple objects part of the same scene (e.g. monkey + triangles)
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
+            lastMaterial = object.material;
+            uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
 
-                //for (auto &image: object.model->_images) {
-                //    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &image._descriptorSet, 0, nullptr);
-                //}
-
-                for (auto &material: object.model->_materials) {
-                    VkDescriptorSet imgDescriptorSet = object.model->_images[material.baseColorTextureIndex]._descriptorSet;
-                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &imgDescriptorSet, 0, nullptr); // &image._descriptorSet
-                }
-
-                if (object.material->textureSet != VK_NULL_HANDLE) {
-                    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &object.material->textureSet, 0, nullptr);
-                }
-            }
-
-            bool bind = object.model.get() != lastModel.get(); // degueulasse sortir de la boucle de rendu
-            object.model->draw_obj(commandBuffer, object.material->pipelineLayout, object.transformMatrix, i, object.model != lastModel);
-            // object.model->draw(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
-            lastModel = bind ? object.model : lastModel;
-
-        } else {
-            if (object.material != lastMaterial) {
-                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
-                lastMaterial = object.material;
-                uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
-
-                if (object.material->textureSet != VK_NULL_HANDLE) {
-                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &object.material->textureSet, 0, nullptr);
-                }
-            }
-
-//            MeshPushConstants constants;
-//            constants.render_matrix = object.transformMatrix;
-//
-//            vkCmdPushConstants(commandBuffer,
-//                               object.material->pipelineLayout,
-//                               VK_SHADER_STAGE_VERTEX_BIT,
-//                               0,
-//                               sizeof(MeshPushConstants),
-//                               &constants);
-
-//            if (object.mesh != lastMesh) {
-//                VkDeviceSize offset = 0;
-//                vkCmdBindVertexBuffers(commandBuffer, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
-//                lastMesh = object.mesh;
+//            for (auto &material: object.model->_materials) { // use with object.model->draw_obj
+//                VkDescriptorSet imgDescriptorSet = object.model->_images[material.baseColorTextureIndex]._descriptorSet;
+//                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &imgDescriptorSet, 0, nullptr); // &image._descriptorSet
 //            }
 
-            // vkCmdDraw(commandBuffer, static_cast<uint32_t>(object.mesh->_vertices.size()), 1, 0, 1);
+//                if (object.material->textureSet != VK_NULL_HANDLE) {
+//                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &object.material->textureSet, 0, nullptr);
+//                }
         }
 
+        bool bind = object.model.get() != lastModel.get(); // degueulasse sortir de la boucle de rendu
+        // object.model->draw_obj(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
+        object.model->draw(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
+        lastModel = bind ? object.model : lastModel;
     }
 }
 

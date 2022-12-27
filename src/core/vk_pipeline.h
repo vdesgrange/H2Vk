@@ -25,8 +25,8 @@ public:
     VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
 
-    std::vector<ShaderPass> _shaderPasses;
-    std::unordered_map<std::string, Material> _materials;
+    std::vector<ShaderPass> _shaderPasses; // duplicate with _materials
+    std::unordered_map<std::string, std::shared_ptr<Material>> _materials;
 
     PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, std::vector<VkDescriptorSetLayout> setLayouts);
     ~PipelineBuilder();
@@ -37,9 +37,9 @@ public:
 
     VkPipeline build_pipeline(const Device& device, RenderPass& renderPass);
 
-    Material* create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name);
+    std::shared_ptr<Material> create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name);
 
-    Material* get_material(const std::string &name);
+    std::shared_ptr<Material> get_material(const std::string &name);
 
 private:
     const class Device& _device;

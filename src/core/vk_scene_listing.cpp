@@ -10,9 +10,9 @@
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
         {"None", SceneListing::empty},
-//        {"Monkey and triangles", SceneListing::monkeyAndTriangles},
+        {"Monkey and triangles", SceneListing::monkeyAndTriangles},
 //        {"Lost empire", SceneListing::lostEmpire},
-        {"Old bridge", SceneListing::oldBridge},
+//        {"Old bridge", SceneListing::oldBridge},
         {"Karibu", SceneListing::karibu},
         {"DamagedHelmet", SceneListing::damagedHelmet},
 };
@@ -53,7 +53,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
 
     RenderObject monkey;
     monkey.model = engine->_meshManager->get_model("monkey");
-    monkey.material = engine->_pipelineBuilder->get_material("defaultMesh");
+    monkey.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
     monkey.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(monkey);
 
@@ -61,7 +61,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
         for (int y = -20; y <= 20; y++) {
             RenderObject tri;
             tri.model = engine->_meshManager->get_model("triangle");
-            tri.material = engine->_pipelineBuilder->get_material("defaultMesh");
+            tri.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
             glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
             glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
             tri.transformMatrix = translation * scale;
@@ -130,7 +130,7 @@ Renderables SceneListing::karibu(Camera& camera, VulkanEngine* engine) {
 
     RenderObject karibu;
     karibu.model = engine->_meshManager->get_model("karibu");
-    karibu.material = engine->_pipelineBuilder->get_material("defaultMesh");
+    karibu.material = engine->_pipelineBuilder->get_material("karibuMaterial");
     karibu.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(karibu);
 
@@ -151,7 +151,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
 
     RenderObject helmet;
     helmet.model = engine->_meshManager->get_model("helmet");
-    helmet.material = engine->_pipelineBuilder->get_material("defaultMesh");
+    helmet.material = engine->_pipelineBuilder->get_material("helmetMaterial");
     helmet.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(helmet);
 

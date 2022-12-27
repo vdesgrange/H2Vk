@@ -22,16 +22,8 @@ class UploadContext;
 
 struct RenderObject {
     std::shared_ptr<Model> model;
-    Material* material;
+    std::shared_ptr<Material> material;
     glm::mat4 transformMatrix;
-
-//    ~RenderObject(){
-//        if ( model ) delete model;
-//        model = nullptr;
-//
-//        if ( material ) delete material;
-//        material = nullptr;
-//    }
 };
 
 struct GPUSceneData {
