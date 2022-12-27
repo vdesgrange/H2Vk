@@ -25,7 +25,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     Renderables renderables{};
 
     camera.inverse(true);
-    camera.set_position({ 0.f, -6.f, -10.f });
+    camera.set_position({ 1.f, 1.f, 1.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
     ModelOBJ* triangleModel= new ModelOBJ(engine->_device.get());
@@ -39,6 +39,17 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     triangleModel->_verticesBuffer[2].color = { 0.f, 1.f, 0.0f }; //pure green
 
     triangleModel->_indexesBuffer = {0, 1, 2};
+
+    Primitive primitive{};
+    primitive.firstIndex = 0;
+    primitive.indexCount = triangleModel->_indexesBuffer.size();
+    primitive.materialIndex = -1;
+
+    Node* node = new Node{};
+    node->matrix = glm::mat4(1.f);
+    node->parent = nullptr;
+    node->mesh.primitives.push_back(primitive);
+    triangleModel->_nodes.push_back(node);
 
     engine->_meshManager->upload_mesh(*triangleModel);
     engine->_meshManager->_models.emplace("triangle", std::shared_ptr<Model>(triangleModel));
@@ -120,7 +131,7 @@ Renderables SceneListing::karibu(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
     camera.inverse(true);
-    camera.set_position({ 0.f, -6.f, -10.f });
+    camera.set_position({ 1.f, 1.f, 1.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
     ModelGLB* karibuModel = new ModelGLB(engine->_device.get());
@@ -141,7 +152,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
     camera.inverse(true);
-    camera.set_position({ 0.f, -6.f, -10.f });
+    camera.set_position({ 1.f, 1.f, 1.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
     ModelGLB* helmetModel = new ModelGLB(engine->_device.get());

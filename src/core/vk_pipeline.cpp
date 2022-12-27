@@ -199,7 +199,6 @@ bool PipelineBuilder::create_shader_module(const std::vector<uint32_t>& code, Vk
 }
 
 std::shared_ptr<Material> PipelineBuilder::create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name) {
-    // Material mat(pipeline, pipelineLayout);
     _materials.emplace(name, std::make_shared<Material>(pipeline, pipelineLayout));
     return _materials[name];
 }
@@ -209,8 +208,7 @@ std::shared_ptr<Material> PipelineBuilder::get_material(const std::string &name)
     if ( it == _materials.end()) {
         return nullptr;
     } else {
-        // return &(*it).second;
-        return it->second;
+        return it->second;  // return &(*it).second;
     }
 }
 
