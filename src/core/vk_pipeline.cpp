@@ -231,7 +231,7 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
 void PipelineBuilder::scene_lost_empire(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules_texture {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene_tex.frag.spv"},
     };
 
     ShaderEffect effect_tex = this->build_effect(setLayouts, {}, modules_texture);
@@ -247,7 +247,7 @@ void PipelineBuilder::scene_lost_empire(std::vector<VkDescriptorSetLayout> setLa
 void PipelineBuilder::scene_old_bridge(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene_tex.frag.spv"},
     };
 
 //    VkPushConstantRange push_constant;
@@ -268,7 +268,7 @@ void PipelineBuilder::scene_old_bridge(std::vector<VkDescriptorSetLayout> setLay
 void PipelineBuilder::scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene_tex.frag.spv"},
     };
 
     ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules);
@@ -284,7 +284,7 @@ void PipelineBuilder::scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setL
 void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/texture_lig.frag.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene_tex.frag.spv"},
     };
 
     ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
