@@ -33,8 +33,8 @@ void main()
     vec3 H = normalize(L + V); // Halfway
     vec3 ambient = lightFactor * lightColor;
     vec3 diffuse = max(dot(N, L), 0.0)  * color.rgb; // inColor: color null for texture
-    vec3 specular = vec3(sceneData.specularFactor) * pow(max(dot(R, V), 0.0), 32.0);  // Phong
-    // vec3 specular = vec3(sceneData.specularFactor) * pow(max(dot(N, H), 0.0), 32.0); // Blinn-Phong
+    // vec3 specular = vec3(sceneData.specularFactor) * pow(max(dot(R, V), 0.0), 32.0);  // Phong
+    vec3 specular = vec3(sceneData.specularFactor) * pow(max(dot(N, H), 0.0), 32.0); // Blinn-Phong
 
     vec3 result = (ambient + diffuse + specular) * color.rgb;
     outFragColor = vec4(result.rgb, 1.0);

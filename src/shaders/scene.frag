@@ -26,11 +26,13 @@ void main()
     vec3 N = normalize(inNormal);
     vec3 L = normalize(lightPos - inFragPos);
     vec3 V = normalize(inCameraPos - inFragPos);
-    vec3 R = reflect(L, N);
+    vec3 R = reflect(-L, N);  // Phong
+    vec3 H = normalize(L + V); // Halfway
 
     vec3 ambient = lightFactor * lightColor;
     vec3 diffuse = max(dot(N, L), 0.0) * inColor;
-    vec3 specular = vec3(sceneData.specularFactor) * pow(max(dot(R, V), 0.0), 32.0);
+    // vec3 specular = vec3(sceneData.specularFactor) * pow(max(dot(R, V), 0.0), 32.0);  // Phong
+    vec3 specular = vec3(sceneData.specularFactor) * pow(max(dot(N, H), 0.0), 32.0); // Blinn-Phong
 
     vec3 result = (ambient + diffuse) * inColor;
     outFragColor = vec4(result.rgb, 1.0); // color.rgb
