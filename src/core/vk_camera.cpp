@@ -30,6 +30,10 @@ const glm::mat4 Camera::get_view_matrix() {
     return this->view;
 }
 
+const glm::vec3 Camera::get_position_vec() {
+    return this->position;
+}
+
 const glm::mat4 Camera::get_rotation_matrix() {
     glm::mat4 theta_rot = glm::rotate(glm::mat4{ 1 }, theta, { 0,1,0 });
     glm::mat4 rotation = glm::rotate(glm::mat4{ theta_rot }, psi, { 1,0,0 });

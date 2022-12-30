@@ -7,13 +7,14 @@
 struct GPUCameraData{
     glm::mat4 view;
     glm::mat4 proj;
-    glm::mat4 viewproj;
+    glm::vec3 pos;
 };
 
 class Camera final {
 public:
     const glm::mat4 get_projection_matrix();
     const glm::mat4 get_view_matrix();
+    const glm::vec3 get_position_vec();
     const glm::mat4 get_rotation_matrix();
     const glm::mat4 get_mesh_matrix(glm::mat4 model);
 
