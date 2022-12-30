@@ -16,12 +16,18 @@ struct Settings final {
     int scene_index;
 
     // Camera
-    int coordinates[3];
     float speed {10.0f};
     float fov{70.f}; // 0 - 360
     float aspect {1700.f / 1200.f}; // 0 - 1
     float z_near {0.1f}; // 0 - 1000, valeurs a la louche
     float z_far {200.0f}; // 0 - 1000, valeurs a la louche
+
+    // Light
+    float coordinates[3] {1.0f, 0.0f, 0.0f};
+    int colors[3] {250, 248, 241};
+    float ambient {0.0005};
+    float specular {0.75};
+
 };
 
 class UInterface final {

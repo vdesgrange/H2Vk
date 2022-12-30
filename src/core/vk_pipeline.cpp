@@ -213,6 +213,20 @@ std::shared_ptr<Material> PipelineBuilder::get_material(const std::string &name)
 }
 
 void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts) {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> light_modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/light.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/light.frag.spv"},
+    };
+
+    ShaderEffect effect_light = this->build_effect(setLayouts, {}, light_modules);
+    ShaderPass pass_light = this->build_pass(&effect_light);
+    this->_shaderPasses.push_back(pass_light);
+    create_material(pass_light.pipeline, pass_light.pipelineLayout, "light");
+
+    for (auto& shader : effect_light.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+    }
+
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene.frag.spv"},

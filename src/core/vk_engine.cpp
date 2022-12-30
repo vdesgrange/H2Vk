@@ -295,7 +295,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     GPUCameraData camData;
     camData.proj = _camera->get_projection_matrix();
     camData.view = _camera->get_view_matrix();
-    camData.viewproj = _camera->get_projection_matrix() * _camera->get_view_matrix();
+    camData.pos = _camera->get_position_vec();
 
     // Camera : write into the buffer by copying the render matrices from camera object into it
     void* data;
@@ -315,7 +315,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
 
     // Environment : write scene data into environment buffer
     float framed = (_frameNumber / 120.f);
-    _sceneParameters.ambientColor = { sin(framed),0,cos(framed),1 };
+    // _sceneParameters.ambientColor = { sin(framed), 0, cos(framed), 1 };
 
     char* sceneData;
     vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
@@ -345,10 +345,12 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
 //                }
         }
 
-        bool bind = object.model.get() != lastModel.get(); // degueulasse sortir de la boucle de rendu
-        // object.model->draw_obj(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
-        object.model->draw(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
-        lastModel = bind ? object.model : lastModel;
+        if (object.model) {
+            bool bind = object.model.get() != lastModel.get(); // degueulasse sortir de la boucle de rendu
+            // object.model->draw_obj(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
+            object.model->draw(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
+            lastModel = bind ? object.model : lastModel;
+        }
     }
 }
 
@@ -441,11 +443,18 @@ void VulkanEngine::render(int imageIndex) {
             _reset = _camera->update_camera(1. / stats.FrameRate);
             _camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near,
                                      _ui->get_settings().z_far);
+
+            // Scene parameters
+            _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
+            _sceneParameters.sunlightDirection = {_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2], _ui->get_settings().ambient};
+            _sceneParameters.specularFactor = _ui->get_settings().specular;
+
             // Scene
             if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
                 _scene->load_scene(_ui->get_settings().scene_index, *_camera);
                 setup_descriptors();
             }
+
             // Draw
             draw_objects(get_current_frame()._commandBuffer->_commandBuffer, _scene->_renderables.data(),
                          _scene->_renderables.size());

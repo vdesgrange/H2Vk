@@ -115,12 +115,12 @@ void UInterface::interface(Statistics statistics) {
 
         //ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
         // ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight()));
-        ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2));
+        // ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2));
         this->scene_editor();
 
         // ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
         // ImGui::SetNextWindowPos(ImVec2(0, viewport->Size.y / 2 + ImGui::GetFrameHeight()));
-        ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2 - ImGui::GetFrameHeight()));
+        // ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2 - ImGui::GetFrameHeight()));
         this->texture_viewer();
 
         this->stats_viewer(statistics);
@@ -149,12 +149,18 @@ void UInterface::scene_editor() {
         ImGui::Text("Camera");
         ImGui::Separator();
         ImGui::SliderFloat("Speed", &get_settings().speed, 0.01f, 100.0f);
-        ImGui::InputInt3("X/Y/Z", get_settings().coordinates, 0);
         ImGui::SliderFloat("FOV", &get_settings().fov, 0.0f, 360.0f);
         ImGui::SliderFloat("Aspect", &get_settings().aspect, 0.0f, 1.0f);
         ImGui::SliderFloat("Z-Near", &get_settings().z_near, 0.0f, 10.0f);
         ImGui::SliderFloat("Z-Far", &get_settings().z_far, 0.0f, 500.0f);
         ImGui::NewLine();
+
+        ImGui::Text("Light");
+        ImGui::Separator();
+        ImGui::InputFloat3("Position", get_settings().coordinates, 0);
+        ImGui::SliderFloat("Ambient", &get_settings().ambient, 0.0f, 0.005f, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+        ImGui::SliderFloat("Specular", &get_settings().specular, 0.0f, 1.0f);
+        ImGui::InputInt3("Color (RGB)", get_settings().colors, 0);
     }
 
     ImGui::End();

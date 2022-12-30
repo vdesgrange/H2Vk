@@ -67,6 +67,17 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     monkey.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
     monkey.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(monkey);
+//
+//    Model* lightModel = new Model(engine->_device.get());
+//    // engine->_meshManager->upload_mesh(*lightModel);
+//    engine->_meshManager->_models.emplace("light", std::shared_ptr<Model>(lightModel));
+//
+//
+//    RenderObject light;
+//    monkey.model = engine->_meshManager->get_model("light");
+//    monkey.material = engine->_pipelineBuilder->get_material("light");
+//    monkey.transformMatrix = glm::mat4{ 1.0f };
+//    renderables.push_back(light);
 
     for (int x = -20; x <= 20; x++) {
         for (int y = -20; y <= 20; y++) {
