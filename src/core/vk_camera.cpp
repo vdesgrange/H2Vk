@@ -5,54 +5,22 @@
 #include "vk_camera.h"
 #include <iostream>
 
-
-bool Camera::update_camera(float delta) {
-    const auto d = delta * speed;
-    if (forwardAction) position += d * _forward;
-    if (backwardAction) position -= d * _forward;
-    if (rightAction) position += d * _right;
-    if (leftAction) position -= d * _right;
-    if (upAction) position += d * _up;
-    if (downAction) position -= d * _up;
-
-
-    this->set_rotation(_rotation.x * 0.003f, _rotation.y * 0.003f);
-
-    this->update_view();
-    return forwardAction || backwardAction || rightAction || leftAction || upAction || downAction;
-}
-
-const glm::mat4 Camera::get_projection_matrix() {
-    return this->perspective;
-}
-
-const glm::mat4 Camera::get_view_matrix() {
-    return this->view;
-}
-
-const glm::vec3 Camera::get_position_vec() {
-    return this->position;
-}
-
-const glm::mat4 Camera::get_rotation_matrix() {
-    glm::mat4 theta_rot = glm::rotate(glm::mat4{ 1 }, theta, { 0,1,0 });
-    glm::mat4 rotation = glm::rotate(glm::mat4{ theta_rot }, psi, { 1,0,0 });
-    return rotation;
-}
-
-const glm::mat4 Camera::get_mesh_matrix(glm::mat4 model) {
-    return this->perspective * this->view * model;
-}
-
 void Camera::update_view() {
-    glm::mat4 transMat = glm::mat4(1.f);
     glm::vec3 position = this->position;
-    glm::mat4 rotation = this->get_rotation_matrix();
-//    if (this->flipY) {
-//        this->position.y *= -1;
-//    }
-    glm::mat4 view = glm::translate(transMat, position) * rotation;
-    this->view = this->flipY ? glm::inverse(view) : view;
+
+    if (this->type == Type::pov) {
+        glm::mat4 translation =  glm::translate(glm::mat4(1.f), position);
+        glm::mat4 rotation = this->get_rotation_matrix();
+        this->view = translation * rotation;  // rotation around the origin of the object:
+    } else if (this->type == Type::axis) {
+        glm::mat4 translation =  glm::translate(glm::mat4(1.f), -1.0f * position);
+        glm::mat4 rotation = this->get_rotation_matrix();
+        this->view = rotation * translation; // rotation around the origin of the world
+    } else {
+        // this->view = glm::lookAt(this->position, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+    }
+
+    this->view = this->flipY ? glm::inverse(this->view) : this->view;
 }
 
 void Camera::set_position(glm::vec3 position) {
@@ -60,11 +28,11 @@ void Camera::set_position(glm::vec3 position) {
     update_view();
 }
 
-void Camera::set_rotation(float theta, float psi) {
-    this->theta = theta;
-    this->psi = psi;
-
-    this->direction();
+void Camera::set_rotation(glm::vec3 rotation) {
+    this->rotation = rotation;
+    if (this->rotation.x > 89.0f) this->rotation.x = 89.0f;
+    if (this->rotation.x < -89.0f) this->rotation.x = -89.0f;
+    update_view();
 }
 
 void Camera::set_perspective(float fov, float aspect, float zNear, float zFar) {
@@ -82,14 +50,6 @@ void Camera::set_perspective(float fov, float aspect, float zNear, float zFar) {
 void Camera::inverse(bool flip) {
     this->flipY = flip;
     update_view();
-}
-
-void Camera::direction() {
-    const auto inverse = this->get_rotation_matrix();
-
-    _right = glm::vec3(inverse * glm::vec4(1, 0, 0, 0));
-    _up = glm::vec3(inverse * glm::vec4(0, 1, 0, 0));
-    _forward = glm::vec3(inverse * glm::vec4(0, 0, -1, 0));
 }
 
 void Camera::set_speed(float speed) {
@@ -112,17 +72,49 @@ bool Camera::on_key(int key, int action) {
     };
 }
 
+bool Camera::update_camera(float delta) {
+    const auto d = delta * this->speed;
+    const auto radius = 1.0f;
+
+    glm::vec3 front;
+    front.x = radius * -cos(glm::radians(rotation.x)) * sin(glm::radians(rotation.y));
+    front.y = radius * sin(glm::radians(rotation.x));
+    front.z = radius * cos(glm::radians(rotation.x)) * cos(glm::radians(rotation.y));
+    front = glm::normalize(front);
+
+    if (this->type == Type::pov) {
+        if (forwardAction) position -= d * front;
+        if (backwardAction) position += d * front;
+        if (rightAction) position -= d * glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
+        if (leftAction) position += d * glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
+        if (upAction) position += d * glm::normalize(glm::cross(front, glm::vec3(1.0f, 0.0f, 0.0f)));
+        if (downAction) position -= d * glm::normalize(glm::cross(front, glm::vec3(1.0f, 0.0f, 0.0f)));
+
+    } else if (this->type == Type::axis) {
+        if (forwardAction) position -= d * front;  // to fix
+        if (backwardAction) position += d * front;  // to fix
+        if (rightAction) this->set_rotation(this->rotation - glm::vec3({0.0f,  10.0f * d, 0}));
+        if (leftAction) this->set_rotation(this->rotation + glm::vec3({0.0f,  10.0f * d, 0}));
+        if (upAction) this->set_rotation(this->rotation + glm::vec3({10.0f * d, 0.0f, 0.0f }));
+        if (downAction) this->set_rotation(this->rotation - glm::vec3({10.0f * d, 0.0f, 0.0f }));
+    } else {  // Type::lookat
+
+    }
+
+    this->update_view();
+    return forwardAction || backwardAction || rightAction || leftAction || upAction || downAction;
+}
+
 bool Camera::on_cursor_position(double xpos, double ypos) {
-    const auto deltaX = static_cast<float>(xpos - mousePositionX);
-    const auto deltaY = static_cast<float>(ypos - mousePositionY);
+    const auto deltaY = static_cast<float>(xpos - mousePositionX);
+    const auto deltaX = static_cast<float>(ypos - mousePositionY);
 
     if (mouseLeft) {
-        _rotation += glm::vec2({deltaX, deltaY});
+        this->set_rotation(this->rotation + 0.1f * glm::vec3({deltaX, deltaY, 0}));
     }
 
     mousePositionX = xpos;
     mousePositionY = ypos;
-
     return mouseRight;
 }
 
@@ -133,4 +125,24 @@ bool Camera::on_mouse_button(int button, int action, int mods) {
     };
 
     return true;
+}
+
+const glm::mat4 Camera::get_projection_matrix() {
+    return this->perspective;
+}
+
+const glm::mat4 Camera::get_view_matrix() {
+    return this->view;
+}
+
+const glm::vec3 Camera::get_position_vector() {
+    return this->position;
+}
+
+const glm::mat4 Camera::get_rotation_matrix() {
+    glm::mat4 rot = glm::mat4{ 1.0f };
+    rot = glm::rotate(rot, glm::radians(this->rotation.x), {1, 0, 0});
+    rot = glm::rotate(rot, glm::radians(this->rotation.y), {0, 1, 0});
+    rot = glm::rotate(rot, glm::radians(this->rotation.z), {0, 0, 1});
+    return rot;
 }

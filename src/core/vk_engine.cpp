@@ -55,7 +55,7 @@ void VulkanEngine::init_interface() {
 
 void VulkanEngine::init_camera() {
     _camera = std::make_unique<Camera>();
-    _camera->inverse(true);
+    _camera->inverse(false);
     _camera->set_position({ 0.f, -6.f, -10.f });
     _camera->set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
@@ -295,7 +295,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     GPUCameraData camData;
     camData.proj = _camera->get_projection_matrix();
     camData.view = _camera->get_view_matrix();
-    camData.pos = _camera->get_position_vec();
+    camData.pos = _camera->get_position_vector();
 
     // Camera : write into the buffer by copying the render matrices from camera object into it
     void* data;
