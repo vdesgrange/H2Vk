@@ -173,6 +173,7 @@ void VulkanEngine::init_descriptors() {
     // === Texture ===
     DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
             .layout(_descriptorSetLayouts.textures); // use reference instead?
 
     // === Clean up ===
@@ -200,12 +201,11 @@ void VulkanEngine::setup_descriptors(){
 
         for (auto &material: renderable.model->_materials) {
             VkDescriptorImageInfo colorMap =  renderable.model->_images[material.baseColorTextureIndex]._texture._descriptor;
-            // VkDescriptorImageInfo normalMap =  renderable.model->_images[material.normalTextureIndex]._texture._descriptor;
+            VkDescriptorImageInfo normalMap =  renderable.model->_images[material.normalTextureIndex]._texture._descriptor;
 
-            // VkDescriptorImageInfo colorMap = renderable.model->get_texture_descriptor(material.baseColorTextureIndex);
             DescriptorBuilder::begin(*_layoutCache, *_allocator)
-            .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0) // image._texture._descriptor
-            // .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
             .layout(_descriptorSetLayouts.textures)
             .build(renderable.model->_images[material.baseColorTextureIndex]._descriptorSet, _descriptorSetLayouts.textures, poolSizes);
         }
@@ -314,9 +314,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     vmaUnmapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation);
 
     // Environment : write scene data into environment buffer
-    float framed = (_frameNumber / 120.f);
-    // _sceneParameters.ambientColor = { sin(framed), 0, cos(framed), 1 };
-
     char* sceneData;
     vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
     int frameIndex = _frameNumber % FRAME_OVERLAP;
@@ -347,7 +344,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
 
         if (object.model) {
             bool bind = object.model.get() != lastModel.get(); // degueulasse sortir de la boucle de rendu
-            // object.model->draw_obj(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
             object.model->draw(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
             lastModel = bind ? object.model : lastModel;
         }
@@ -402,7 +398,9 @@ Statistics VulkanEngine::monitoring() {
     Statistics stats = {};
     stats.FramebufferSize = _window->get_framebuffer_size();
     stats.FrameRate = static_cast<float>(1 / timeDelta); // FPS
-
+    stats.coordinates[0] = _camera->get_position_vector().x;
+    stats.coordinates[1] = _camera->get_position_vector().y;
+    stats.coordinates[2] = _camera->get_position_vector().z;
     return stats;
 }
 

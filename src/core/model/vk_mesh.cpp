@@ -84,12 +84,11 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
 
         for (Primitive& primitive : node->mesh.primitives) {
             if (primitive.indexCount > 0) {
-                if (!_textures.empty() && primitive.materialIndex != -1) { // handle non-gltf meshes
+                if (!_materials.empty() && primitive.materialIndex != -1) { // handle non-gltf meshes // !_textures.empty()
                     Materials material = _materials[primitive.materialIndex];
                     // Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];  // Get the texture index for this primitive
-
+                    // vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, &_images[material.baseColorTextureIndex]);
                     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[material.baseColorTextureIndex]._descriptorSet, 0, nullptr);
-                    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[texture.imageIndex]._descriptorSet, 0, nullptr);
                 }
                 vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance);
             }

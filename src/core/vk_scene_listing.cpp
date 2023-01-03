@@ -27,6 +27,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     camera.inverse(true);
     camera.set_position({ 1.f, 1.f, 1.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+    camera.type = Camera::Type::pov;
 
     ModelOBJ* triangleModel= new ModelOBJ(engine->_device.get());
     triangleModel->_verticesBuffer.resize(3);
@@ -142,8 +143,9 @@ Renderables SceneListing::karibu(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
     camera.inverse(true);
-    camera.set_position({ 1.f, 1.f, 1.f });
+    camera.set_position({ 0.0f, 10.0f, 0.0f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+    camera.type = Camera::Type::axis;
 
     ModelGLB* karibuModel = new ModelGLB(engine->_device.get());
     karibuModel->load_model(*engine, "../assets/karibu_hippo_zanzibar/karibu_hippo_zanzibar.glb");
@@ -163,8 +165,9 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
     camera.inverse(true);
-    camera.set_position({ 1.f, 1.f, 1.f });
+    camera.set_position({ 0.0f, 0.0f, -3.0f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+    camera.type = Camera::Type::axis;
 
     ModelGLB* helmetModel = new ModelGLB(engine->_device.get());
     helmetModel->load_model(*engine, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");

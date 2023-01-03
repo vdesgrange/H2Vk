@@ -204,8 +204,10 @@ void UInterface::stats_viewer(const Statistics& statistics) {
         ImGui::Text("Statistics (%.0f x %.0f):", io.DisplayFramebufferScale.x * io.DisplaySize.x,  io.DisplayFramebufferScale.y * io.DisplaySize.y);
         ImGui::Separator();
         ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-        ImGui::Text("%d vertices, %d indices ", io.MetricsRenderVertices, io.MetricsRenderIndices);
-        ImGui::Text("%d triangles", io.MetricsRenderIndices / 3);
+//        ImGui::Text("%d vertices, %d indices ", io.MetricsRenderVertices, io.MetricsRenderIndices);
+//        ImGui::Text("%d triangles", io.MetricsRenderIndices / 3);
+        ImGui::Text("Coordinates (%.0f, %.0f, %.0f)", statistics.coordinates[0], statistics.coordinates[1], statistics.coordinates[2]);
+        ImGui::Text("Rotation (%.0f, %.0f, %.0f)", statistics.rotation[0], statistics.rotation[1], statistics.rotation[2]);
     }
     ImGui::End();
 }

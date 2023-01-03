@@ -13,7 +13,7 @@ struct GPUCameraData{
 class Camera final {
 public:
     enum Type { pov, axis, look_at };
-    Type type = Type::axis;
+    Type type = Type::pov;
 
     const glm::mat4 get_projection_matrix();
     const glm::mat4 get_view_matrix();

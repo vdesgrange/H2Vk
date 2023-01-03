@@ -10,6 +10,8 @@ struct Statistics final
 {
     VkExtent2D FramebufferSize;
     float FrameRate;
+    float coordinates[3] {0.0f, 0.0f, 0.0f};
+    float rotation[3] {0.0f, 0.0f, 0.0f};
 };
 
 struct Settings final {

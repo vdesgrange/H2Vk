@@ -264,11 +264,6 @@ void PipelineBuilder::scene_old_bridge(std::vector<VkDescriptorSetLayout> setLay
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene_tex.frag.spv"},
     };
 
-//    VkPushConstantRange push_constant;
-//    push_constant.offset = 0;
-//    push_constant.size = static_cast<uint32_t>(sizeof(MeshPushConstants));
-//    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
     ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
     ShaderPass pass = this->build_pass(&effect_mesh);
     this->_shaderPasses.push_back(pass);
