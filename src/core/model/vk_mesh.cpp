@@ -182,7 +182,7 @@ VertexInputDescription Vertex::get_vertex_description()
     VkVertexInputAttributeDescription  uvAttribute = {};
     uvAttribute.binding = 0;
     uvAttribute.location = 2;
-    uvAttribute.format = VK_FORMAT_R32G32_SFLOAT;
+    uvAttribute.format = VK_FORMAT_R32G32B32_SFLOAT; // VK_FORMAT_R32G32_SFLOAT
     uvAttribute.offset = offsetof(Vertex, uv);
 
     //Color will be stored at Location 3
@@ -192,9 +192,18 @@ VertexInputDescription Vertex::get_vertex_description()
     colorAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
     colorAttribute.offset = offsetof(Vertex, color);
 
+    // Tangent will be stored at Location 4
+    VkVertexInputAttributeDescription tangentAttribute = {};
+    tangentAttribute.binding = 0;
+    tangentAttribute.location = 4;
+    tangentAttribute.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    tangentAttribute.offset = offsetof(Vertex, tangent);
+
     description.attributes.push_back(positionAttribute);
     description.attributes.push_back(normalAttribute);
     description.attributes.push_back(uvAttribute);
     description.attributes.push_back(colorAttribute);
+    description.attributes.push_back(tangentAttribute);
+
     return description;
 }

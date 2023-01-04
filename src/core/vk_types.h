@@ -9,11 +9,6 @@ struct AllocatedBuffer {
     VmaAllocation _allocation;
 };
 
-//struct AllocatedImage {
-//    VkImage _image;
-//    VmaAllocation _allocation;
-//};
-
 struct DeletionQueue
 {
     std::deque<std::function<void()>> deletors;

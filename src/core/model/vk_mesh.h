@@ -32,9 +32,10 @@ struct Vertex {
     glm::vec3 normal;
     glm::vec2 uv;
     glm::vec3 color;
+    glm::vec4 tangent;
 
     bool operator==(const Vertex& other) const {
-        return position == other.position && color == other.color && uv == other.uv; // && normal == other.normal;
+        return position == other.position && color == other.color && uv == other.uv; // && normal == other.normal && tangent == other.tangent;
     }
     static VertexInputDescription get_vertex_description();
 };
@@ -70,36 +71,6 @@ struct Node {
             delete child;
         }
     }
-
-//    Node(const Node& rhs) {
-//        if (rhs.parent != nullptr) {
-//            this->parent = new Node(rhs);
-//        }
-//        for (auto& child : rhs.children) {
-//            if (child != nullptr) {
-//                this->children.push_back(new Node(*child));
-//            }
-//        }
-//    }
-
-//    Node& operator=(const Node& rhs) {
-//        delete this->parent;
-//        for (auto& child : this->children) {
-//            delete child;
-//        }
-//
-//        if (rhs.parent != nullptr) {
-//            this->parent = new Node(rhs);
-//        }
-//
-//        for (auto& child : rhs.children) {
-//            if (child != nullptr) {
-//                this->children.push_back(new Node(*child));
-//            }
-//        }
-//
-//        return *this;
-//    }
 
 };
 

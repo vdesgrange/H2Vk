@@ -9,10 +9,6 @@ class Device;
 class VulkanEngine;
 
 struct Texture {
-//    int32_t index;
-//    AllocatedImage image;
-//    VkImageView imageView;
-
     VkImage _image;
     VkImageLayout _imageLayout; // duplicate with _descriptor
     VmaAllocation _allocation;

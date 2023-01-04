@@ -16,6 +16,7 @@ layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec3 inFragPos; // fragment position
 layout (location = 4) in vec3 inCameraPos; // camera/view position
+layout (location = 5) in vec4 inTangent; // camera/view position
 
 layout (location = 0) out vec4 outFragColor;
 
@@ -28,6 +29,10 @@ void main()
     vec3 lightColor = sceneData.sunlightColor.xyz;
 
     vec3 N = normalize(inNormal);
+//    vec3 T = normalize(inTangent.xyz);
+//    vec3 B = cross(inNormal, inTangent.xyz) * inTangent.w;
+//    mat3 TBN = mat3(T, B, N);
+//    N = TBN * normalize(texture(samplerNormalMap, inUV).xyz * 2.0 - vec3(1.0));
     vec3 L = normalize(lightPos - inFragPos);
     vec3 V = normalize(inCameraPos - inFragPos);
     vec3 R = reflect(-L, N);  // Phong
