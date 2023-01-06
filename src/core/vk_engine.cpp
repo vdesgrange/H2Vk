@@ -215,31 +215,6 @@ void VulkanEngine::setup_descriptors(){
 void VulkanEngine::init_pipelines() {
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
     _pipelineBuilder = std::make_unique<PipelineBuilder>(*_window, *_device, *_renderPass, setLayouts);
-
-//  === To uncomment if old empire is loaded ===
-//    std::vector<VkDescriptorPoolSize> poolSizes = {
-//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-//            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-//            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
-//    };
-//
-//    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
-//    VkSampler blockySampler; // add cache for sampler
-//    vkCreateSampler(_device->_logicalDevice, &samplerInfo, nullptr, &blockySampler);
-//    _samplerManager->_loadedSampler["blocky_sampler"] = blockySampler;
-//
-//    Material* texturedMat =	_pipelineBuilder->get_material("texturedMesh");
-//
-//    VkDescriptorImageInfo imageBufferInfo;
-//    imageBufferInfo.sampler = _samplerManager->_loadedSampler["blocky_sampler"];
-//    imageBufferInfo.imageView = _textureManager->_loadedTextures["empire_diffuse"].imageView;
-//    imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-//
-//    DescriptorBuilder::begin(*_layoutCache, *_allocator)
-//            .bind_image(imageBufferInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-//            //.layout(_descriptorSetLayouts.textures)
-//            .build(texturedMat->textureSet, _descriptorSetLayouts.textures, poolSizes);
 }
 
 FrameData& VulkanEngine::get_current_frame()
@@ -259,9 +234,6 @@ void VulkanEngine::load_images() {
 void VulkanEngine::init_scene() {
     _sceneListing = std::make_unique<SceneListing>();
     _scene = std::make_unique<Scene>(*this);
-
-    // If texture not loaded here, it creates issues -> Must be loaded before binding (previously in load_images)
-    // _textureManager->load_texture("../assets/lost_empire/lost_empire-RGBA.png", "empire_diffuse");
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -331,15 +303,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
             uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
-
-//            for (auto &material: object.model->_materials) { // use with object.model->draw_obj
-//                VkDescriptorSet imgDescriptorSet = object.model->_images[material.baseColorTextureIndex]._descriptorSet;
-//                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &imgDescriptorSet, 0, nullptr); // &image._descriptorSet
-//            }
-
-//                if (object.material->textureSet != VK_NULL_HANDLE) {
-//                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &object.material->textureSet, 0, nullptr);
-//                }
         }
 
         if (object.model) {
@@ -389,7 +352,6 @@ void VulkanEngine::draw() {
 }
 
 Statistics VulkanEngine::monitoring() {
-
     // Record delta time between calls to Render.
     const auto prevTime = _time;
     _time = _window->get_time();
