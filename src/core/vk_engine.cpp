@@ -275,6 +275,14 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     memcpy(data, &camData, sizeof(GPUCameraData));
     vmaUnmapMemory(_device->_allocator, get_current_frame().cameraBuffer._allocation);
 
+    // Environment : write scene data into environment buffer
+    char* sceneData;
+    vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
+    int frameIndex = _frameNumber % FRAME_OVERLAP;
+    sceneData += Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
+    memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
+    vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
+
     // Objects : write into the buffer by copying the render matrices from our render objects into it
     void* objectData;
     vmaMapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation, &objectData);
@@ -284,14 +292,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
         objectSSBO[i].model = object.transformMatrix;
     }
     vmaUnmapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation);
-
-    // Environment : write scene data into environment buffer
-    char* sceneData;
-    vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
-    int frameIndex = _frameNumber % FRAME_OVERLAP;
-    sceneData += Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
-    memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
-    vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
 
     // === Drawing ===
     for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
@@ -379,7 +379,6 @@ void VulkanEngine::render(int imageIndex) {
     cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     VK_CHECK(vkBeginCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, &cmdBeginInfo));
-
     {
         // -- Clear value
         VkClearValue clearValue;

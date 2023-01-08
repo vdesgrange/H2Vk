@@ -55,13 +55,8 @@ private:
 
     void set_shaders(ShaderEffect& effect);
 
+    void scene_light(std::vector<VkDescriptorSetLayout> setLayouts);
     void scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts);
-
-    void scene_lost_empire(std::vector<VkDescriptorSetLayout> setLayouts);
-
-    void scene_old_bridge(std::vector<VkDescriptorSetLayout> setLayouts);
-
     void scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setLayouts);
-
     void scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts);
 };

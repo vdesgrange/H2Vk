@@ -26,9 +26,11 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
     camera.type = Camera::Type::pov;
 
-    std::shared_ptr<Model> triangleModel = ModelPOLY::create_plane(engine->_device.get(), {-10.f, -5.f, -10.f}, {10.f, -5.f, 10.f});
-    // std::shared_ptr<Model> triangleModel = ModelPOLY::create_sphere(engine->_device.get(), {0.f, 0.f, 0.0f}, 1000.0f);
-    // std::shared_ptr<Model> triangleModel = ModelPOLY::create_triangle(engine->_device.get(), {0.f, 1.f, 0.0f});
+    std::shared_ptr<Model> lightModel = ModelPOLY::create_sphere(engine->_device.get(), {0.f, 0.f, 0.0f}, 0.1f);
+    engine->_meshManager->upload_mesh(*lightModel);
+    engine->_meshManager->_models.emplace("light", lightModel);
+
+    std::shared_ptr<Model> triangleModel = ModelPOLY::create_triangle(engine->_device.get(), {0.f, 1.f, 0.0f});
     engine->_meshManager->upload_mesh(*triangleModel);
     engine->_meshManager->_models.emplace("triangle", triangleModel);
 
@@ -40,14 +42,20 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     engine->_meshManager->upload_mesh(*monkeyModel);
     engine->_meshManager->_models.emplace("monkey", std::shared_ptr<Model>(monkeyModel));
 
+    RenderObject light;
+    light.model = engine->_meshManager->get_model("light");
+    light.material = engine->_pipelineBuilder->get_material("light");
+    light.transformMatrix = glm::mat4{ 1.0f };
+    renderables.push_back(light);
+
     RenderObject monkey;
     monkey.model = engine->_meshManager->get_model("monkey");
     monkey.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
     monkey.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(monkey);
 
-//    for (int x = -1; x <= 1; x++) {
-//        for (int y = -1; y <= 1; y++) {
+    for (int x = -10; x <= 10; x++) {
+        for (int y = -10; y <= 10; y++) {
             RenderObject tri;
             tri.model = engine->_meshManager->get_model("triangle");
             tri.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
@@ -55,8 +63,8 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
             glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
             tri.transformMatrix = translation * scale;
             renderables.push_back(tri);
-//        }
-//    }
+        }
+    }
 
     return renderables;
 }

@@ -54,6 +54,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     this->_vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
     this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
+    this->scene_light(setLayouts);
     this->scene_monkey_triangle(setLayouts);
     this->scene_karibu_hippo(setLayouts);
     this->scene_damaged_helmet(setLayouts);
@@ -206,6 +207,22 @@ std::shared_ptr<Material> PipelineBuilder::get_material(const std::string &name)
         return nullptr;
     } else {
         return it->second;  // return &(*it).second;
+    }
+}
+
+void PipelineBuilder::scene_light(std::vector<VkDescriptorSetLayout> setLayouts) {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/light.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/light.frag.spv"},
+    };
+
+    ShaderEffect effect = this->build_effect(setLayouts, {}, modules);
+    ShaderPass pass = this->build_pass(&effect);
+    this->_shaderPasses.push_back(pass);
+    create_material(pass.pipeline, pass.pipelineLayout, "light");
+
+    for (auto& shader : effect.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }
 
