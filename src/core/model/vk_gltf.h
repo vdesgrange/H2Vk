@@ -10,7 +10,6 @@ public:
     using Model::Model;
 
     bool load_model(VulkanEngine& engine, const char *filename) override;
-    void print_type() override;
 
 protected:
     void load_images(VulkanEngine& _engine, tinygltf::Model& input);

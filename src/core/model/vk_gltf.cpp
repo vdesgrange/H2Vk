@@ -4,10 +4,6 @@
 
 #include "vk_gltf.h"
 
-void ModelGLTF::print_type() {
-    std::cout << "je suis gltf" << std::endl;
-}
-
 bool ModelGLTF::load_model(VulkanEngine& engine, const char *filename) {
     tinygltf::Model input;
     tinygltf::TinyGLTF loader;

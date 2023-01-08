@@ -3,10 +3,6 @@
 #include <unordered_map>
 #include "vk_obj.h"
 
-void ModelOBJ::print_type() {
-    std::cout << "je suis obj" << std::endl;
-}
-
 bool ModelOBJ::load_model(VulkanEngine& engine, const char *filename) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;

@@ -72,7 +72,6 @@ VkDescriptorImageInfo Model::get_texture_descriptor(const size_t index)
     return _images[index]._texture._descriptor;
 }
 
-
 void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance) {
     if (!node->mesh.primitives.empty()) {
         glm::mat4 nodeMatrix = node->matrix;
@@ -121,36 +120,6 @@ void Model::draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineL
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(this->_indexesBuffer.size()), 1, 0, 0, instance);
 }
-
-//Mesh Mesh::cube() {
-//    Mesh mesh{};
-//
-//    const std::array<std::array<int, 7>, 6> cube_faces = {{
-//    {0, 4, 2, 6, -1, 0, 0}, // -x
-//    {1, 3, 5, 7, +1, 0, 0}, // +x
-//    {0, 1, 4, 5, 0, -1, 0}, // -y
-//    {2, 6, 3, 7, 0, +1, 0}, // +y
-//    {0, 2, 1, 3, 0, 0, -1}, // -z
-//    {4, 5, 6, 7, 0, 0, +1} // +z
-//    }};
-//
-//    for (int i = 0; i < cube_faces.size(); i++) {
-//        std::array<int, 7> face = cube_faces[i];
-//        for (int j = 0; j < 4; j++) {
-//            int d = face[j];
-//
-//            Vertex vertex{};
-//            vertex.position = {(d & 1) * 2 - 1, (d & 2) - 1, (d & 4) / 2 - 1};
-//            vertex.normal = {face[4], face[5], face[6]};
-//            vertex.uv = {j & 1, (j & 2) / 2};
-//            vertex.color = {0, 255, 0};
-//
-//            mesh._vertices.push_back(vertex);
-//        }
-//    }
-//
-//    return mesh;
-//}
 
 VertexInputDescription Vertex::get_vertex_description()
 {

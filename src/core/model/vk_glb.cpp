@@ -1,9 +1,5 @@
 #include "vk_glb.h"
 
-void ModelGLB::print_type() {
-    std::cout << "je suis glb" << std::endl;
-}
-
 bool ModelGLB::load_model(VulkanEngine& engine, const char *filename) {
     tinygltf::Model input;
     tinygltf::TinyGLTF loader;

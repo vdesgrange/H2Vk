@@ -112,7 +112,6 @@ public:
     Model& operator=(const Model& rhs);
 
     virtual bool load_model(VulkanEngine& engine, const char *filename) { return false; };
-    virtual void print_type() {};
 
     void destroy();
     void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);

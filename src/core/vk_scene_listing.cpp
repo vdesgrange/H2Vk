@@ -1,18 +1,15 @@
 #include "vk_scene_listing.h"
-#include "vk_pipeline.h"
 #include "vk_camera.h"
 #include "vk_engine.h"
-#include "vk_device.h"
 #include "core/model/vk_mesh.h"
 #include "core/model/vk_obj.h"
+#include "core/model/vk_poly.h"
 #include "core/model/vk_glb.h"
 #include "vk_descriptor_builder.h"
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
         {"None", SceneListing::empty},
         {"Monkey and triangles", SceneListing::monkeyAndTriangles},
-//        {"Lost empire", SceneListing::lostEmpire},
-//        {"Old bridge", SceneListing::oldBridge},
         {"Karibu", SceneListing::karibu},
         {"DamagedHelmet", SceneListing::damagedHelmet},
 };
@@ -29,31 +26,11 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
     camera.type = Camera::Type::pov;
 
-    ModelOBJ* triangleModel= new ModelOBJ(engine->_device.get());
-    triangleModel->_verticesBuffer.resize(3);
-    triangleModel->_verticesBuffer[0].position = { 1.f, 1.f, 0.0f };
-    triangleModel->_verticesBuffer[1].position = {-1.f, 1.f, 0.0f };
-    triangleModel->_verticesBuffer[2].position = { 0.f,-1.f, 0.0f };
-
-    triangleModel->_verticesBuffer[0].color = { 0.f, 1.f, 0.0f }; //pure green
-    triangleModel->_verticesBuffer[1].color = { 0.f, 1.f, 0.0f }; //pure green
-    triangleModel->_verticesBuffer[2].color = { 0.f, 1.f, 0.0f }; //pure green
-
-    triangleModel->_indexesBuffer = {0, 1, 2};
-
-    Primitive primitive{};
-    primitive.firstIndex = 0;
-    primitive.indexCount = triangleModel->_indexesBuffer.size();
-    primitive.materialIndex = -1;
-
-    Node* node = new Node{};
-    node->matrix = glm::mat4(1.f);
-    node->parent = nullptr;
-    node->mesh.primitives.push_back(primitive);
-    triangleModel->_nodes.push_back(node);
-
+    std::shared_ptr<Model> triangleModel = ModelPOLY::create_plane(engine->_device.get(), {-10.f, -5.f, -10.f}, {10.f, -5.f, 10.f});
+    // std::shared_ptr<Model> triangleModel = ModelPOLY::create_sphere(engine->_device.get(), {0.f, 0.f, 0.0f}, 1000.0f);
+    // std::shared_ptr<Model> triangleModel = ModelPOLY::create_triangle(engine->_device.get(), {0.f, 1.f, 0.0f});
     engine->_meshManager->upload_mesh(*triangleModel);
-    engine->_meshManager->_models.emplace("triangle", std::shared_ptr<Model>(triangleModel));
+    engine->_meshManager->_models.emplace("triangle", triangleModel);
 
     ModelOBJ* monkeyModel = new ModelOBJ(engine->_device.get());
     monkeyModel->load_model(*engine, "../assets/monkey/monkey_smooth.obj");
@@ -68,73 +45,18 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     monkey.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
     monkey.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(monkey);
-//
-//    Model* lightModel = new Model(engine->_device.get());
-//    // engine->_meshManager->upload_mesh(*lightModel);
-//    engine->_meshManager->_models.emplace("light", std::shared_ptr<Model>(lightModel));
-//
-//
-//    RenderObject light;
-//    monkey.model = engine->_meshManager->get_model("light");
-//    monkey.material = engine->_pipelineBuilder->get_material("light");
-//    monkey.transformMatrix = glm::mat4{ 1.0f };
-//    renderables.push_back(light);
 
-    for (int x = -20; x <= 20; x++) {
-        for (int y = -20; y <= 20; y++) {
+//    for (int x = -1; x <= 1; x++) {
+//        for (int y = -1; y <= 1; y++) {
             RenderObject tri;
             tri.model = engine->_meshManager->get_model("triangle");
             tri.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
-            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
+            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(0, 0, 0)); // vec3(x, 0, y)
             glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
             tri.transformMatrix = translation * scale;
             renderables.push_back(tri);
-        }
-    }
-
-    return renderables;
-}
-
-Renderables SceneListing::lostEmpire(Camera& camera, VulkanEngine* engine) {
-    Renderables renderables{};
-
-    camera.inverse(true);
-    camera.set_position({ 0.f, -6.f, -10.f });
-    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
-
-    // Upload mesh
-    ModelOBJ* lostEmpire = new ModelOBJ(engine->_device.get());
-    lostEmpire->load_model(*engine, "../assets/lost_empire/lost_empire.obj");
-    engine->_meshManager->upload_mesh(*lostEmpire);
-    engine->_meshManager->_models.emplace("empire", std::shared_ptr<Model>(lostEmpire));
-
-    // From init_scene
-    RenderObject map;
-    map.model = engine->_meshManager->get_model("empire");
-    map.material = engine->_pipelineBuilder->get_material("texturedMesh");
-    map.transformMatrix = glm::translate(glm::mat4(1.f), glm::vec3{ 5,-10,0 });
-    renderables.push_back(map);
-
-    return renderables;
-}
-
-Renderables SceneListing::oldBridge(Camera& camera, VulkanEngine* engine) {
-    Renderables renderables{};
-
-    camera.inverse(true);
-    camera.set_position({ 0.f, -6.f, -10.f });
-    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
-
-    ModelGLB* oldBridgeModel = new ModelGLB(engine->_device.get());
-    oldBridgeModel->load_model(*engine, "../assets/old_brick_bridge/old_brick_bridge.glb");
-    engine->_meshManager->upload_mesh(*oldBridgeModel);
-    engine->_meshManager->_models.emplace("oldBridge", std::shared_ptr<Model>(oldBridgeModel));
-
-    RenderObject oldBridge;
-    oldBridge.model = engine->_meshManager->get_model("oldBridge");
-    oldBridge.material = engine->_pipelineBuilder->get_material("defaultMesh");
-    oldBridge.transformMatrix = glm::mat4{ 1.0f };
-    renderables.push_back(oldBridge);
+//        }
+//    }
 
     return renderables;
 }

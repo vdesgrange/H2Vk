@@ -82,13 +82,27 @@ bool Camera::update_camera(float delta) {
     front.z = radius * cos(glm::radians(rotation.x)) * cos(glm::radians(rotation.y));
     front = glm::normalize(front);
 
+
     if (this->type == Type::pov) {
-        if (forwardAction) position -= d * front;
-        if (backwardAction) position += d * front;
-        if (rightAction) position -= d * glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
-        if (leftAction) position += d * glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
-        if (upAction) position += d * glm::normalize(glm::cross(front, glm::vec3(1.0f, 0.0f, 0.0f)));
-        if (downAction) position -= d * glm::normalize(glm::cross(front, glm::vec3(1.0f, 0.0f, 0.0f)));
+        const auto inverse = this->get_rotation_matrix();
+        glm::vec3 right = glm::vec3(inverse * glm::vec4(1, 0, 0, 0));
+        glm::vec3 up = glm::vec3(inverse * glm::vec4(0, 1, 0, 0));
+        glm::vec3 forward = glm::vec3(inverse * glm::vec4(0, 0, -1, 0));
+
+        if (forwardAction) position +=  d * forward;
+        if (backwardAction) position -=  d * forward;
+        if (rightAction) position +=  d * right;
+        if (leftAction) position -=  d * right;
+        if (upAction) position +=  d * up;
+        if (downAction) position -=  d * up;
+
+
+//        if (forwardAction) position -=  d * front;
+//        if (backwardAction) position +=  d * front;
+//        if (rightAction) position -=  d * glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
+//        if (leftAction) position +=  d * glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
+//        if (upAction) position +=  d * glm::normalize(glm::cross(front, glm::vec3(1.0f, 0.0f, 0.0f)));
+//        if (downAction) position -=  d * glm::normalize(glm::cross(front, glm::vec3(1.0f, 0.0f, 0.0f)));
 
     } else if (this->type == Type::axis) {
         if (forwardAction) position -= d * front;  // to fix

@@ -46,8 +46,6 @@ public:
 
     static Renderables empty(Camera& camera, VulkanEngine* engine);
     static Renderables monkeyAndTriangles(Camera& camera, VulkanEngine* engine);
-    static Renderables lostEmpire(Camera &camera, VulkanEngine* engine);
-    static Renderables oldBridge(Camera& camera, VulkanEngine* engine);
     static Renderables karibu(Camera& camera, VulkanEngine* engine);
     static Renderables damagedHelmet(Camera& camera, VulkanEngine* engine);
 
