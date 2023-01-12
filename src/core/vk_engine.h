@@ -10,6 +10,7 @@
 
 #include "glm/gtc/matrix_transform.hpp"
 #include "core/model/vk_mesh.h"
+#include "core/skybox/vk_skybox.h"
 #include "imgui.h"
 
 #include "VkBootstrap.h"
@@ -64,6 +65,7 @@ class Scene;
 class SceneListing;
 class TextureManager;
 class SamplerManager;
+class Skybox;
 
 struct Texture;
 
@@ -78,6 +80,9 @@ struct FrameData {
     CommandPool* _commandPool;
     CommandBuffer* _commandBuffer;
 
+    AllocatedBuffer skyboxBuffer;
+    VkDescriptorSet skyboxDescriptor;
+
     AllocatedBuffer cameraBuffer;
     VkDescriptorSet environmentDescriptor;
 
@@ -87,10 +92,11 @@ struct FrameData {
 
 class VulkanEngine {
 public:
-	bool _isInitialized{ false };
-	uint32_t _frameNumber {0};
-    double _time = 0;
+	bool _isInitialized = false;
     bool framebufferResized = false;
+    bool _skyboxDisplay = false;
+    uint32_t _frameNumber = 0;
+    double _time = 0;
 
     std::unique_ptr<class Window> _window;
     std::unique_ptr<class Device> _device;
@@ -104,6 +110,7 @@ public:
     std::unique_ptr<class SceneListing> _sceneListing;
     std::unique_ptr<class Scene> _scene;
     std::unique_ptr<class UInterface> _ui;
+    std::unique_ptr<class Skybox> _skybox;
 
     FrameData _frames[FRAME_OVERLAP];
     std::vector<RenderObject> _renderables;
@@ -112,6 +119,7 @@ public:
     DescriptorAllocator* _allocator;
 
     struct {
+        VkDescriptorSetLayout skybox;
         VkDescriptorSetLayout environment;
         VkDescriptorSetLayout matrices;
         VkDescriptorSetLayout textures;
@@ -119,10 +127,14 @@ public:
 
     DeletionQueue _mainDeletionQueue;
 
+    UploadContext _uploadContext;
     std::unique_ptr<Camera> _camera;
+
     GPUSceneData _sceneParameters;
     AllocatedBuffer _sceneParameterBuffer;
-    UploadContext _uploadContext;
+
+    GPUSkyboxData _skyboxParameters;
+    AllocatedBuffer _skyboxParameterBuffer;
 
 	void init();
 	void cleanup();
@@ -148,7 +160,9 @@ private:
     void load_meshes();
     void load_images();
     void recreate_swap_chain();
+    void skybox(VkCommandBuffer commandBuffer);
     void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
+    void ui_overlay(Statistics stats);
     void render(int imageIndex); // ImDrawData* draw_data,
     Statistics monitoring();
     FrameData& get_current_frame();

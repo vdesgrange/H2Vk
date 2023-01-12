@@ -5,8 +5,6 @@
 #include "vk_types.h"
 #include "vk_scene_listing.h"
 #include "vk_command_buffer.h"
-
-// #include "imgui.h"
 #include "imgui_internal.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
@@ -15,6 +13,7 @@ UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine
     this->p_open.emplace("scene_editor", false);
     this->p_open.emplace("texture_viewer", false);
     this->p_open.emplace("stats_viewer", false);
+    this->p_open.emplace("skybox_editor", false);
 };
 
 UInterface::~UInterface() {
@@ -70,15 +69,6 @@ void UInterface::init_imgui() {
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
-void UInterface::new_frame() {
-    auto& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-}
-
 void UInterface::render(VkCommandBuffer cmd, Statistics statistics) {
     this->new_frame();
     this->interface(statistics);
@@ -88,11 +78,25 @@ void UInterface::render(VkCommandBuffer cmd, Statistics statistics) {
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 }
 
+bool UInterface::want_capture_mouse()
+{
+    return ImGui::GetIO().WantCaptureMouse;
+}
+
 void UInterface::clean_up() {
     vkDestroyDescriptorPool(_engine._device->_logicalDevice, _imguiPool, nullptr);
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+}
+
+void UInterface::new_frame() {
+    auto& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 }
 
 void UInterface::interface(Statistics statistics) {
@@ -104,6 +108,7 @@ void UInterface::interface(Statistics statistics) {
             ImGui::MenuItem("Scene editor", nullptr, &this->p_open["scene_editor"]);
             ImGui::MenuItem("Texture viewer", nullptr, &this->p_open["texture_viewer"]);
             ImGui::MenuItem("Statistics viewer", nullptr, &this->p_open["stats_viewer"]);
+            ImGui::MenuItem("Enable skybox", nullptr, &this->p_open["skybox"]);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -124,6 +129,8 @@ void UInterface::interface(Statistics statistics) {
         this->texture_viewer();
 
         this->stats_viewer(statistics);
+
+        this->skybox_editor();
     }
 }
 
@@ -212,7 +219,10 @@ void UInterface::stats_viewer(const Statistics& statistics) {
     ImGui::End();
 }
 
-bool UInterface::want_capture_mouse() const
-{
-    return ImGui::GetIO().WantCaptureMouse;
+void UInterface::skybox_editor() {
+
+    if (!this->p_open["skybox_editor"]) {
+        return;
+    }
 }
+

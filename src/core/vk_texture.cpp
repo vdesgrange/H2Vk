@@ -20,6 +20,7 @@ void TextureManager::load_texture(const char* file, std::string name) {
 
     texture.load_image_from_file(_engine, file);
 
+    // duplicate ?
     VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
     vkCreateImageView(_engine._device->_logicalDevice, &imageinfo, nullptr, &texture._imageView);
 
@@ -39,6 +40,7 @@ void Texture::destroy(const Device& device) {
         vkDestroySampler(device._logicalDevice, this->_sampler, nullptr);
     }
 }
+
 
 bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
     int texWidth, texHeight, texChannels;
@@ -116,6 +118,7 @@ bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
 
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
 
+        // unrelated to command buffer: can be move outside?
         VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
         vkCreateSampler(engine._device->_logicalDevice, &samplerInfo, nullptr, &this->_sampler);
 

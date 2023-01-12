@@ -26,6 +26,10 @@ struct RenderObject {
     glm::mat4 transformMatrix;
 };
 
+struct GPUSkyboxData {
+
+};
+
 struct GPUSceneData {
     glm::vec4 fogColor;
     glm::vec4 fogDistance;

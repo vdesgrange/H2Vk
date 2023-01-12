@@ -30,6 +30,8 @@ struct Settings final {
     float ambient {0.0005};
     float specular {0.75};
 
+    // Skybox
+    bool display = false;
 };
 
 class UInterface final {
@@ -41,18 +43,21 @@ public:
     ~UInterface();
 
     void init_imgui();
-    void new_frame();
     void render(VkCommandBuffer cmd, Statistics stats);
-    void interface(Statistics statistics);
-    void scene_editor();
-    void texture_viewer();
-    void stats_viewer(const Statistics& statistics);
-    void clean_up();
-    bool want_capture_mouse() const;
+    static bool want_capture_mouse();
 
     Settings& get_settings() { return _settings; };
 
 private:
     class VulkanEngine& _engine;
     Settings _settings;
+
+    void clean_up();
+    void new_frame();
+
+    void interface(Statistics statistics);
+    void scene_editor();
+    void texture_viewer();
+    void stats_viewer(const Statistics& statistics);
+    void skybox_editor();
 };

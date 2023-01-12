@@ -75,7 +75,7 @@ void VulkanEngine::init_camera() {
 }
 
 void VulkanEngine::init_swapchain() {
-    _swapchain = std::unique_ptr<SwapChain>(new SwapChain(*_window, *_device));
+    _swapchain = std::make_unique<SwapChain>(*_window, *_device);
 }
 
 void VulkanEngine::init_commands() {
@@ -120,6 +120,11 @@ void VulkanEngine::init_sync_structures() {
 }
 
 void VulkanEngine::init_descriptors() {
+    std::vector<VkDescriptorPoolSize> skyboxPoolSizes = {
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2}
+    };
+
     std::vector<VkDescriptorPoolSize> poolSizes = {
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
@@ -130,9 +135,19 @@ void VulkanEngine::init_descriptors() {
     _layoutCache = new DescriptorLayoutCache(*_device);  // ok
     _allocator = new DescriptorAllocator(*_device);  // ok
 
+    // === Skybox === todo
+    VkDescriptorBufferInfo skyboxBInfo{};
+    if (_skyboxDisplay) {
+        const size_t skyboxParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSkyboxData));
+        _skyboxParameterBuffer = Buffer::create_buffer(*_device, skyboxParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        skyboxBInfo.buffer = _skyboxParameterBuffer._buffer;
+        skyboxBInfo.offset = 0;
+        skyboxBInfo.range = sizeof(GPUSkyboxData);
+    }
+
     // === Environment 1 ===
     const size_t sceneParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData));
-    _sceneParameterBuffer = Buffer::create_buffer(*_device, sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU); // ok
+    _sceneParameterBuffer = Buffer::create_buffer(*_device, sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     VkDescriptorBufferInfo sceneBInfo{};
     sceneBInfo.buffer = _sceneParameterBuffer._buffer;
     sceneBInfo.range = sizeof(GPUSceneData);
@@ -140,8 +155,8 @@ void VulkanEngine::init_descriptors() {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
 
         // === Environment 2 ===
-        _frames[i].environmentDescriptor = VkDescriptorSet();  // ok
-        _frames[i].cameraBuffer = Buffer::create_buffer(*_device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);  // ok
+        _frames[i].environmentDescriptor = VkDescriptorSet();
+        _frames[i].cameraBuffer = Buffer::create_buffer(*_device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
         VkDescriptorBufferInfo camBInfo{};
         camBInfo.buffer = _frames[i].cameraBuffer._buffer;
@@ -154,10 +169,19 @@ void VulkanEngine::init_descriptors() {
                 .layout(_descriptorSetLayouts.environment) // use reference instead?
                 .build(_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 
+        // === Skybox ===
+        if (_skyboxDisplay) {
+            DescriptorBuilder::begin(*_layoutCache, *_allocator)
+                    .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0) // skyboxBInfo
+                    .bind_image(_skybox->_texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                    .layout(_descriptorSetLayouts.skybox)
+                    .build(_frames[i].skyboxDescriptor, _descriptorSetLayouts.skybox, skyboxPoolSizes);
+        }
+
         // === Object ===
         const uint32_t MAX_OBJECTS = 10000;
-        _frames[i].objectDescriptor = VkDescriptorSet();  // ok
-        _frames[i].objectBuffer = Buffer::create_buffer(*_device, sizeof(GPUCameraData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);  // ok
+        _frames[i].objectDescriptor = VkDescriptorSet();
+        _frames[i].objectBuffer = Buffer::create_buffer(*_device, sizeof(GPUCameraData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
         VkDescriptorBufferInfo objectsBInfo{};
         objectsBInfo.buffer = _frames[i].objectBuffer._buffer;
@@ -213,12 +237,21 @@ void VulkanEngine::setup_descriptors(){
 }
 
 void VulkanEngine::init_pipelines() {
-    std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
+    std::vector<VkDescriptorSetLayout> skyboxSetLayout = {_descriptorSetLayouts.skybox};
+    std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.skybox, _descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
     _pipelineBuilder = std::make_unique<PipelineBuilder>(*_window, *_device, *_renderPass, setLayouts);
+
+//    if (this->_skyboxDisplay) {
+//        _pipelineBuilder->skybox(skyboxSetLayout);
+//    }
+
+//    _pipelineBuilder->scene_light(setLayouts);
+//    _pipelineBuilder->scene_monkey_triangle(setLayouts);
+//    _pipelineBuilder->scene_karibu_hippo(setLayouts);
+//    _pipelineBuilder->scene_damaged_helmet(setLayouts);
 }
 
-FrameData& VulkanEngine::get_current_frame()
-{
+FrameData& VulkanEngine::get_current_frame() {
     return _frames[_frameNumber % FRAME_OVERLAP];
 }
 
@@ -232,6 +265,7 @@ void VulkanEngine::load_images() {
 }
 
 void VulkanEngine::init_scene() {
+    _skybox = std::make_unique<Skybox>(*_device, *_pipelineBuilder, *_textureManager, *_meshManager, _uploadContext);
     _sceneListing = std::make_unique<SceneListing>();
     _scene = std::make_unique<Scene>(*this);
 }
@@ -258,13 +292,24 @@ void VulkanEngine::recreate_swap_chain() {
     init_pipelines();
 }
 
+void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
+    if (_skyboxDisplay) {
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipeline);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 0, 1, &get_current_frame().skyboxDescriptor, 0, NULL);
+        _skybox->_cube->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
+    }
+
+    // vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
+    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
+
+}
+
 void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
     std::shared_ptr<Model> lastModel = nullptr;
     std::shared_ptr<Material> lastMaterial = nullptr;
 
     // === Camera & Objects & Environment ===
-
-    GPUCameraData camData;
+    GPUCameraData camData{};
     camData.proj = _camera->get_projection_matrix();
     camData.view = _camera->get_view_matrix();
     camData.pos = _camera->get_position_vector();
@@ -292,6 +337,10 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
         objectSSBO[i].model = object.transformMatrix;
     }
     vmaUnmapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation);
+
+    // Skybox
+    // cancel out translation
+    skybox(commandBuffer);
 
     // === Drawing ===
     for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
@@ -328,7 +377,7 @@ void VulkanEngine::draw() {
         throw std::runtime_error("failed to acquire swap chain image");
     }
 
-    render(imageIndex); // draw_data,
+    render(imageIndex);
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -366,6 +415,25 @@ Statistics VulkanEngine::monitoring() {
     return stats;
 }
 
+void VulkanEngine::ui_overlay(Statistics stats) {
+    // Camera
+    _camera->set_speed(_ui->get_settings().speed);
+    _reset = _camera->update_camera(1. / stats.FrameRate);
+    _camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near,
+                                 _ui->get_settings().z_far);
+
+    // Scene
+    _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
+    _sceneParameters.sunlightDirection = {_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2], _ui->get_settings().ambient};
+    _sceneParameters.specularFactor = _ui->get_settings().specular;
+
+    // Skybox
+    _skyboxDisplay = _ui->p_open["skybox_editor"];
+
+    // Interface
+    _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
+}
+
 void VulkanEngine::render(int imageIndex) {
     Statistics stats = monitoring();
 
@@ -397,28 +465,17 @@ void VulkanEngine::render(int imageIndex) {
         vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_commandBuffer, &renderPassInfo,
                              VK_SUBPASS_CONTENTS_INLINE);
         {
-            // Camera
-            _camera->set_speed(_ui->get_settings().speed);
-            _reset = _camera->update_camera(1. / stats.FrameRate);
-            _camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near,
-                                     _ui->get_settings().z_far);
-
-            // Scene parameters
-            _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
-            _sceneParameters.sunlightDirection = {_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2], _ui->get_settings().ambient};
-            _sceneParameters.specularFactor = _ui->get_settings().specular;
 
             // Scene
             if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
                 _scene->load_scene(_ui->get_settings().scene_index, *_camera);
                 setup_descriptors();
             }
-
             // Draw
             draw_objects(get_current_frame()._commandBuffer->_commandBuffer, _scene->_renderables.data(),
                          _scene->_renderables.size());
-            // Interface
-            _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
+
+            this->ui_overlay(stats);
         }
         vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);
 

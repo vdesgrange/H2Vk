@@ -54,10 +54,16 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     this->_vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
     this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
-    this->scene_light(setLayouts);
-    this->scene_monkey_triangle(setLayouts);
-    this->scene_karibu_hippo(setLayouts);
-    this->scene_damaged_helmet(setLayouts);
+    bool _skyboxDisplay = false;
+    if (_skyboxDisplay) {
+           this->skybox({setLayouts[0]});
+    }
+
+    std::vector<VkDescriptorSetLayout> setLayouts2 = {setLayouts[1], setLayouts[2], setLayouts[3]};
+    this->scene_light(setLayouts2);
+    this->scene_monkey_triangle(setLayouts2);
+    this->scene_karibu_hippo(setLayouts2);
+    this->scene_damaged_helmet(setLayouts2);
 }
 
 PipelineBuilder::~PipelineBuilder() {
@@ -76,7 +82,7 @@ PipelineBuilder::~PipelineBuilder() {
 
 ShaderEffect PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules) {
     ShaderEffect effect{};
-    effect.pipelineLayout = this->build_layout(setLayouts, pushConstants);
+    effect.pipelineLayout = this->build_layout(setLayouts, pushConstants); // todo useless to move it somewhere else
     effect.setLayouts = setLayouts;
 
     for (auto const& module: modules) {
@@ -206,14 +212,30 @@ std::shared_ptr<Material> PipelineBuilder::get_material(const std::string &name)
     if ( it == _materials.end()) {
         return nullptr;
     } else {
-        return it->second;  // return &(*it).second;
+        return it->second;
+    }
+}
+
+void PipelineBuilder::skybox(std::vector<VkDescriptorSetLayout> setLayouts) {
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/atmosphere/skybox.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/atmosphere/skybox.frag.spv"},
+    };
+
+    ShaderEffect effect = this->build_effect(setLayouts, {}, modules);
+    ShaderPass pass = this->build_pass(&effect);
+    this->_shaderPasses.push_back(pass);
+    create_material(pass.pipeline, pass.pipelineLayout, "skybox_cube");
+
+    for (auto& shader : effect.shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }
 
 void PipelineBuilder::scene_light(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/light.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/light.frag.spv"},
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/light/light.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/light/light.frag.spv"},
     };
 
     ShaderEffect effect = this->build_effect(setLayouts, {}, modules);
