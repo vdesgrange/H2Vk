@@ -6,3 +6,5 @@ glslc mesh_tex.vert -o mesh_tex.vert.spv
 glslc scene_tex.frag -o scene_tex.frag.spv
 glslc light/light.vert -o light/light.vert.spv
 glslc light/light.frag -o light/light.frag.spv
+glslc atmosphere/skybox.vert -o atmosphere/skybox.vert.spv
+glslc atmosphere/skybox.frag -o atmosphere/skybox.frag.spv

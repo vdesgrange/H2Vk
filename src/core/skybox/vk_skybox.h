@@ -15,7 +15,7 @@ struct UploadContext;
 
 class Skybox final {
 public:
-    std::shared_ptr<Model> _cube {nullptr};
+    std::shared_ptr<Model> _cube;
     std::shared_ptr<Material> _material;
     Texture _texture;
 
@@ -24,6 +24,7 @@ public:
 
     void load();
     void load_texture();
+    void destroy();
 
 private:
     class Device& _device;

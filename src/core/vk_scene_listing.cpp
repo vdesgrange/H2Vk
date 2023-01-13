@@ -30,7 +30,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     engine->_meshManager->upload_mesh(*lightModel);
     engine->_meshManager->_models.emplace("light", lightModel);
 
-    std::shared_ptr<Model> triangleModel = ModelPOLY::create_triangle(engine->_device.get(), {0.f, 1.f, 0.0f});
+    std::shared_ptr<Model> triangleModel = ModelPOLY::create_cube(engine->_device.get(), {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
     engine->_meshManager->upload_mesh(*triangleModel);
     engine->_meshManager->_models.emplace("triangle", triangleModel);
 
@@ -54,17 +54,23 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     monkey.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(monkey);
 
-    for (int x = -10; x <= 10; x++) {
-        for (int y = -10; y <= 10; y++) {
-            RenderObject tri;
-            tri.model = engine->_meshManager->get_model("triangle");
-            tri.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
-            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(0, 0, 0)); // vec3(x, 0, y)
-            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
-            tri.transformMatrix = translation * scale;
-            renderables.push_back(tri);
-        }
-    }
+    RenderObject tri;
+    tri.model = engine->_meshManager->get_model("triangle");
+    tri.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
+    tri.transformMatrix = glm::mat4{ 1.0f };
+    renderables.push_back(tri);
+
+//    for (int x = -10; x <= 10; x++) {
+//        for (int y = -10; y <= 10; y++) {
+//            RenderObject tri;
+//            tri.model = engine->_meshManager->get_model("triangle");
+//            tri.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
+//            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(0, 0, 0)); // vec3(x, 0, y)
+//            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
+//            tri.transformMatrix = translation * scale;
+//            renderables.push_back(tri);
+//        }
+//    }
 
     return renderables;
 }

@@ -4,6 +4,7 @@
 
 #include "vk_device.h"
 #include "vk_window.h"
+#include <iostream>
 
 Device::Device(Window& window) {
     vkb::InstanceBuilder builder;
@@ -49,6 +50,8 @@ Device::Device(Window& window) {
     _logicalDevice = vkbDevice.device;
     _physicalDevice = physicalDevice.physical_device;
     _gpuProperties = physicalDevice.properties;
+
+    std::cout << "GPU properties : " << _gpuProperties.deviceType << " : " << _gpuProperties.deviceName << std::endl;
 
     _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
     _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();

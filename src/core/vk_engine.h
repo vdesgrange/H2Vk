@@ -94,7 +94,7 @@ class VulkanEngine {
 public:
 	bool _isInitialized = false;
     bool framebufferResized = false;
-    bool _skyboxDisplay = false;
+    bool _skyboxDisplay = true;
     uint32_t _frameNumber = 0;
     double _time = 0;
 
@@ -133,8 +133,8 @@ public:
     GPUSceneData _sceneParameters;
     AllocatedBuffer _sceneParameterBuffer;
 
-    GPUSkyboxData _skyboxParameters;
-    AllocatedBuffer _skyboxParameterBuffer;
+    // GPUSkyboxData _skyboxParameters;
+    // AllocatedBuffer _skyboxParameterBuffer;
 
 	void init();
 	void cleanup();

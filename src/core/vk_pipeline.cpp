@@ -54,7 +54,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     this->_vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
     this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
-    bool _skyboxDisplay = false;
+    bool _skyboxDisplay = true;
     if (_skyboxDisplay) {
            this->skybox({setLayouts[0]});
     }
@@ -225,7 +225,7 @@ void PipelineBuilder::skybox(std::vector<VkDescriptorSetLayout> setLayouts) {
     ShaderEffect effect = this->build_effect(setLayouts, {}, modules);
     ShaderPass pass = this->build_pass(&effect);
     this->_shaderPasses.push_back(pass);
-    create_material(pass.pipeline, pass.pipelineLayout, "skybox_cube");
+    create_material(pass.pipeline, pass.pipelineLayout, "skyboxMaterial");
 
     for (auto& shader : effect.shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);

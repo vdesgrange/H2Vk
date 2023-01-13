@@ -65,7 +65,6 @@ std::shared_ptr<Model> MeshManager::get_model(const std::string &name) {
     if ( it == _models.end()) {
         return nullptr;
     } else {
-        // return &(*it).second;
         return it->second;
     }
 }

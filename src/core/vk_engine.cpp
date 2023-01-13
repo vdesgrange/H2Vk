@@ -136,14 +136,14 @@ void VulkanEngine::init_descriptors() {
     _allocator = new DescriptorAllocator(*_device);  // ok
 
     // === Skybox === todo
-    VkDescriptorBufferInfo skyboxBInfo{};
-    if (_skyboxDisplay) {
-        const size_t skyboxParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSkyboxData));
-        _skyboxParameterBuffer = Buffer::create_buffer(*_device, skyboxParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-        skyboxBInfo.buffer = _skyboxParameterBuffer._buffer;
-        skyboxBInfo.offset = 0;
-        skyboxBInfo.range = sizeof(GPUSkyboxData);
-    }
+//    VkDescriptorBufferInfo skyboxBInfo{};
+//    if (_skyboxDisplay) {
+//        const size_t skyboxParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSkyboxData));
+//        _skyboxParameterBuffer = Buffer::create_buffer(*_device, skyboxParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+//        skyboxBInfo.buffer = _skyboxParameterBuffer._buffer;
+//        skyboxBInfo.offset = 0;
+//        skyboxBInfo.range = sizeof(GPUSkyboxData);
+//    }
 
     // === Environment 1 ===
     const size_t sceneParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData));
@@ -207,6 +207,10 @@ void VulkanEngine::init_descriptors() {
         for (int i = 0; i < FRAME_OVERLAP; i++) {
             vmaDestroyBuffer(_device->_allocator, _frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, _frames[i].objectBuffer._buffer, _frames[i].objectBuffer._allocation);
+
+            if (_skyboxDisplay) {
+                vmaDestroyBuffer(_device->_allocator, _frames[i].skyboxBuffer._buffer, _frames[i].skyboxBuffer._allocation);
+            }
         }
 
         delete _layoutCache;
@@ -240,10 +244,10 @@ void VulkanEngine::init_pipelines() {
     std::vector<VkDescriptorSetLayout> skyboxSetLayout = {_descriptorSetLayouts.skybox};
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.skybox, _descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
     _pipelineBuilder = std::make_unique<PipelineBuilder>(*_window, *_device, *_renderPass, setLayouts);
-
-//    if (this->_skyboxDisplay) {
+    if (this->_skyboxDisplay) {
+        _skybox->_material = this->_pipelineBuilder->get_material("skyboxMaterial");
 //        _pipelineBuilder->skybox(skyboxSetLayout);
-//    }
+    }
 
 //    _pipelineBuilder->scene_light(setLayouts);
 //    _pipelineBuilder->scene_monkey_triangle(setLayouts);
@@ -268,6 +272,10 @@ void VulkanEngine::init_scene() {
     _skybox = std::make_unique<Skybox>(*_device, *_pipelineBuilder, *_textureManager, *_meshManager, _uploadContext);
     _sceneListing = std::make_unique<SceneListing>();
     _scene = std::make_unique<Scene>(*this);
+
+    if (_skyboxDisplay) {
+        _skybox->load();
+    }
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -295,13 +303,10 @@ void VulkanEngine::recreate_swap_chain() {
 void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
     if (_skyboxDisplay) {
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipeline);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 0, 1, &get_current_frame().skyboxDescriptor, 0, NULL);
-        _skybox->_cube->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 0, 1, &get_current_frame().skyboxDescriptor, 0, nullptr);
+        // _skybox->_cube->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
+        this->_meshManager->get_model("skybox")->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
     }
-
-    // vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
-    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
-
 }
 
 void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
@@ -519,6 +524,7 @@ void VulkanEngine::cleanup()
         }
 
         _scene->_renderables.clear();
+        _skybox->destroy();
         _ui.reset();
         _samplerManager.reset();
         _textureManager.reset();

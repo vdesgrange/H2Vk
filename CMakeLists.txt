@@ -11,12 +11,14 @@ ENDIF()
 
 set(CMAKE_CXX_STANDARD 17)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -O0")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -O0 ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -O0") # -fsanitize=address -fsanitize=thread -fsanitize=undefined
 set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fsanitize=address -O0")
 
 option(TRACY_ENABLE "" ON)
 option(TRACY_ON_DEMAND "" ON)
+option(VMA_RECORDING_ENABLED "" ON)
+option(VMA_DEBUG_LOG "" ON)
 
 find_package(Vulkan REQUIRED)
 

@@ -14,24 +14,30 @@ Skybox::Skybox(Device& device, PipelineBuilder& pipelineBuilder, TextureManager&
 }
 
 Skybox::~Skybox() {
-    // this->_cube->destroy(); // smart pointer, break when called
-    // this->_texture.destroy(this->_device);
+    // this->_cube->destroy(); // smart pointer, break because destroy automatically.
+    // this->_texture.destroy(this->_device);  // Must be called before vmaDestroyAllocator
+}
+
+void Skybox::destroy() {
+    this->_cube->destroy();
+    this->_texture.destroy(this->_device);
 }
 
 void Skybox::load() {
-    _cube = ModelPOLY::create_cube(&_device, {-10.f, -10.f, -10.0f}, {10.f, 10.f, 10.0f});
+    _cube = ModelPOLY::create_cube(&_device, {0.0f, 0.0f, 0.0f},  {10.f, 10.f, 10.0f});
     load_texture();
     _meshManager.upload_mesh(*_cube);
+    _meshManager._models.emplace("skybox", _cube);
 }
 
 void Skybox::load_texture() {
     std::vector<const char*> files = {
-            "../../assets/skybox/left.jpg",
-            "../../assets/skybox/right.jpg",
-            "../../assets/skybox/front.jpg",
-            "../../assets/skybox/back.jpg",
-            "../../assets/skybox/top.jpg",
-            "../../assets/skybox/bottom.jpg",
+            "../assets/skybox/left.jpg",
+            "../assets/skybox/right.jpg",
+            "../assets/skybox/front.jpg",
+            "../assets/skybox/back.jpg",
+            "../assets/skybox/top.jpg",
+            "../assets/skybox/bottom.jpg",
     };
 
     _texture = Texture();
@@ -42,7 +48,9 @@ void Skybox::load_texture() {
 
     for (int i=0; i < count; i++) {
         pixels[i] = stbi_load(files[i], &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-        void* pixel_ptr = pixels[i];
+        if (!pixels[i]) {
+            std::cout << "Failed to load texture file " << files[i] << std::endl;
+        }
     }
 
     VkDeviceSize layerSize = texWidth * texHeight * 4;
@@ -65,6 +73,10 @@ void Skybox::load_texture() {
     imageExtent.depth = 1;
 
     VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
+    imgInfo.arrayLayers = 6;
+    imgInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -76,7 +88,7 @@ void Skybox::load_texture() {
         range.baseMipLevel = 0;
         range.levelCount = 1;
         range.baseArrayLayer = 0;
-        range.layerCount = 1;
+        range.layerCount = 6;
 
         VkImageMemoryBarrier imageBarrier_toTransfer = {};
         imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -90,18 +102,24 @@ void Skybox::load_texture() {
         //barrier the image into the transfer-receive layout
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
 
-        VkBufferImageCopy copyRegion = {};
-        copyRegion.bufferOffset = 0;
-        copyRegion.bufferRowLength = 0;
-        copyRegion.bufferImageHeight = 0;
-        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        copyRegion.imageSubresource.mipLevel = 0;
-        copyRegion.imageSubresource.baseArrayLayer = 0;
-        copyRegion.imageSubresource.layerCount = 1;
-        copyRegion.imageExtent = imageExtent;
+        uint64_t offset = 0;
+        std::vector<VkBufferImageCopy> copyRegions;
+        for (int i=0; i < count; i++) {
+            VkBufferImageCopy copyRegion = {};
+            copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyRegion.imageSubresource.mipLevel = 0;
+            copyRegion.imageSubresource.baseArrayLayer = i;
+            copyRegion.imageSubresource.layerCount = 1;
+            copyRegion.imageExtent = imageExtent;
+            copyRegion.bufferOffset = offset + i * layerSize;
+            copyRegion.bufferRowLength = 0;
+            copyRegion.bufferImageHeight = 0;
+
+            copyRegions.push_back(copyRegion);
+        }
 
         //copy the buffer into the image
-        vkCmdCopyBufferToImage(cmd, buffer._buffer, this->_texture._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+        vkCmdCopyBufferToImage(cmd, buffer._buffer, this->_texture._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
 
         VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
         imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -110,15 +128,20 @@ void Skybox::load_texture() {
         imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
+
+        // Change texture image layout to shader read after all mip levels have been copied
+        _texture._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &_texture._sampler);
+
+        VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
+        imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+        imageViewInfo.subresourceRange.layerCount = 6;
+        vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &_texture._imageView);
+
+        _texture.updateDescriptor();
     });
-
-    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-    vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &_texture._sampler);
-
-    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-    imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-    imageViewInfo.subresourceRange.layerCount = 6;
-    vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &_texture._imageView);
 
     vmaDestroyBuffer(_device._allocator, buffer._buffer, buffer._allocation);
     std::cout << "Skybox texture loaded successfully" << std::endl;
