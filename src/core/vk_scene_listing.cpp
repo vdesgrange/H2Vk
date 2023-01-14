@@ -21,7 +21,7 @@ Renderables SceneListing::empty(Camera& camera, VulkanEngine* engine) {
 Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
-    camera.inverse(true);
+    camera.inverse(false);
     camera.set_position({ 1.f, 1.f, 1.f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
     camera.type = Camera::Type::pov;
@@ -29,10 +29,6 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     std::shared_ptr<Model> lightModel = ModelPOLY::create_sphere(engine->_device.get(), {0.f, 0.f, 0.0f}, 0.1f);
     engine->_meshManager->upload_mesh(*lightModel);
     engine->_meshManager->_models.emplace("light", lightModel);
-
-    std::shared_ptr<Model> triangleModel = ModelPOLY::create_cube(engine->_device.get(), {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
-    engine->_meshManager->upload_mesh(*triangleModel);
-    engine->_meshManager->_models.emplace("triangle", triangleModel);
 
     ModelOBJ* monkeyModel = new ModelOBJ(engine->_device.get());
     monkeyModel->load_model(*engine, "../assets/monkey/monkey_smooth.obj");
@@ -53,12 +49,6 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     monkey.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
     monkey.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(monkey);
-
-    RenderObject tri;
-    tri.model = engine->_meshManager->get_model("triangle");
-    tri.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
-    tri.transformMatrix = glm::mat4{ 1.0f };
-    renderables.push_back(tri);
 
 //    for (int x = -10; x <= 10; x++) {
 //        for (int y = -10; y <= 10; y++) {

@@ -56,7 +56,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
 
     bool _skyboxDisplay = true;
     if (_skyboxDisplay) {
-           this->skybox({setLayouts[0], setLayouts[1]});
+           this->skybox({setLayouts[0]}); // , setLayouts[1]
     }
 
     std::vector<VkDescriptorSetLayout> setLayouts2 = {setLayouts[1], setLayouts[2], setLayouts[3]};

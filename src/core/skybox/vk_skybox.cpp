@@ -24,7 +24,7 @@ void Skybox::destroy() {
 }
 
 void Skybox::load() {
-    _cube = ModelPOLY::create_cube(&_device, {0.0f, 0.0f, 0.0f},  {10.f, 10.f, 10.0f});
+    _cube = ModelPOLY::create_cube(&_device, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
     // _cube = ModelPOLY::create_sphere(&_device, {0.0f, 0.0f, 0.0f},  10.0f);
     load_texture();
     _meshManager.upload_mesh(*_cube);
@@ -33,12 +33,12 @@ void Skybox::load() {
 
 void Skybox::load_texture() {
     std::vector<const char*> files = {
-            "../assets/skybox/left.jpg",
             "../assets/skybox/right.jpg",
-            "../assets/skybox/front.jpg",
-            "../assets/skybox/back.jpg",
+            "../assets/skybox/left.jpg",
             "../assets/skybox/top.jpg",
             "../assets/skybox/bottom.jpg",
+            "../assets/skybox/front.jpg",
+            "../assets/skybox/back.jpg",
     };
 
     _texture = Texture();
