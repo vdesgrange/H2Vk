@@ -118,7 +118,8 @@ void Model::draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineL
         vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.allocation._buffer, 0, VK_INDEX_TYPE_UINT32);
     }
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(this->_indexesBuffer.size()), 1, 0, 0, instance);
+    // vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(this->_indexesBuffer.size()), 1, 0, 0, instance);
+    vkCmdDraw(commandBuffer,  static_cast<uint32_t>(this->_verticesBuffer.size()), 1, 0, instance);
 }
 
 VertexInputDescription Vertex::get_vertex_description()

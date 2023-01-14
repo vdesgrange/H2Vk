@@ -121,7 +121,7 @@ void VulkanEngine::init_sync_structures() {
 
 void VulkanEngine::init_descriptors() {
     std::vector<VkDescriptorPoolSize> skyboxPoolSizes = {
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
+           {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2}
     };
 
@@ -132,18 +132,8 @@ void VulkanEngine::init_descriptors() {
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 20 }
     };
 
-    _layoutCache = new DescriptorLayoutCache(*_device);  // ok
-    _allocator = new DescriptorAllocator(*_device);  // ok
-
-    // === Skybox === todo
-//    VkDescriptorBufferInfo skyboxBInfo{};
-//    if (_skyboxDisplay) {
-//        const size_t skyboxParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSkyboxData));
-//        _skyboxParameterBuffer = Buffer::create_buffer(*_device, skyboxParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-//        skyboxBInfo.buffer = _skyboxParameterBuffer._buffer;
-//        skyboxBInfo.offset = 0;
-//        skyboxBInfo.range = sizeof(GPUSkyboxData);
-//    }
+    _layoutCache = new DescriptorLayoutCache(*_device);
+    _allocator = new DescriptorAllocator(*_device);
 
     // === Environment 1 ===
     const size_t sceneParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData));
@@ -249,10 +239,6 @@ void VulkanEngine::init_pipelines() {
 //        _pipelineBuilder->skybox(skyboxSetLayout);
     }
 
-//    _pipelineBuilder->scene_light(setLayouts);
-//    _pipelineBuilder->scene_monkey_triangle(setLayouts);
-//    _pipelineBuilder->scene_karibu_hippo(setLayouts);
-//    _pipelineBuilder->scene_damaged_helmet(setLayouts);
 }
 
 FrameData& VulkanEngine::get_current_frame() {
@@ -301,11 +287,14 @@ void VulkanEngine::recreate_swap_chain() {
 }
 
 void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
+    int frameIndex = _frameNumber % FRAME_OVERLAP;
+
     if (_skyboxDisplay) {
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipeline);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 0, 1, &get_current_frame().skyboxDescriptor, 0, nullptr);
-        // _skybox->_cube->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
-        this->_meshManager->get_model("skybox")->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
+        uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 1, 1, &get_current_frame().skyboxDescriptor, 0, nullptr);
+        _skybox->_cube->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
     }
 }
 
@@ -344,8 +333,14 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     vmaUnmapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation);
 
     // Skybox
-    // cancel out translation
-    skybox(commandBuffer);
+    //skybox(commandBuffer, first, lastMaterial);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipeline);
+    uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 1, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 0, 1, &get_current_frame().skyboxDescriptor, 0, nullptr);
+    _skybox->_cube->draw_obj(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
+        // this->_meshManager->get_model("skybox")->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
 
     // === Drawing ===
     for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.

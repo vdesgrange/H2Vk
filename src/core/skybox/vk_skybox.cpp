@@ -19,12 +19,13 @@ Skybox::~Skybox() {
 }
 
 void Skybox::destroy() {
-    this->_cube->destroy();
+    // this->_cube->destroy();
     this->_texture.destroy(this->_device);
 }
 
 void Skybox::load() {
     _cube = ModelPOLY::create_cube(&_device, {0.0f, 0.0f, 0.0f},  {10.f, 10.f, 10.0f});
+    // _cube = ModelPOLY::create_sphere(&_device, {0.0f, 0.0f, 0.0f},  10.0f);
     load_texture();
     _meshManager.upload_mesh(*_cube);
     _meshManager._models.emplace("skybox", _cube);
