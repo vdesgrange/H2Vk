@@ -43,11 +43,11 @@ Device::Device(Window& window) {
     //create the final Vulkan device
     vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 
-    VkValidationFeatureEnableEXT enables[] = {VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT};
-    VkValidationFeaturesEXT validation_features = {};
-    validation_features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-    validation_features.enabledValidationFeatureCount = 1;
-    validation_features.pEnabledValidationFeatures = enables;
+//    VkValidationFeatureEnableEXT enables[] = {VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT};
+//    VkValidationFeaturesEXT validation_features = {};
+//    validation_features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+//    validation_features.enabledValidationFeatureCount = 1;
+//    validation_features.pEnabledValidationFeatures = enables;
 
     VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features = {};
     shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
@@ -56,7 +56,7 @@ Device::Device(Window& window) {
 
     vkb::Device vkbDevice = deviceBuilder
             .add_pNext(&shader_draw_parameters_features)
-            .add_pNext(&validation_features)
+            // .add_pNext(&validation_features)
             .build()
             .value();
 

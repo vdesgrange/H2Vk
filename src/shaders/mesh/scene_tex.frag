@@ -16,7 +16,7 @@ layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec3 inFragPos; // fragment position
 layout (location = 4) in vec3 inCameraPos; // camera/view position
-layout (location = 5) in vec4 inTangent; // camera/view position
+layout (location = 5) in vec4 inTangent;
 
 layout (location = 0) out vec4 outFragColor;
 
