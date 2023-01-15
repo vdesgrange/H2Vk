@@ -44,8 +44,9 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
 ## iterate each shader
 foreach(GLSL ${GLSL_SOURCE_FILES})
   message(STATUS "BUILDING SHADER")
+  get_filename_component(FILE_DIR ${GLSL} DIRECTORY)
   get_filename_component(FILE_NAME ${GLSL} NAME)
-  set(SPIRV "${PROJECT_SOURCE_DIR}/src/shaders/${FILE_NAME}.spv")
+  set(SPIRV "${FILE_DIR}/${FILE_NAME}.spv") # ${PROJECT_SOURCE_DIR}/src/shaders/
   message(STATUS ${GLSL})
   ##execute glslang command to compile that specific shader
   add_custom_command(

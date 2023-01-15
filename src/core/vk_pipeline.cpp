@@ -56,7 +56,7 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
 
     bool _skyboxDisplay = true;
     if (_skyboxDisplay) {
-           this->skybox({setLayouts[0]}); // , setLayouts[1]
+           this->skybox({setLayouts[0]});
     }
 
     std::vector<VkDescriptorSetLayout> setLayouts2 = {setLayouts[1], setLayouts[2], setLayouts[3]};
@@ -218,8 +218,8 @@ std::shared_ptr<Material> PipelineBuilder::get_material(const std::string &name)
 
 void PipelineBuilder::skybox(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/atmosphere/skybox.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/atmosphere/skybox.frag.spv"},
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/skybox/skybox.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/skybox/skybox.frag.spv"},
     };
 
     ShaderEffect effect = this->build_effect(setLayouts, {}, modules);
@@ -250,8 +250,8 @@ void PipelineBuilder::scene_light(std::vector<VkDescriptorSetLayout> setLayouts)
 
 void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene.frag.spv"},
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh/mesh_tex.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene.frag.spv"},
     };
 
     ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules);
@@ -266,8 +266,8 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
 
 void PipelineBuilder::scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene_tex.frag.spv"},
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh/mesh_tex.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene_tex.frag.spv"},
     };
 
     ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules);
@@ -282,8 +282,8 @@ void PipelineBuilder::scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setL
 
 void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/scene_tex.frag.spv"},
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh/mesh_tex.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene_tex.frag.spv"},
     };
 
     ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
