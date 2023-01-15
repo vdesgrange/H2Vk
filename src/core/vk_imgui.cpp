@@ -10,10 +10,10 @@
 #include "backends/imgui_impl_vulkan.h"
 
 UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine), _settings(settings) {
-    this->p_open.emplace("scene_editor", false);
-    this->p_open.emplace("texture_viewer", false);
-    this->p_open.emplace("stats_viewer", false);
-    this->p_open.emplace("skybox_editor", false);
+    this->p_open.emplace(SCENE_EDITOR, false);
+    this->p_open.emplace(TEXTURE_VIEWER, false);
+    this->p_open.emplace(STATS_VIEWER, false);
+    this->p_open.emplace(SKYBOX_EDITOR, true);
 };
 
 UInterface::~UInterface() {
@@ -21,20 +21,19 @@ UInterface::~UInterface() {
 }
 
 void UInterface::init_imgui() {
-    VkDescriptorPoolSize pool_sizes[] =
-            {
-                    { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-                    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-                    { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-                    { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-                    { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-                    { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-                    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-                    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-                    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-                    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-                    { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-            };
+    VkDescriptorPoolSize pool_sizes[] = {
+            { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
 
     VkDescriptorPoolCreateInfo pool_info{};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -43,7 +42,7 @@ void UInterface::init_imgui() {
     pool_info.poolSizeCount = std::size(pool_sizes);
     pool_info.pPoolSizes = pool_sizes;
 
-    VK_CHECK(vkCreateDescriptorPool(_engine._device->_logicalDevice, &pool_info, nullptr, &_imguiPool));
+    VK_CHECK(vkCreateDescriptorPool(_engine._device->_logicalDevice, &pool_info, nullptr, &_pool));
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -55,7 +54,7 @@ void UInterface::init_imgui() {
     init_info.PhysicalDevice = _engine._device->_physicalDevice;
     init_info.Device = _engine._device->_logicalDevice;
     init_info.Queue = _engine._device->get_graphics_queue();
-    init_info.DescriptorPool = _imguiPool;
+    init_info.DescriptorPool = _pool;
     init_info.MinImageCount = 3;
     init_info.ImageCount = 3;
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
@@ -84,7 +83,7 @@ bool UInterface::want_capture_mouse()
 }
 
 void UInterface::clean_up() {
-    vkDestroyDescriptorPool(_engine._device->_logicalDevice, _imguiPool, nullptr);
+    vkDestroyDescriptorPool(_engine._device->_logicalDevice, _pool, nullptr);
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -105,10 +104,10 @@ void UInterface::interface(Statistics statistics) {
     // ImGui::ShowDemoWindow()
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Tools")) {
-            ImGui::MenuItem("Scene editor", nullptr, &this->p_open["scene_editor"]);
-            ImGui::MenuItem("Texture viewer", nullptr, &this->p_open["texture_viewer"]);
-            ImGui::MenuItem("Statistics viewer", nullptr, &this->p_open["stats_viewer"]);
-            ImGui::MenuItem("Enable skybox", nullptr, &this->p_open["skybox"]);
+            ImGui::MenuItem("Scene editor", nullptr, &this->p_open[SCENE_EDITOR]);
+            ImGui::MenuItem("Texture viewer", nullptr, &this->p_open[TEXTURE_VIEWER]);
+            ImGui::MenuItem("Statistics viewer", nullptr, &this->p_open[STATS_VIEWER]);
+            ImGui::MenuItem("Enable skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -135,12 +134,12 @@ void UInterface::interface(Statistics statistics) {
 }
 
 void UInterface::scene_editor() {
-    if (!this->p_open["scene_editor"]) {
+    if (!this->p_open[SCENE_EDITOR]) {
         return;
     }
 
     const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
-    if (ImGui::Begin("Scene editor", &this->p_open["scene_editor"], window_flags)) {
+    if (ImGui::Begin("Scene editor", &this->p_open[SCENE_EDITOR], window_flags)) {
         std::vector<const char*> scenes;
         for (const auto& scene : SceneListing::scenes) {
             scenes.push_back(scene.first.c_str());
@@ -174,19 +173,19 @@ void UInterface::scene_editor() {
 }
 
 void UInterface::texture_viewer() {
-    if (!this->p_open["texture_viewer"]) {
+    if (!this->p_open[TEXTURE_VIEWER]) {
         return;
     }
 
     const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
-    if (ImGui::Begin("Texture viewer", &this->p_open["texture_viewer"], window_flags)) {
+    if (ImGui::Begin("Texture viewer", &this->p_open[TEXTURE_VIEWER], window_flags)) {
         ImGui::Text("TO DO");
     }
     ImGui::End();
 }
 
 void UInterface::stats_viewer(const Statistics& statistics) {
-    if (!this->p_open["stats_viewer"]) {
+    if (!this->p_open[STATS_VIEWER]) {
         return;
     }
 
@@ -206,7 +205,7 @@ void UInterface::stats_viewer(const Statistics& statistics) {
             ImGuiWindowFlags_NoTitleBar |
             ImGuiWindowFlags_NoSavedSettings;
 
-    if (ImGui::Begin("Statistics viewer", &this->p_open["stats_viewer"], flags))
+    if (ImGui::Begin("Statistics viewer", &this->p_open[STATS_VIEWER], flags))
     {
         ImGui::Text("Statistics (%.0f x %.0f):", io.DisplayFramebufferScale.x * io.DisplaySize.x,  io.DisplayFramebufferScale.y * io.DisplaySize.y);
         ImGui::Separator();
@@ -221,7 +220,7 @@ void UInterface::stats_viewer(const Statistics& statistics) {
 
 void UInterface::skybox_editor() {
 
-    if (!this->p_open["skybox_editor"]) {
+    if (!this->p_open[SKYBOX_EDITOR]) {
         return;
     }
 }

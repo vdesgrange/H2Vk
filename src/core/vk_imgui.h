@@ -6,8 +6,14 @@ class VulkanEngine;
 #include "VkBootstrap.h"
 #include "vk_types.h"
 
-struct Statistics final
-{
+typedef enum UIConstants {
+    SCENE_EDITOR = 0,
+    TEXTURE_VIEWER = 1,
+    STATS_VIEWER = 2,
+    SKYBOX_EDITOR = 3,
+} UIConstants;
+
+struct Statistics final {
     VkExtent2D FramebufferSize;
     float FrameRate;
     float coordinates[3] {0.0f, 0.0f, 0.0f};
@@ -21,8 +27,8 @@ struct Settings final {
     float speed {10.0f};
     float fov{70.f}; // 0 - 360
     float aspect {1700.f / 1200.f}; // 0 - 1
-    float z_near {0.1f}; // 0 - 1000, valeurs a la louche
-    float z_far {200.0f}; // 0 - 1000, valeurs a la louche
+    float z_near {0.1f}; // 0 - 1000
+    float z_far {200.0f}; // 0 - 1000
 
     // Light
     float coordinates[3] {1.0f, 0.0f, 0.0f};
@@ -36,8 +42,8 @@ struct Settings final {
 
 class UInterface final {
 public:
-    std::unordered_map<std::string, bool> p_open;
-    VkDescriptorPool _imguiPool;
+    std::unordered_map<UIConstants, bool> p_open;
+    VkDescriptorPool _pool;
 
     UInterface(VulkanEngine& engine, Settings settings);
     ~UInterface();

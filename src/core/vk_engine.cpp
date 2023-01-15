@@ -189,7 +189,7 @@ void VulkanEngine::init_descriptors() {
     DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
             .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .layout(_descriptorSetLayouts.textures); // use reference instead?
+            .layout(_descriptorSetLayouts.textures);
 
     // === Clean up ===
     _mainDeletionQueue.push_function([&]() {
@@ -198,10 +198,6 @@ void VulkanEngine::init_descriptors() {
         for (int i = 0; i < FRAME_OVERLAP; i++) {
             vmaDestroyBuffer(_device->_allocator, _frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, _frames[i].objectBuffer._buffer, _frames[i].objectBuffer._allocation);
-
-            if (_skyboxDisplay) {
-                vmaDestroyBuffer(_device->_allocator, _frames[i].skyboxBuffer._buffer, _frames[i].skyboxBuffer._allocation);
-            }
         }
 
         delete _layoutCache;
@@ -422,7 +418,7 @@ void VulkanEngine::ui_overlay(Statistics stats) {
     _sceneParameters.specularFactor = _ui->get_settings().specular;
 
     // Skybox
-    // _skyboxDisplay = _ui->p_open["skybox_editor"];
+    _skyboxDisplay = _ui->p_open[SKYBOX_EDITOR];
 
     // Interface
     _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);

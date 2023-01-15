@@ -80,7 +80,6 @@ struct FrameData {
     CommandPool* _commandPool;
     CommandBuffer* _commandBuffer;
 
-    AllocatedBuffer skyboxBuffer;
     VkDescriptorSet skyboxDescriptor;
 
     AllocatedBuffer cameraBuffer;
@@ -132,9 +131,6 @@ public:
 
     GPUSceneData _sceneParameters;
     AllocatedBuffer _sceneParameterBuffer;
-
-    // GPUSkyboxData _skyboxParameters;
-    // AllocatedBuffer _skyboxParameterBuffer;
 
 	void init();
 	void cleanup();
