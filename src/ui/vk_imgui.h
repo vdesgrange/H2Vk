@@ -4,7 +4,7 @@ class VulkanEngine;
 
 #include <unordered_map>
 #include "VkBootstrap.h"
-#include "vk_types.h"
+#include "core/utilities/vk_types.h"
 
 typedef enum UIConstants {
     SCENE_EDITOR = 0,

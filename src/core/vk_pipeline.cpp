@@ -4,14 +4,14 @@
 
 #include <GLFW/glfw3.h>
 #include <fstream>
-#include "vk_helpers.h"
-#include "vk_initializers.h"
+#include "core/utilities/vk_helpers.h"
+#include "core/utilities/vk_initializers.h"
 #include "vk_pipeline.h"
 #include "vk_window.h"
 #include "vk_device.h"
 #include "vk_renderpass.h"
 #include "vk_material.h"
-#include "core/model/vk_mesh.h"
+#include "core/model/vk_model.h"
 
 /**
  * Graphics pipeline

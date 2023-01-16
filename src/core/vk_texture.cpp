@@ -1,7 +1,7 @@
 // #define STB_IMAGE_IMPLEMENTATION
 
 #include "vk_texture.h"
-#include "vk_initializers.h"
+#include "core/utilities/vk_initializers.h"
 #include "vk_buffer.h"
 #include "vk_device.h"
 #include "vk_engine.h"

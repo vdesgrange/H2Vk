@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "vk_mem_alloc.h"
-#include "vk_types.h"
+#include "core/utilities/vk_types.h"
 
 const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME

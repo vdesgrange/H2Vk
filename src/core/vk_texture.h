@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <string>
 
-#include "vk_types.h"
+#include "core/utilities/vk_types.h"
 
 class Device;
 class VulkanEngine;

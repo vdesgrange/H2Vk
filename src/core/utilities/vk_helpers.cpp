@@ -1,5 +1,5 @@
 #include "vk_helpers.h"
-#include "vk_device.h"
+#include "core/vk_device.h"
 
 std::vector<uint32_t> Helper::read_file(const char* filePath) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);

@@ -1,6 +1,6 @@
 #include "vk_command_pool.h"
 #include "vk_device.h"
-#include "vk_helpers.h"
+#include "core/utilities/vk_helpers.h"
 
 /**
  * Command pools manage the memory that is used to store the buffers.

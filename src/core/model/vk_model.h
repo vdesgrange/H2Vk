@@ -10,7 +10,7 @@
 #include <iostream>
 
 #include "core/vk_texture.h"
-#include "core/vk_types.h"
+#include "core/utilities/vk_types.h"
 #include "core/vk_mesh_manager.h"
 
 class Device;

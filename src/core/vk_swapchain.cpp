@@ -3,10 +3,10 @@
 #endif
 
 #include "vk_swapchain.h"
-#include "vk_helpers.h"
+#include "core/utilities/vk_helpers.h"
 #include "vk_window.h"
 #include "vk_device.h"
-#include "vk_initializers.h"
+#include "core/utilities/vk_initializers.h"
 
 /**
  * Implementation of SwapChain

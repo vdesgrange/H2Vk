@@ -6,7 +6,7 @@
 #include "vk_fence.h"
 #include "vk_command_buffer.h"
 #include "vk_command_pool.h"
-#include "core/model/vk_mesh.h"
+#include "core/model/vk_model.h"
 
 MeshManager::MeshManager(const Device& device, UploadContext& uploadContext) : _device(device), _uploadContext(uploadContext) {};
 

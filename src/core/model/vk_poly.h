@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vk_mesh.h"
+#include "vk_model.h"
 
 class Device;
 class Model;

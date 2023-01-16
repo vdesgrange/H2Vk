@@ -1,6 +1,6 @@
 #include "vk_scene.h"
 #include "vk_scene_listing.h"
-#include "vk_camera.h"
+#include "core/vk_camera.h"
 
 Scene::Scene(VulkanEngine& engine) : _engine(engine) {}
 

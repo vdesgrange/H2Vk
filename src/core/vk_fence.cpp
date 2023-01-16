@@ -1,6 +1,6 @@
 #include "vk_fence.h"
-#include "vk_helpers.h"
-#include "vk_initializers.h"
+#include "core/utilities/vk_helpers.h"
+#include "core/utilities/vk_initializers.h"
 #include "vk_device.h"
 
 Fence::Fence(const Device& device) : _device(device) {

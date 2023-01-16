@@ -2,7 +2,7 @@
 
 #include <GLFW/glfw3.h>
 #include "VkBootstrap.h"
-#include "vk_types.h"
+#include "core/utilities/vk_types.h"
 
 class Device;
 

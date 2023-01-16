@@ -4,7 +4,7 @@
 #include <array>
 
 #include "VkBootstrap.h"
-#include "vk_types.h"
+#include "core/utilities/vk_types.h"
 #include "vk_swapchain.h"
 
 class SwapChain;

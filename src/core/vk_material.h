@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vk_types.h"
+#include "core/utilities/vk_types.h"
 
 struct Material {
     VkPipeline pipeline;

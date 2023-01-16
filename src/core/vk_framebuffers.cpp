@@ -1,5 +1,5 @@
 #include "vk_framebuffers.h"
-#include "vk_helpers.h"
+#include "core/utilities/vk_helpers.h"
 #include "vk_window.h"
 #include "vk_device.h"
 #include "vk_renderpass.h"

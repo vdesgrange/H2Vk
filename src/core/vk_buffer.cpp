@@ -1,5 +1,5 @@
 #include "vk_buffer.h"
-#include "vk_helpers.h"
+#include "core/utilities/vk_helpers.h"
 #include "vk_device.h"
 
 /**

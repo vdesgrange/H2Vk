@@ -1,9 +1,9 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
-#include "core/model/vk_mesh.h"
-#include "vk_material.h"
+#include "core/model/vk_model.h"
+#include "core/vk_material.h"
 
 #include <vector>
 #include <utility>

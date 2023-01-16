@@ -1,7 +1,7 @@
 #include "vk_descriptor_builder.h"
 #include "vk_descriptor_allocator.h"
 #include "vk_descriptor_cache.h"
-#include "vk_initializers.h"
+#include "core/utilities/vk_initializers.h"
 #include "vk_device.h"
 
 DescriptorBuilder DescriptorBuilder::begin(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator) {

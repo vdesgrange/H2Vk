@@ -5,7 +5,7 @@
 #include <iostream>
 #include <unordered_map>
 
-#include "vk_types.h"
+#include "core/utilities/vk_types.h"
 #include "vk_material.h"
 #include "vk_shaders.h"
 

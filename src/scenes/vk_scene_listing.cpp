@@ -1,11 +1,11 @@
 #include "vk_scene_listing.h"
-#include "vk_camera.h"
+#include "core/vk_camera.h"
 #include "vk_engine.h"
-#include "core/model/vk_mesh.h"
+#include "core/model/vk_model.h"
 #include "core/model/vk_obj.h"
 #include "core/model/vk_poly.h"
 #include "core/model/vk_glb.h"
-#include "vk_descriptor_builder.h"
+#include "core/vk_descriptor_builder.h"
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
         {"None", SceneListing::empty},

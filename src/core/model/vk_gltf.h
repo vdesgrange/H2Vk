@@ -1,7 +1,7 @@
 #pragma once
 
 #include "tiny_gltf.h"
-#include "vk_mesh.h"
+#include "vk_model.h"
 
 class Model;
 

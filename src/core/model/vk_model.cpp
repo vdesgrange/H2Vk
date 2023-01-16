@@ -1,9 +1,9 @@
-#include "vk_mesh.h"
+#include "vk_model.h"
 #include "core/vk_device.h"
 #include "core/vk_buffer.h"
 #include "core/vk_command_buffer.h"
 #include "core/vk_command_pool.h"
-#include "core/vk_engine.h"
+#include "vk_engine.h"
 #include "core/vk_camera.h"
 
 
