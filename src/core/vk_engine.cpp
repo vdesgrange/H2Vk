@@ -160,14 +160,12 @@ void VulkanEngine::init_descriptors() {
                 .layout(_descriptorSetLayouts.environment) // use reference instead?
                 .build(_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 
-        // === Skybox ===
-        if (_skyboxDisplay) {
-            DescriptorBuilder::begin(*_layoutCache, *_allocator)
-                    .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-                    .bind_image(_skybox->_texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-                    .layout(_descriptorSetLayouts.skybox)
-                    .build(_frames[i].skyboxDescriptor, _descriptorSetLayouts.skybox, skyboxPoolSizes);
-        }
+        // === Skybox === (Build by default to handle if skybox enabled later)
+        DescriptorBuilder::begin(*_layoutCache, *_allocator)
+            .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+            .bind_image(_skybox->_texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .layout(_descriptorSetLayouts.skybox)
+            .build(_frames[i].skyboxDescriptor, _descriptorSetLayouts.skybox, skyboxPoolSizes);
 
         // === Object ===
         const uint32_t MAX_OBJECTS = 10000;
@@ -228,14 +226,18 @@ void VulkanEngine::setup_descriptors(){
 }
 
 void VulkanEngine::init_pipelines() {
-    std::vector<VkDescriptorSetLayout> skyboxSetLayout = {_descriptorSetLayouts.skybox};
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.skybox, _descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
     _pipelineBuilder = std::make_unique<PipelineBuilder>(*_window, *_device, *_renderPass, setLayouts);
 
-    if (this->_skyboxDisplay) {
-        _skybox->_material = this->_pipelineBuilder->get_material("skyboxMaterial");
-    }
+    std::vector<VkDescriptorSetLayout> setLayouts2 = {setLayouts[1], setLayouts[2], setLayouts[3]};
+    _pipelineBuilder->scene_light(setLayouts2);
+    _pipelineBuilder->scene_monkey_triangle(setLayouts2);
+    _pipelineBuilder->scene_karibu_hippo(setLayouts2);
+    _pipelineBuilder->scene_damaged_helmet(setLayouts2);
 
+    // === Skybox === (Build by default to handle if skybox enabled later)
+    _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
+    _skybox->_material = this->_pipelineBuilder->get_material("skyboxMaterial");
 }
 
 FrameData& VulkanEngine::get_current_frame() {
@@ -256,9 +258,9 @@ void VulkanEngine::init_scene() {
     _sceneListing = std::make_unique<SceneListing>();
     _scene = std::make_unique<Scene>(*this);
 
-    if (_skyboxDisplay) {
+    //if (_skyboxDisplay) {
         _skybox->load();
-    }
+    //}
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -352,7 +354,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     }
 }
 
-void VulkanEngine::draw() {
+void VulkanEngine::draw() { // todo : what need to be called at each frame? draw()? commandBuffers?
     // Wait GPU to render latest frame
     VK_CHECK(get_current_frame()._renderFence->wait(1000000000));  // wait until the GPU has finished rendering the last frame. Timeout of 1 second
     VK_CHECK(get_current_frame()._renderFence->reset());

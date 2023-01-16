@@ -21,9 +21,11 @@ VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
     VkPipelineVertexInputStateCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     info.pNext = nullptr;
-
     info.vertexBindingDescriptionCount = 0;
+    info.pVertexBindingDescriptions = nullptr;
     info.vertexAttributeDescriptionCount = 0;
+    info.pVertexAttributeDescriptions = nullptr;
+
     return info;
 }
 

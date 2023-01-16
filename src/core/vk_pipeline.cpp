@@ -41,29 +41,23 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     this->_scissor = scissor;
 
     // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
-    this->_vertexInputInfo = vkinit::vertex_input_state_create_info();
     this->_inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     this->_depthStencil = vkinit::pipeline_depth_stencil_state_create_info(true, true, VK_COMPARE_OP_LESS);
     this->_rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
     this->_multisampling = vkinit::multisampling_state_create_info();
     this->_colorBlendAttachment = vkinit::color_blend_attachment_state();
+    this->_vertexInputInfo = vkinit::vertex_input_state_create_info();
 
-    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
-    this->_vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
-    this->_vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
-    this->_vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
-    this->_vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
-
-    bool _skyboxDisplay = true;
-    if (_skyboxDisplay) {
-           this->skybox({setLayouts[0]});
-    }
-
-    std::vector<VkDescriptorSetLayout> setLayouts2 = {setLayouts[1], setLayouts[2], setLayouts[3]};
-    this->scene_light(setLayouts2);
-    this->scene_monkey_triangle(setLayouts2);
-    this->scene_karibu_hippo(setLayouts2);
-    this->scene_damaged_helmet(setLayouts2);
+//    bool _skyboxDisplay = true;
+//    if (_skyboxDisplay) {
+//           this->skybox({setLayouts[0]});
+//    }
+//
+//    std::vector<VkDescriptorSetLayout> setLayouts2 = {setLayouts[1], setLayouts[2], setLayouts[3]};
+//    this->scene_light(setLayouts2);
+//    this->scene_monkey_triangle(setLayouts2);
+//    this->scene_karibu_hippo(setLayouts2);
+//    this->scene_damaged_helmet(setLayouts2);
 }
 
 PipelineBuilder::~PipelineBuilder() {
@@ -137,6 +131,15 @@ void PipelineBuilder::set_shaders(ShaderEffect& effect) {
  * rasterization -> fragment shader -> color blending -> framebuffer
  */
 VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& renderPass) {
+
+    // Warning: keeped until pipeline is created because destroyed when out of scope.
+    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo = vkinit::vertex_input_state_create_info();
+    vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
+    vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+    vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
+    vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.pNext = nullptr;
@@ -157,14 +160,14 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.pNext = nullptr;
-    pipelineInfo.pVertexInputState = &_vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &_inputAssembly;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pInputAssemblyState = &_inputAssembly;
     pipelineInfo.pRasterizationState = &_rasterizer;
     pipelineInfo.pMultisampleState = &_multisampling;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.pDepthStencilState = &_depthStencil;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.stageCount = static_cast<uint32_t>(_shaderStages.size());
     pipelineInfo.pStages = _shaderStages.data();
     pipelineInfo.layout = *_pipelineLayout; // Comment gerer plusieurs pipeline dans une meme classe sans changer cette fonction
