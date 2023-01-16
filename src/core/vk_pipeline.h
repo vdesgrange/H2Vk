@@ -27,7 +27,7 @@ public:
     std::vector<ShaderPass> _shaderPasses; // duplicate with _materials
     std::unordered_map<std::string, std::shared_ptr<Material>> _materials;
 
-    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, std::vector<VkDescriptorSetLayout> setLayouts);
+    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass);
     ~PipelineBuilder();
 
     bool load_shader_module(const char* filePath, VkShaderModule* out);

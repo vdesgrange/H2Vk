@@ -23,7 +23,7 @@
  * @param device
  * @param renderPass
  */
-PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass, std::vector<VkDescriptorSetLayout> setLayouts) :
+PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass) :
     _device(device), _renderPass(renderPass)
 {
     VkViewport viewport{};
@@ -47,17 +47,6 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     this->_multisampling = vkinit::multisampling_state_create_info();
     this->_colorBlendAttachment = vkinit::color_blend_attachment_state();
     this->_vertexInputInfo = vkinit::vertex_input_state_create_info();
-
-//    bool _skyboxDisplay = true;
-//    if (_skyboxDisplay) {
-//           this->skybox({setLayouts[0]});
-//    }
-//
-//    std::vector<VkDescriptorSetLayout> setLayouts2 = {setLayouts[1], setLayouts[2], setLayouts[3]};
-//    this->scene_light(setLayouts2);
-//    this->scene_monkey_triangle(setLayouts2);
-//    this->scene_karibu_hippo(setLayouts2);
-//    this->scene_damaged_helmet(setLayouts2);
 }
 
 PipelineBuilder::~PipelineBuilder() {

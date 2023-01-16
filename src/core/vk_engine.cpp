@@ -226,14 +226,13 @@ void VulkanEngine::setup_descriptors(){
 }
 
 void VulkanEngine::init_pipelines() {
-    std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.skybox, _descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
-    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_window, *_device, *_renderPass, setLayouts);
+    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_window, *_device, *_renderPass);
 
-    std::vector<VkDescriptorSetLayout> setLayouts2 = {setLayouts[1], setLayouts[2], setLayouts[3]};
-    _pipelineBuilder->scene_light(setLayouts2);
-    _pipelineBuilder->scene_monkey_triangle(setLayouts2);
-    _pipelineBuilder->scene_karibu_hippo(setLayouts2);
-    _pipelineBuilder->scene_damaged_helmet(setLayouts2);
+    std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
+    _pipelineBuilder->scene_light(setLayouts);
+    _pipelineBuilder->scene_monkey_triangle(setLayouts);
+    _pipelineBuilder->scene_karibu_hippo(setLayouts);
+    _pipelineBuilder->scene_damaged_helmet(setLayouts);
 
     // === Skybox === (Build by default to handle if skybox enabled later)
     _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
@@ -255,12 +254,10 @@ void VulkanEngine::load_images() {
 
 void VulkanEngine::init_scene() {
     _skybox = std::make_unique<Skybox>(*_device, *_pipelineBuilder, *_textureManager, *_meshManager, _uploadContext);
+    _skybox->load();
+
     _sceneListing = std::make_unique<SceneListing>();
     _scene = std::make_unique<Scene>(*this);
-
-    //if (_skyboxDisplay) {
-        _skybox->load();
-    //}
 }
 
 void VulkanEngine::recreate_swap_chain() {
@@ -289,9 +286,6 @@ void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
     if (_skyboxDisplay) {
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipeline);
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 0,1, &get_current_frame().skyboxDescriptor, 0, nullptr);
-        // int frameIndex = _frameNumber % FRAME_OVERLAP;
-        // uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData)) * frameIndex;
-        // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 1,1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
         _skybox->_cube->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
     }
 
