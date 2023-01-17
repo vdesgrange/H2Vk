@@ -53,7 +53,7 @@ PipelineBuilder::~PipelineBuilder() {
 //        vkDestroyPipeline(_device._logicalDevice, item.second->pipeline, nullptr);
 //        vkDestroyPipelineLayout(_device._logicalDevice, item.second->pipelineLayout, nullptr);
 //    }
-    _matserials.clear();
+    _materials.clear();
 
     // Duplicate with _materials
     for (const auto& item : this->_shaderPasses) {
