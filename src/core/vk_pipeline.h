@@ -6,7 +6,6 @@
 #include <unordered_map>
 
 #include "core/utilities/vk_types.h"
-#include "vk_material.h"
 #include "vk_shaders.h"
 
 class Window;
@@ -23,14 +22,11 @@ public:
     VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
 
-    // std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-    // std::vector<ShaderPass> _shaderPasses; // duplicate with _materials
     std::unordered_map<std::string, std::shared_ptr<Material>> _materials;
 
     PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass);
     ~PipelineBuilder();
 
-    // std::shared_ptr<Material> get_material(const std::string &name);
     std::shared_ptr<ShaderPass> get_material(const std::string &name);
 
     void skybox(std::vector<VkDescriptorSetLayout> setLayouts);
@@ -47,7 +43,6 @@ private:
     VkPipelineLayout build_layout(std::vector<VkDescriptorSetLayout> &setLayouts, std::vector<VkPushConstantRange> &pushConstants) const;
     VkPipeline build_pipeline(const Device& device, RenderPass& renderPass, VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages);
 
-    // std::shared_ptr<Material> create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name);
     void create_material(const std::string &name, std::shared_ptr<Material> pass);
 
 };

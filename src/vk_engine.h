@@ -8,6 +8,7 @@
 #include <functional>
 #include <cmath>
 
+#include "vk_mem_alloc.h"
 #include "VkBootstrap.h"
 #include "glm/gtc/matrix_transform.hpp"
 #include "imgui.h"
@@ -27,8 +28,6 @@
 #include "core/vk_framebuffers.h"
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
-#include "core/vk_material.h"
-#include "vk_mem_alloc.h"
 #include "core/vk_mesh_manager.h"
 #include "core/vk_pipeline.h"
 #include "core/vk_renderpass.h"
@@ -54,7 +53,6 @@ class MeshManager;
 class DeletionQueue;
 class Camera;
 class Mesh;
-class DescriptorPools;
 class DescriptorLayoutCache;
 class DescriptorAllocator;
 class UInterface;

@@ -3,6 +3,7 @@
 #include "vulkan/vulkan_core.h"
 
 #include <vector>
+#include <iostream>
 
 class Device;
 
@@ -22,6 +23,10 @@ struct ShaderPass {
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
     std::shared_ptr<ShaderEffect> effect;
+
+    ~ShaderPass() {
+        std::cout << "Material/ShaderPass destroyed" << std::endl;
+    }
 };
 
 typedef ShaderPass Material;
