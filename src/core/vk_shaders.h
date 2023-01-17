@@ -13,10 +13,13 @@ struct ShaderEffect {
         VkShaderModule shaderModule;
     };
 
-    // VkPipelineLayout pipelineLayout;
     std::vector<VkDescriptorSetLayout> setLayouts;
     std::vector<VkPushConstantRange> pushConstants;
     std::vector<ShaderStage> shaderStages;
+
+    ~ShaderEffect() {
+        std::cout << "ShaderEffect destroyed" << std::endl;
+    }
 };
 
 struct ShaderPass {
