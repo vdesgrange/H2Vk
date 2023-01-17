@@ -11,33 +11,15 @@
 
 class VulkanEngine;
 class Camera;
-class Mesh;
 class Model;
 class Material;
 class MeshManager;
-class TextureManager;
-class PipelineBuilder;
 class Device;
-class UploadContext;
 
 struct RenderObject {
     std::shared_ptr<Model> model;
     std::shared_ptr<Material> material;
     glm::mat4 transformMatrix;
-};
-
-
-
-struct GPUSceneData {
-    glm::vec4 fogColor;
-    glm::vec4 fogDistance;
-    glm::vec4 sunlightDirection;
-    glm::vec4 sunlightColor;
-    glm::float32 specularFactor;
-};
-
-struct GPUObjectData {
-    glm::mat4 model;
 };
 
 typedef std::vector<RenderObject> Renderables;
