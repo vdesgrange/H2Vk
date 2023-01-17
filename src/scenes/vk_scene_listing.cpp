@@ -90,7 +90,7 @@ Renderables SceneListing::karibu(Camera& camera, VulkanEngine* engine) {
 Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
-    camera.inverse(true);
+    camera.inverse(false);
     camera.set_position({ 0.0f, 0.0f, -3.0f });
     camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
     camera.type = Camera::Type::axis;

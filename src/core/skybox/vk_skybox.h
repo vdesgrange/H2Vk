@@ -3,11 +3,12 @@
 #include <memory>
 
 #include "core/vk_texture.h"
+#include "core/vk_shaders.h"
 
 class Model;
 class Device;
 class Texture;
-class Material;
+// class Material;
 class TextureManager;
 class MeshManager;
 class PipelineBuilder;

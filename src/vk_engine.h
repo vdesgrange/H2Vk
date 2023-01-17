@@ -53,7 +53,6 @@ class PipelineBuilder;
 class MeshManager;
 class DeletionQueue;
 class Camera;
-class Material;
 class Mesh;
 class DescriptorPools;
 class DescriptorLayoutCache;

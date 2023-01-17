@@ -3,7 +3,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "core/model/vk_model.h"
-#include "core/vk_material.h"
+#include "core/vk_shaders.h"
 
 #include <vector>
 #include <utility>
@@ -12,7 +12,6 @@
 class VulkanEngine;
 class Camera;
 class Model;
-class Material;
 class MeshManager;
 class Device;
 

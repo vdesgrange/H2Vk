@@ -10,7 +10,7 @@
 #include "vk_window.h"
 #include "vk_device.h"
 #include "vk_renderpass.h"
-#include "vk_material.h"
+// #include "vk_material.h"
 #include "core/model/vk_model.h"
 
 /**
@@ -49,39 +49,59 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
 }
 
 PipelineBuilder::~PipelineBuilder() {
-//    for (const auto& item : this->_materials) {
-//        vkDestroyPipeline(_device._logicalDevice, item.second->pipeline, nullptr);
-//        vkDestroyPipelineLayout(_device._logicalDevice, item.second->pipelineLayout, nullptr);
-//    }
+    for (const auto& item : this->_materials) {
+        vkDestroyPipeline(_device._logicalDevice, item.second->pipeline, nullptr);
+        vkDestroyPipelineLayout(_device._logicalDevice, item.second->pipelineLayout, nullptr);
+    }
     _materials.clear();
 
-    // Duplicate with _materials
-    for (const auto& item : this->_shaderPasses) {
-        vkDestroyPipeline(_device._logicalDevice, item.pipeline, nullptr);
-        vkDestroyPipelineLayout(_device._logicalDevice, item.pipelineLayout, nullptr);
-    }
+//    Duplicate with _materials
+//    for (const auto& item : this->_shaderPasses) {
+//        vkDestroyPipeline(_device._logicalDevice, item.pipeline, nullptr);
+//        vkDestroyPipelineLayout(_device._logicalDevice, item.pipelineLayout, nullptr);
+//    }
 }
 
-ShaderEffect PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules) {
-    ShaderEffect effect{};
-    effect.pipelineLayout = this->build_layout(setLayouts, pushConstants); // todo useless to move it somewhere else
-    effect.setLayouts = setLayouts;
+std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> shaderModules) {
+    std::shared_ptr<ShaderEffect> effect = std::make_shared<ShaderEffect>();
+    effect->setLayouts = setLayouts;
+    effect->pushConstants = pushConstants;
 
-    for (auto const& module: modules) {
+    for (auto const& module: shaderModules) {
         VkShaderModule shader;
-        if (!load_shader_module(module.second, &shader)) {
+        if (!Shader::load_shader_module(_device, module.second, &shader)) {
             std::cout << "Error when building the shader module" << std::string(module.second) << std::endl;
         } else {
             std::cout << "Shader " << std::string(module.second) << " successfully loaded" << std::endl;
         }
 
-        effect.shaderStages.push_back(ShaderEffect::ShaderStage{shader, module.first});
+        effect->shaderStages.push_back(ShaderEffect::ShaderStage{module.first, shader});
     }
 
     return effect;
 }
 
-VkPipelineLayout PipelineBuilder::build_layout(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants) {
+std::shared_ptr<ShaderPass> PipelineBuilder::build_pass(std::shared_ptr<ShaderEffect> effect) {
+    std::shared_ptr<ShaderPass> pass = std::make_shared<ShaderPass>();
+    pass->effect = std::shared_ptr<ShaderEffect>(effect);
+    pass->pipelineLayout = this->build_layout(effect->setLayouts, effect->pushConstants);
+
+//  this->_pipelineLayout = &pass.pipelineLayout;
+//  this->_shaderStages.clear();
+//  for (const auto& stage : pass.effect->shaderStages) {
+//      this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(stage.flags, stage.shaderModule));
+//  }
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages{};
+    for (const auto& stage : pass->effect->shaderStages) {
+        shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(stage.flags, stage.shaderModule));
+    }
+
+    pass->pipeline =  this->build_pipeline(_device, _renderPass, pass->pipelineLayout, shaderStages);
+
+    return pass;
+}
+
+VkPipelineLayout PipelineBuilder::build_layout(std::vector<VkDescriptorSetLayout> &setLayouts, std::vector<VkPushConstantRange> &pushConstants) const {
     VkPipelineLayout layout{};
     VkPipelineLayoutCreateInfo layoutInfo = vkinit::pipeline_layout_create_info();
     layoutInfo.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
@@ -94,33 +114,9 @@ VkPipelineLayout PipelineBuilder::build_layout(std::vector<VkDescriptorSetLayout
     return layout;
 }
 
-ShaderPass PipelineBuilder::build_pass(ShaderEffect* effect) {
-    this->set_shaders(*effect);
+VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& renderPass, VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) {
 
-    ShaderPass pass{};
-    pass.effect = *effect;
-    pass.pipelineLayout = effect->pipelineLayout;
-    pass.pipeline =  this->build_pipeline(_device, _renderPass);
-
-    return pass;
-}
-
-void PipelineBuilder::set_shaders(ShaderEffect& effect) {
-    this->_pipelineLayout = &effect.pipelineLayout;
-    this->_shaderStages.clear();
-    for (const auto& stage : effect.shaderStages) {
-        this->_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(stage.flags, stage.shaderModule));
-    }
-}
-
-/**
- * Create graphics pipeline
- * vertex/index buffer -> input assembler -> vertex shader -> tesselation -> geometry shader ->
- * rasterization -> fragment shader -> color blending -> framebuffer
- */
-VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& renderPass) {
-
-    // Warning: keeped until pipeline is created because destroyed when out of scope.
+    // Warning: keep until pipeline is created because destroyed when out of scope.
     VertexInputDescription vertexDescription = Vertex::get_vertex_description();
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = vkinit::vertex_input_state_create_info();
     vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
@@ -136,8 +132,7 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     viewportState.scissorCount = 1;
     viewportState.pScissors = &_scissor;
 
-    // Dummy color blending (no transparency)
-    VkPipelineColorBlendStateCreateInfo colorBlending{};
+    VkPipelineColorBlendStateCreateInfo colorBlending{}; // Dummy color blending (no transparency)
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.pNext = nullptr;
     colorBlending.logicOpEnable = VK_FALSE;
@@ -156,9 +151,9 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     pipelineInfo.pMultisampleState = &_multisampling;
     pipelineInfo.pDepthStencilState = &_depthStencil;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineInfo.stageCount = static_cast<uint32_t>(_shaderStages.size());
-    pipelineInfo.pStages = _shaderStages.data();
-    pipelineInfo.layout = *_pipelineLayout; // Comment gerer plusieurs pipeline dans une meme classe sans changer cette fonction
+    pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
+    pipelineInfo.pStages = shaderStages.data();
+    pipelineInfo.layout = pipelineLayout; // Comment gerer plusieurs pipeline dans une meme classe sans changer cette fonction
     pipelineInfo.renderPass = renderPass._renderPass;
     pipelineInfo.subpass = 0;
 
@@ -171,38 +166,30 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     }
 }
 
-bool PipelineBuilder::load_shader_module(const char* filePath, VkShaderModule* out) {
-    const std::vector<uint32_t> code = Helper::read_file(filePath);
-    return create_shader_module(code, out);
-}
+//std::shared_ptr<Material> PipelineBuilder::create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name) {
+//    _materials.emplace(name, std::make_shared<Material>(pipeline, pipelineLayout));
+//    return _materials[name];
+//}
 
-bool PipelineBuilder::create_shader_module(const std::vector<uint32_t>& code, VkShaderModule* out) {
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.pNext = nullptr;
+//std::shared_ptr<Material> PipelineBuilder::get_material(const std::string &name) {
+//    auto it = _materials.find(name);
+//    if ( it == _materials.end()) {
+//        return nullptr;
+//    } else {
+//        return it->second;
+//    }
+//}
 
-    createInfo.codeSize = code.size() * sizeof(uint32_t);
-    createInfo.pCode = code.data();
-
-    VkShaderModule shaderModule;
-    if (vkCreateShaderModule(_device._logicalDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-        return false;
-    }
-
-    *out = shaderModule;
-    return true;
-}
-
-std::shared_ptr<Material> PipelineBuilder::create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name) {
-    _materials.emplace(name, std::make_shared<Material>(pipeline, pipelineLayout));
-    return _materials[name];
+void PipelineBuilder::create_material(const std::string &name, std::shared_ptr<Material> pass) {
+    _materials.emplace(name, pass);
 }
 
 std::shared_ptr<Material> PipelineBuilder::get_material(const std::string &name) {
     auto it = _materials.find(name);
     if ( it == _materials.end()) {
-        return nullptr;
+        return {};
     } else {
+        // return std::shared_ptr<Material>(&it->second);
         return it->second;
     }
 }
@@ -213,12 +200,13 @@ void PipelineBuilder::skybox(std::vector<VkDescriptorSetLayout> setLayouts) {
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/skybox/skybox.frag.spv"},
     };
 
-    ShaderEffect effect = this->build_effect(setLayouts, {}, modules);
-    ShaderPass pass = this->build_pass(&effect);
-    this->_shaderPasses.push_back(pass);
-    create_material(pass.pipeline, pass.pipelineLayout, "skyboxMaterial");
+    std::shared_ptr<ShaderEffect> effect = this->build_effect(setLayouts, {}, modules);
+    std::shared_ptr<ShaderPass> pass = this->build_pass(effect);
+    // this->_shaderPasses.push_back(pass);
+    create_material("skyboxMaterial", pass);
+    //  create_material(pass.pipeline, pass.pipelineLayout, "skyboxMaterial");
 
-    for (auto& shader : effect.shaderStages) {
+    for (auto& shader : effect->shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }
@@ -229,12 +217,13 @@ void PipelineBuilder::scene_light(std::vector<VkDescriptorSetLayout> setLayouts)
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/light/light.frag.spv"},
     };
 
-    ShaderEffect effect = this->build_effect(setLayouts, {}, modules);
-    ShaderPass pass = this->build_pass(&effect);
-    this->_shaderPasses.push_back(pass);
-    create_material(pass.pipeline, pass.pipelineLayout, "light");
+    std::shared_ptr<ShaderEffect> effect = this->build_effect(setLayouts, {}, modules);
+    std::shared_ptr<ShaderPass> pass = this->build_pass(effect);
+    //this->_shaderPasses.push_back(pass);
+    create_material("light", pass);
+    // create_material(pass.pipeline, pass.pipelineLayout, "light");
 
-    for (auto& shader : effect.shaderStages) {
+    for (auto& shader : effect->shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }
@@ -245,12 +234,13 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene.frag.spv"},
     };
 
-    ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules);
-    ShaderPass pass_mesh = this->build_pass(&effect_mesh);
-    this->_shaderPasses.push_back(pass_mesh);
-    create_material(pass_mesh.pipeline, pass_mesh.pipelineLayout, "monkeyMaterial");
+    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {}, modules);
+    std::shared_ptr<ShaderPass> pass_mesh = this->build_pass(effect_mesh);
+    //this->_shaderPasses.push_back(pass_mesh);
+    //create_material(pass_mesh.pipeline, pass_mesh.pipelineLayout, "monkeyMaterial");
+    create_material("monkeyMaterial", pass_mesh);
 
-    for (auto& shader : effect_mesh.shaderStages) {
+    for (auto& shader : effect_mesh->shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }
@@ -261,12 +251,13 @@ void PipelineBuilder::scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setL
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene_tex.frag.spv"},
     };
 
-    ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules);
-    ShaderPass pass = this->build_pass(&effect_mesh);
-    this->_shaderPasses.push_back(pass);
-    create_material(pass.pipeline, pass.pipelineLayout, "karibuMaterial");
+    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {}, modules);
+    std::shared_ptr<ShaderPass> pass = this->build_pass(effect_mesh);
+    //this->_shaderPasses.push_back(pass);
+    //create_material(pass.pipeline, pass.pipelineLayout, "karibuMaterial");
+    create_material("karibuMaterial", pass);
 
-    for (auto& shader : effect_mesh.shaderStages) {
+    for (auto& shader : effect_mesh->shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }
@@ -277,12 +268,13 @@ void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> se
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene_tex.frag.spv"},
     };
 
-    ShaderEffect effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
-    ShaderPass pass = this->build_pass(&effect_mesh);
-    this->_shaderPasses.push_back(pass);
-    create_material(pass.pipeline, pass.pipelineLayout, "helmetMaterial");
+    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
+    std::shared_ptr<ShaderPass> pass = this->build_pass(effect_mesh);
+    //this->_shaderPasses.push_back(pass);
+    //create_material(pass.pipeline, pass.pipelineLayout, "helmetMaterial");
+    create_material("helmetMaterial", pass);
 
-    for (auto& shader : effect_mesh.shaderStages) {
+    for (auto& shader : effect_mesh->shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }
