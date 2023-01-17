@@ -1,19 +1,16 @@
 #pragma once
 
-#include <vector>
+#include "vk_scene_listing.h"
 
 class VulkanEngine;
-struct RenderObject;
 class Camera;
-
-typedef std::vector<RenderObject> Renderables;
 
 class Scene final {
 public:
     int _sceneIndex;
     Renderables _renderables;
 
-    Scene(VulkanEngine& engine);
+    explicit Scene(VulkanEngine& engine) : _engine(engine) {};
 
     void load_scene(int sceneIndex, Camera& camera);
 

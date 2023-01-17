@@ -19,7 +19,7 @@ class CommandBuffer final {
 public:
     VkCommandBuffer _commandBuffer;
 
-    CommandBuffer(const Device& device, CommandPool& commandPool);
+    CommandBuffer(const Device& device, CommandPool& commandPool, uint32_t count=1);
     ~CommandBuffer();
 
     static void immediate_submit(const Device& device, const UploadContext& ctx, std::function<void(VkCommandBuffer cmd)>&& function);

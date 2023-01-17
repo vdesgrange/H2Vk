@@ -15,8 +15,6 @@ class RenderPass;
 
 class PipelineBuilder {
 public:
-    std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-    VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
     VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
     VkViewport _viewport;
     VkRect2D _scissor;
@@ -24,16 +22,14 @@ public:
     VkPipelineColorBlendAttachmentState _colorBlendAttachment;
     VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
+
+    std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
     std::vector<ShaderPass> _shaderPasses; // duplicate with _materials
     std::unordered_map<std::string, std::shared_ptr<Material>> _materials;
 
     PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass);
     ~PipelineBuilder();
 
-    bool load_shader_module(const char* filePath, VkShaderModule* out);
-    bool create_shader_module(const std::vector<uint32_t>& code, VkShaderModule* out);
-    VkPipeline build_pipeline(const Device& device, RenderPass& renderPass);
-    std::shared_ptr<Material> create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name);
     std::shared_ptr<Material> get_material(const std::string &name);
 
     void skybox(std::vector<VkDescriptorSetLayout> setLayouts);
@@ -49,5 +45,11 @@ private:
     ShaderPass build_pass(ShaderEffect* effect);
     ShaderEffect build_effect(std::vector<VkDescriptorSetLayout> setLayouts,  std::vector<VkPushConstantRange> pushConstants, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules);
     VkPipelineLayout build_layout(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants);
+    VkPipeline build_pipeline(const Device& device, RenderPass& renderPass);
+
+    std::shared_ptr<Material> create_material(VkPipeline pipeline, VkPipelineLayout pipelineLayout, const std::string &name);
+
+    bool load_shader_module(const char* filePath, VkShaderModule* out);
+    bool create_shader_module(const std::vector<uint32_t>& code, VkShaderModule* out);
     void set_shaders(ShaderEffect& effect);
 };

@@ -46,7 +46,6 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
     this->_rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
     this->_multisampling = vkinit::multisampling_state_create_info();
     this->_colorBlendAttachment = vkinit::color_blend_attachment_state();
-    this->_vertexInputInfo = vkinit::vertex_input_state_create_info();
 }
 
 PipelineBuilder::~PipelineBuilder() {
@@ -54,7 +53,7 @@ PipelineBuilder::~PipelineBuilder() {
 //        vkDestroyPipeline(_device._logicalDevice, item.second->pipeline, nullptr);
 //        vkDestroyPipelineLayout(_device._logicalDevice, item.second->pipelineLayout, nullptr);
 //    }
-    _materials.clear();
+    _matserials.clear();
 
     // Duplicate with _materials
     for (const auto& item : this->_shaderPasses) {

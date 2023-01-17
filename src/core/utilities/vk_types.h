@@ -18,11 +18,6 @@ struct GPUObjectData {
     glm::mat4 model;
 };
 
-struct AllocatedBuffer {
-    VkBuffer _buffer;
-    VmaAllocation _allocation;
-};
-
 struct DeletionQueue
 {
     std::deque<std::function<void()>> deletors;

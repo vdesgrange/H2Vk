@@ -10,16 +10,12 @@
 #include <iostream>
 
 #include "core/vk_texture.h"
+#include "core/vk_buffer.h"
 #include "core/utilities/vk_types.h"
 #include "core/vk_mesh_manager.h"
 
 class Device;
 class VulkanEngine;
-
-struct MeshPushConstants {
-    glm::vec4 data;
-    glm::mat4 render_matrix;
-};
 
 struct VertexInputDescription {
     std::vector<VkVertexInputBindingDescription> bindings;

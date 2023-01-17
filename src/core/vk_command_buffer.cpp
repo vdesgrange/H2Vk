@@ -12,11 +12,11 @@
  * @param device
  * @param commandPool
  */
-CommandBuffer::CommandBuffer(const Device& device, CommandPool& commandPool) {
+CommandBuffer::CommandBuffer(const Device& device, CommandPool& commandPool, uint32_t count) {
     VkCommandBufferAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocateInfo.commandPool = commandPool._commandPool;
-    allocateInfo.commandBufferCount = 1; // why ? Shouldn't be a vector?
+    allocateInfo.commandBufferCount = count;
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocateInfo.pNext = nullptr;
 

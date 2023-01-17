@@ -41,7 +41,6 @@ void Texture::destroy(const Device& device) {
     }
 }
 
-
 bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
     int texWidth, texHeight, texChannels;
 
@@ -134,24 +133,7 @@ bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
 
 bool Texture::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
 
-    VkBufferCreateInfo bufferInfo = {};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.pNext = nullptr;
-    bufferInfo.size = bufferSize;
-    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VmaAllocationCreateInfo vmaallocInfo = {};
-    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-    vmaallocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
-    AllocatedBuffer stagingBuffer{};
-    VK_CHECK(vmaCreateBuffer(engine._device->_allocator,
-                             &bufferInfo,
-                             &vmaallocInfo,
-                             &stagingBuffer._buffer,
-                             &stagingBuffer._allocation,
-                             nullptr));
+    AllocatedBuffer stagingBuffer = Buffer::create_buffer(*engine._device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
     void* data;
     vmaMapMemory(engine._device->_allocator, stagingBuffer._allocation, &data);
