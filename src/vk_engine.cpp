@@ -269,7 +269,7 @@ void VulkanEngine::recreate_swap_chain() {
     }
     vkDeviceWaitIdle(_device->_logicalDevice);
 
-    _scene->_renderables.clear(); // Possible memory leak. Revoir comment gerer les scenes
+    _scene->_renderables.clear(); // Problem: Must update pipeline, however should not have to delete objects.
     _pipelineBuilder.reset(); // Revoir comment gerer pipeline avec scene.
     _frameBuffers.reset();
     _renderPass.reset();
@@ -278,7 +278,7 @@ void VulkanEngine::recreate_swap_chain() {
     init_swapchain();
     init_default_renderpass();
     init_framebuffers();
-    init_scene();
+    // init_scene(); // Should not have to initialized fully the scene
     init_pipelines();
 }
 

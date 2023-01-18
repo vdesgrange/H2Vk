@@ -102,7 +102,7 @@ VkPipelineLayout PipelineBuilder::build_layout(std::vector<VkDescriptorSetLayout
     return layout;
 }
 
-VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& renderPass, VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) {
+VkPipeline PipelineBuilder::build_pipeline(const Device& device, const RenderPass& renderPass, VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) {
 
     // Warning: keep until pipeline is created because destroyed when out of scope.
     VertexInputDescription vertexDescription = Vertex::get_vertex_description();
@@ -141,7 +141,7 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, RenderPass& ren
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
     pipelineInfo.pStages = shaderStages.data();
-    pipelineInfo.layout = pipelineLayout; // Comment gerer plusieurs pipeline dans une meme classe sans changer cette fonction
+    pipelineInfo.layout = pipelineLayout;
     pipelineInfo.renderPass = renderPass._renderPass;
     pipelineInfo.subpass = 0;
 
