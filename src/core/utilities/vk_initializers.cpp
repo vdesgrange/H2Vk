@@ -269,3 +269,24 @@ VkWriteDescriptorSet vkinit::write_descriptor_image(VkDescriptorType type, VkDes
     write.pImageInfo = imageInfo;
     return write;
 }
+
+VkViewport vkinit::get_viewport(float width, float height) {
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = width;
+    viewport.height = height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    return viewport;
+}
+
+VkRect2D vkinit::get_scissor(float width, float height) {
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent.width = width;
+    scissor.extent.height = height;
+
+    return scissor;
+}

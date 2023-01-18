@@ -269,17 +269,34 @@ void VulkanEngine::recreate_swap_chain() {
     }
     vkDeviceWaitIdle(_device->_logicalDevice);
 
-    _scene->_renderables.clear(); // Problem: Must update pipeline, however should not have to delete objects.
-    _pipelineBuilder.reset(); // Revoir comment gerer pipeline avec scene.
+    //_scene->_renderables.clear(); // Problem: Must update pipeline, however should not have to delete objects.
+    //_pipelineBuilder.reset(); // Revoir comment gerer pipeline avec scene.
     _frameBuffers.reset();
     _renderPass.reset();
     _swapchain.reset();
 
+    // Command buffers
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        delete _frames[i]._commandBuffer;
+        _frames[i]._commandBuffer = new CommandBuffer(*_device, *_frames[i]._commandPool);
+    }
+    delete _uploadContext._commandBuffer;
+    _uploadContext._commandBuffer = new CommandBuffer(*_device, *_uploadContext._commandPool);
+
+
     init_swapchain();
     init_default_renderpass();
     init_framebuffers();
+
+    if (_window->_windowExtent.width > 0.0f && _window->_windowExtent.height > 0.0f) {
+        _camera->set_perspective(70.0f, (float)_window->_windowExtent.width /(float)_window->_windowExtent.height, _camera->zNear, _camera->zFar);
+
+        // _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
+        update_buffers();
+    }
+
     // init_scene(); // Should not have to initialized fully the scene
-    init_pipelines();
+    //init_pipelines();
 }
 
 void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
@@ -288,13 +305,9 @@ void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 0,1, &get_current_frame().skyboxDescriptor, 0, nullptr);
         _skybox->_cube->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
     }
-
 }
 
-void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
-    std::shared_ptr<Model> lastModel = nullptr;
-    std::shared_ptr<Material> lastMaterial = nullptr;
-
+void VulkanEngine::update_buffers() {
     // === Camera & Objects & Environment ===
     GPUCameraData camData{};
     camData.proj = _camera->get_projection_matrix();
@@ -314,7 +327,35 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     sceneData += Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
     memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
     vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
+}
 
+void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
+    std::shared_ptr<Model> lastModel = nullptr;
+    std::shared_ptr<Material> lastMaterial = nullptr;
+    int frameIndex = _frameNumber % FRAME_OVERLAP;
+
+    update_buffers();
+
+//    // === Camera & Objects & Environment ===
+//    GPUCameraData camData{};
+//    camData.proj = _camera->get_projection_matrix();
+//    camData.view = _camera->get_view_matrix();
+//    camData.pos = _camera->get_position_vector();
+//
+//    // Camera : write into the buffer by copying the render matrices from camera object into it
+//    void* data;
+//    vmaMapMemory(_device->_allocator, get_current_frame().cameraBuffer._allocation, &data);
+//    memcpy(data, &camData, sizeof(GPUCameraData));
+//    vmaUnmapMemory(_device->_allocator, get_current_frame().cameraBuffer._allocation);
+//
+//    // Environment : write scene data into environment buffer
+//    char* sceneData;
+//    vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
+//    int frameIndex = _frameNumber % FRAME_OVERLAP;
+//    sceneData += Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
+//    memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
+//    vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
+//
     // Objects : write into the buffer by copying the render matrices from our render objects into it
     void* objectData;
     vmaMapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation, &objectData);
@@ -405,8 +446,7 @@ void VulkanEngine::ui_overlay(Statistics stats) {
     // Camera
     _camera->set_speed(_ui->get_settings().speed);
     _reset = _camera->update_camera(1. / stats.FrameRate);
-    _camera->set_perspective(_ui->get_settings().fov, _ui->get_settings().aspect, _ui->get_settings().z_near,
-                                 _ui->get_settings().z_far);
+    _camera->set_perspective(_ui->get_settings().fov, _camera->aspect, _ui->get_settings().z_near,_ui->get_settings().z_far); // _ui->get_settings().aspect
 
     // Scene
     _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
@@ -451,6 +491,11 @@ void VulkanEngine::render(int imageIndex) {
         vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_commandBuffer, &renderPassInfo,
                              VK_SUBPASS_CONTENTS_INLINE);
         {
+            VkViewport viewport = vkinit::get_viewport((float) _window->_windowExtent.width, (float) _window->_windowExtent.height);
+            vkCmdSetViewport(get_current_frame()._commandBuffer->_commandBuffer, 0, 1, &viewport);
+
+            VkRect2D scissor = vkinit::get_scissor((float) _window->_windowExtent.width, (float) _window->_windowExtent.height);
+            vkCmdSetScissor(get_current_frame()._commandBuffer->_commandBuffer, 0, 1, &scissor);
 
             // Scene
             if (_scene->_sceneIndex != _ui->get_settings().scene_index) {

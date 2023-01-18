@@ -38,6 +38,6 @@ FrameBuffers::FrameBuffers(const Window& window, const Device& device, const Swa
 FrameBuffers::~FrameBuffers() {
     for (int i = 0; i < _swapchain._swapChainImages.size(); i++) {
         vkDestroyFramebuffer(_device._logicalDevice, _frameBuffers[i], nullptr);
-        vkDestroyImageView(_device._logicalDevice, _swapchain._swapChainImageViews[i], nullptr);
+        // vkDestroyImageView(_device._logicalDevice, _swapchain._swapChainImageViews[i], nullptr);
     }
 }

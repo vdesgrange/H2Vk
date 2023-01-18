@@ -25,19 +25,21 @@
 PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass) :
     _device(device), _renderPass(renderPass)
 {
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float) window._windowExtent.width;
-    viewport.height = (float) window._windowExtent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    this->_viewport = viewport;
+    this->_viewport = vkinit::get_viewport((float) window._windowExtent.width, (float) window._windowExtent.height);
+    this->_scissor = vkinit::get_scissor((float) window._windowExtent.width, (float) window._windowExtent.height);
+//    VkViewport viewport{};
+//    viewport.x = 0.0f;
+//    viewport.y = 0.0f;
+//    viewport.width = (float) window._windowExtent.width;
+//    viewport.height = (float) window._windowExtent.height;
+//    viewport.minDepth = 0.0f;
+//    viewport.maxDepth = 1.0f;
+//    this->_viewport = viewport;
 
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = window._windowExtent;
-    this->_scissor = scissor;
+//    VkRect2D scissor{};
+//    scissor.offset = {0, 0};
+//    scissor.extent = window._windowExtent;
+//    this->_scissor = scissor;
 
     // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
     this->_inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
@@ -116,9 +118,9 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, const RenderPas
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.pNext = nullptr;
     viewportState.viewportCount = 1;
-    viewportState.pViewports = &_viewport;
+    viewportState.pViewports = NULL; //&_viewport;
     viewportState.scissorCount = 1;
-    viewportState.pScissors = &_scissor;
+    viewportState.pScissors = NULL;//&_scissor;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{}; // Dummy color blending (no transparency)
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -128,12 +130,21 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, const RenderPas
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &_colorBlendAttachment;
 
+    std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkPipelineDynamicStateCreateInfo dynamicState{};
+    dynamicState.pNext = nullptr;
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.dynamicStateCount = dynamicStateEnables.size();
+    dynamicState.pDynamicStates = dynamicStateEnables.data();
+    dynamicState.flags = 0;
+
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.pNext = nullptr;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.pInputAssemblyState = &_inputAssembly;
     pipelineInfo.pRasterizationState = &_rasterizer;
     pipelineInfo.pMultisampleState = &_multisampling;

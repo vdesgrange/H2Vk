@@ -154,7 +154,7 @@ private:
     void load_images();
     void recreate_swap_chain();
     void skybox(VkCommandBuffer commandBuffer);
-    void skybox(VkCommandBuffer commandBuffer, RenderObject *first, std::shared_ptr<Material> lastMaterial);
+    void update_buffers();
     void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
     void ui_overlay(Statistics stats);
     void render(int imageIndex); // ImDrawData* draw_data,

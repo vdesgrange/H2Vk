@@ -23,4 +23,9 @@ public:
     ~CommandBuffer();
 
     static void immediate_submit(const Device& device, const UploadContext& ctx, std::function<void(VkCommandBuffer cmd)>&& function);
+
+private:
+    const class Device& _device;
+    const class CommandPool& _commandPool;
+    const uint32_t _count;
 };

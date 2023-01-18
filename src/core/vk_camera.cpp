@@ -45,6 +45,12 @@ void Camera::set_perspective(float fov, float aspect, float zNear, float zFar) {
     if (this->flipY) {
         this->perspective[1][1] *= -1;
     }
+    update_view();
+}
+
+void Camera::set_aspect(float aspect) {
+    this->aspect = aspect; // width / height
+    update_view();
 }
 
 void Camera::inverse(bool flip) {

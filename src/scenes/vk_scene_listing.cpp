@@ -92,7 +92,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
 
     camera.inverse(false);
     camera.set_position({ 0.0f, 0.0f, -3.0f });
-    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+    camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);  // 1700.f / 1200.f
     camera.type = Camera::Type::axis;
 
     ModelGLB* helmetModel = new ModelGLB(engine->_device.get());

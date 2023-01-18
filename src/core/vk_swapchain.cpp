@@ -14,7 +14,7 @@
  * SwapChain owns buffers where rendering happen before visualizing it.
  * A queue of images waiting to be displayed on screen.
  */
-SwapChain::SwapChain(Window& window, const Device& device) {
+SwapChain::SwapChain(Window& window, const Device& device) : _device(device) {
     VkSurfaceCapabilitiesKHR capabilities{};
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device._physicalDevice, device._surface, &capabilities);
 
@@ -59,6 +59,11 @@ SwapChain::SwapChain(Window& window, const Device& device) {
 
 SwapChain::~SwapChain() {
     // Clean up
+    for (int i = 0; i < _swapChainImages.size(); i++) {
+        // vkDestroyImage(_device._logicalDevice, _swapChainImages[i], nullptr); // used by framebuffer
+        vkDestroyImageView(_device._logicalDevice, _swapChainImageViews[i], nullptr);
+    }
+
     _swapChainDeletionQueue.flush();
 }
 

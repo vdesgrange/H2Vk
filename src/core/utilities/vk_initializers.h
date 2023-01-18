@@ -22,6 +22,7 @@ namespace vkinit {
     VkSubmitInfo submit_info(VkCommandBuffer* cmd);
     VkSamplerCreateInfo sampler_create_info(VkFilter filters, VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT);
     VkWriteDescriptorSet write_descriptor_image(VkDescriptorType type, VkDescriptorSet dstSet, VkDescriptorImageInfo* imageInfo, uint32_t binding);
-
+    VkViewport get_viewport(float width, float height);
+    VkRect2D get_scissor(float width, float height);
 }
 

@@ -12,7 +12,7 @@
  * @param device
  * @param commandPool
  */
-CommandBuffer::CommandBuffer(const Device& device, CommandPool& commandPool, uint32_t count) {
+CommandBuffer::CommandBuffer(const Device& device, CommandPool& commandPool, uint32_t count) : _device(device), _commandPool(commandPool), _count(count) {
     VkCommandBufferAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocateInfo.commandPool = commandPool._commandPool;
@@ -21,6 +21,10 @@ CommandBuffer::CommandBuffer(const Device& device, CommandPool& commandPool, uin
     allocateInfo.pNext = nullptr;
 
     VK_CHECK(vkAllocateCommandBuffers(device._logicalDevice, &allocateInfo, &_commandBuffer));
+}
+
+CommandBuffer::~CommandBuffer() {
+    vkFreeCommandBuffers(_device._logicalDevice, _commandPool._commandPool, _count, &_commandBuffer);
 }
 
 void CommandBuffer::immediate_submit(const Device& device, const UploadContext& ctx, std::function<void(VkCommandBuffer cmd)>&& function) {

@@ -33,4 +33,7 @@ public:
     ~SwapChain();
 
     VkExtent2D choose_swap_extent(Window& window, const VkSurfaceCapabilitiesKHR& capabilities);
+
+private:
+    const class Device& _device;
 };

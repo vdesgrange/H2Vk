@@ -157,7 +157,7 @@ void UInterface::scene_editor() {
         ImGui::Separator();
         ImGui::SliderFloat("Speed", &get_settings().speed, 0.01f, 100.0f);
         ImGui::SliderFloat("FOV", &get_settings().fov, 0.0f, 360.0f);
-        ImGui::SliderFloat("Aspect", &get_settings().aspect, 0.0f, 1.0f);
+        // ImGui::SliderFloat("Aspect", &get_settings().aspect, 0.0f, 1.0f);
         ImGui::SliderFloat("Z-Near", &get_settings().z_near, 0.0f, 10.0f);
         ImGui::SliderFloat("Z-Far", &get_settings().z_far, 0.0f, 500.0f);
         ImGui::NewLine();

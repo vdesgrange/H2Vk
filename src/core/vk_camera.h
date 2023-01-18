@@ -15,6 +15,12 @@ public:
     enum Type { pov, axis, look_at };
     Type type = Type::pov;
 
+    float speed {1.0f};
+    float fov {70.f};
+    float zNear {0.01f};
+    float zFar {200.f};
+    float aspect {1};
+
     const glm::mat4 get_projection_matrix();
     const glm::mat4 get_view_matrix();
     const glm::vec3 get_position_vector();
@@ -30,6 +36,7 @@ public:
     void set_rotation(glm::vec3 rotation);
     void set_rotation(glm::mat4 rotation);
     void set_perspective(float fov, float aspect, float zNear, float zFar);
+    void set_aspect(float aspect);
     void set_speed(float speed);
     void inverse(bool flip);
 
@@ -40,11 +47,6 @@ private:
     glm::vec3 rotation = glm::vec3();
     glm::vec3 target = glm::vec3(0.0f);
 
-    float speed {1.0f};
-    float fov {70.f};
-    float zNear {0.01f};
-    float zFar {200.f};
-    float aspect {1};
     bool flipY = false;
 
     bool leftAction {false};
