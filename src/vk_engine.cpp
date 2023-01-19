@@ -60,17 +60,26 @@ void VulkanEngine::init_camera() {
     _camera->set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
 
     _window->on_get_key = [this](int key, int action) {
-        _camera->on_key(key, action);
+        bool updated = _camera->on_key(key, action);
+        if (updated) {
+            update_buffers();
+        }
     };
 
     _window->on_cursor_position = [this](double xpos, double ypos) {
         if (_ui->want_capture_mouse()) return;
-        _camera->on_cursor_position(xpos, ypos);
+        bool updated = _camera->on_cursor_position(xpos, ypos);
+        if (updated) {
+            update_buffers();
+        }
     };
 
     _window->on_mouse_button = [this](int button, int action, int mods) {
         if (_ui->want_capture_mouse()) return;
-        _camera->on_mouse_button(button, action, mods);
+        bool updated = _camera->on_mouse_button(button, action, mods);
+        if (updated) {
+            update_buffers();
+        }
     };
 }
 
@@ -268,9 +277,6 @@ void VulkanEngine::recreate_swap_chain() {
         glfwWaitEvents();
     }
     vkDeviceWaitIdle(_device->_logicalDevice);
-
-    //_scene->_renderables.clear(); // Problem: Must update pipeline, however should not have to delete objects.
-    //_pipelineBuilder.reset(); // Revoir comment gerer pipeline avec scene.
     _frameBuffers.reset();
     _renderPass.reset();
     _swapchain.reset();
@@ -283,20 +289,16 @@ void VulkanEngine::recreate_swap_chain() {
     delete _uploadContext._commandBuffer;
     _uploadContext._commandBuffer = new CommandBuffer(*_device, *_uploadContext._commandPool);
 
-
     init_swapchain();
     init_default_renderpass();
     init_framebuffers();
 
     if (_window->_windowExtent.width > 0.0f && _window->_windowExtent.height > 0.0f) {
-        _camera->set_perspective(70.0f, (float)_window->_windowExtent.width /(float)_window->_windowExtent.height, _camera->zNear, _camera->zFar);
-
-        // _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
+        _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
         update_buffers();
+        update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
     }
 
-    // init_scene(); // Should not have to initialized fully the scene
-    //init_pipelines();
 }
 
 void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
@@ -308,6 +310,9 @@ void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
 }
 
 void VulkanEngine::update_buffers() {
+    std::cout << "Update uniform buffers" << std::endl;
+    uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
+
     // === Camera & Objects & Environment ===
     GPUCameraData camData{};
     camData.proj = _camera->get_projection_matrix();
@@ -323,39 +328,13 @@ void VulkanEngine::update_buffers() {
     // Environment : write scene data into environment buffer
     char* sceneData;
     vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
-    int frameIndex = _frameNumber % FRAME_OVERLAP;
     sceneData += Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
     memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
     vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
 }
 
-void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
-    std::shared_ptr<Model> lastModel = nullptr;
-    std::shared_ptr<Material> lastMaterial = nullptr;
-    int frameIndex = _frameNumber % FRAME_OVERLAP;
-
-    update_buffers();
-
-//    // === Camera & Objects & Environment ===
-//    GPUCameraData camData{};
-//    camData.proj = _camera->get_projection_matrix();
-//    camData.view = _camera->get_view_matrix();
-//    camData.pos = _camera->get_position_vector();
-//
-//    // Camera : write into the buffer by copying the render matrices from camera object into it
-//    void* data;
-//    vmaMapMemory(_device->_allocator, get_current_frame().cameraBuffer._allocation, &data);
-//    memcpy(data, &camData, sizeof(GPUCameraData));
-//    vmaUnmapMemory(_device->_allocator, get_current_frame().cameraBuffer._allocation);
-//
-//    // Environment : write scene data into environment buffer
-//    char* sceneData;
-//    vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation , (void**)&sceneData);
-//    int frameIndex = _frameNumber % FRAME_OVERLAP;
-//    sceneData += Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
-//    memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
-//    vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
-//
+void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
+    std::cout << "Update storage buffer" << std::endl;
     // Objects : write into the buffer by copying the render matrices from our render objects into it
     void* objectData;
     vmaMapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation, &objectData);
@@ -365,11 +344,19 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
         objectSSBO[i].model = object.transformMatrix;
     }
     vmaUnmapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation);
+}
 
-    // Skybox
-    skybox(commandBuffer);
+void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
+    std::shared_ptr<Model> lastModel = nullptr;
+    std::shared_ptr<Material> lastMaterial = nullptr;
+    int frameIndex = _frameNumber % FRAME_OVERLAP;
+
+    // update_buffers();
+    // update_buffer_objects(first, count);
 
     // === Drawing ===
+    skybox(commandBuffer);
+
     for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
         RenderObject& object = first[i]; // Take the scene/object
 
@@ -443,21 +430,27 @@ Statistics VulkanEngine::monitoring() {
 }
 
 void VulkanEngine::ui_overlay(Statistics stats) {
-    // Camera
-    _camera->set_speed(_ui->get_settings().speed);
-    _reset = _camera->update_camera(1. / stats.FrameRate);
-    _camera->set_perspective(_ui->get_settings().fov, _camera->aspect, _ui->get_settings().z_near,_ui->get_settings().z_far); // _ui->get_settings().aspect
-
-    // Scene
-    _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
-    _sceneParameters.sunlightDirection = {_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2], _ui->get_settings().ambient};
-    _sceneParameters.specularFactor = _ui->get_settings().specular;
-
-    // Skybox
-    _skyboxDisplay = _ui->p_open[SKYBOX_EDITOR];
-
     // Interface
-    _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
+    bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
+
+    if (updated) {
+        std::cout << "Interaction with UI" << std::endl;
+        // Camera
+        _camera->set_speed(_ui->get_settings().speed);
+        _reset = _camera->update_camera(1. / stats.FrameRate);
+        _camera->set_perspective(_ui->get_settings().fov, _camera->aspect, _ui->get_settings().z_near,_ui->get_settings().z_far); // _ui->get_settings().aspect
+
+        // Scene
+        _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
+        _sceneParameters.sunlightDirection = {_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2], _ui->get_settings().ambient};
+        _sceneParameters.specularFactor = _ui->get_settings().specular;
+
+        // Skybox
+        _skyboxDisplay = _ui->p_open[SKYBOX_EDITOR];
+
+        update_buffers();
+    }
+
 }
 
 void VulkanEngine::render(int imageIndex) {
@@ -501,6 +494,7 @@ void VulkanEngine::render(int imageIndex) {
             if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
                 _scene->load_scene(_ui->get_settings().scene_index, *_camera);
                 setup_descriptors();
+                update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
             }
             // Draw
             draw_objects(get_current_frame()._commandBuffer->_commandBuffer, _scene->_renderables.data(),

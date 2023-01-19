@@ -62,20 +62,18 @@ void Camera::set_speed(float speed) {
     this->speed = speed;
 }
 
-bool Camera::on_key(int key, int scancode, int action, int mods) {
-    return this->on_key(key, action);
-}
-
 bool Camera::on_key(int key, int action) {
+
     switch(key) {
-        case GLFW_KEY_UP: forwardAction = action == GLFW_PRESS; return true;
-        case GLFW_KEY_DOWN: backwardAction = action == GLFW_PRESS; return true;
-        case GLFW_KEY_LEFT: leftAction = action == GLFW_PRESS; return true;
-        case GLFW_KEY_RIGHT: rightAction = action == GLFW_PRESS; return true;
-        case GLFW_KEY_SLASH: downAction = action == GLFW_PRESS; return true;
-        case GLFW_KEY_RIGHT_SHIFT: upAction = action == GLFW_PRESS; return true;
+        case GLFW_KEY_UP: forwardAction = action == GLFW_PRESS; return forwardAction;
+        case GLFW_KEY_DOWN: backwardAction = action == GLFW_PRESS; return backwardAction;
+        case GLFW_KEY_LEFT: leftAction = action == GLFW_PRESS; return leftAction;
+        case GLFW_KEY_RIGHT: rightAction = action == GLFW_PRESS; return rightAction;
+        case GLFW_KEY_SLASH: downAction = action == GLFW_PRESS; return downAction;
+        case GLFW_KEY_RIGHT_SHIFT: upAction = action == GLFW_PRESS; return upAction;
         default: return false;
     };
+
 }
 
 bool Camera::update_camera(float delta) {

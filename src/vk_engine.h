@@ -155,6 +155,7 @@ private:
     void recreate_swap_chain();
     void skybox(VkCommandBuffer commandBuffer);
     void update_buffers();
+    void update_buffer_objects(RenderObject *first, int count);
     void draw_objects(VkCommandBuffer commandBuffer, RenderObject* first, int count);
     void ui_overlay(Statistics stats);
     void render(int imageIndex); // ImDrawData* draw_data,

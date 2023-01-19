@@ -14,11 +14,6 @@ class Camera final {
 public:
     enum Type { pov, axis, look_at };
     Type type = Type::pov;
-
-    float speed {1.0f};
-    float fov {70.f};
-    float zNear {0.01f};
-    float zFar {200.f};
     float aspect {1};
 
     const glm::mat4 get_projection_matrix();
@@ -26,7 +21,7 @@ public:
     const glm::vec3 get_position_vector();
     const glm::mat4 get_rotation_matrix();
 
-    bool on_key(int key, int scancode, int action, int mods);
+    // bool on_key(int key, int scancode, int action, int mods);
     bool on_key(int key, int action);
     bool on_cursor_position(double xpos, double ypos);
     bool on_mouse_button(int button, int action, int mods);
@@ -34,7 +29,6 @@ public:
 
     void set_position(glm::vec3 position);
     void set_rotation(glm::vec3 rotation);
-    void set_rotation(glm::mat4 rotation);
     void set_perspective(float fov, float aspect, float zNear, float zFar);
     void set_aspect(float aspect);
     void set_speed(float speed);
@@ -48,6 +42,10 @@ private:
     glm::vec3 target = glm::vec3(0.0f);
 
     bool flipY = false;
+    float speed {1.0f};
+    float fov {70.f};
+    float zNear {0.01f};
+    float zFar {200.f};
 
     bool leftAction {false};
     bool rightAction {false};

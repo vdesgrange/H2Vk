@@ -69,13 +69,15 @@ void UInterface::init_imgui() {
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
-void UInterface::render(VkCommandBuffer cmd, Statistics statistics) {
+bool UInterface::render(VkCommandBuffer cmd, Statistics statistics) {
     this->new_frame();
-    this->interface(statistics);
+    bool updated = this->interface(statistics);
 
     ImGui::Render();     // It might be interesting to use a dedicated commandBuffer (not mainCommandBuffer).
     ImDrawData* draw_data = ImGui::GetDrawData();
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
+
+    return updated;
 }
 
 bool UInterface::want_capture_mouse()
@@ -99,16 +101,17 @@ void UInterface::new_frame() {
     ImGui::NewFrame();
 }
 
-void UInterface::interface(Statistics statistics) {
+bool UInterface::interface(Statistics statistics) {
     const auto& io = ImGui::GetIO();
+    bool updated = false;
 
     // ImGui::ShowDemoWindow()
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Tools")) {
-            ImGui::MenuItem("Scene editor", nullptr, &this->p_open[SCENE_EDITOR]);
-            ImGui::MenuItem("Texture viewer", nullptr, &this->p_open[TEXTURE_VIEWER]);
-            ImGui::MenuItem("Statistics viewer", nullptr, &this->p_open[STATS_VIEWER]);
-            ImGui::MenuItem("Enable skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
+            updated |= ImGui::MenuItem("Scene editor", nullptr, &this->p_open[SCENE_EDITOR]);
+            updated |= ImGui::MenuItem("Texture viewer", nullptr, &this->p_open[TEXTURE_VIEWER]);
+            updated |= ImGui::MenuItem("Statistics viewer", nullptr, &this->p_open[STATS_VIEWER]);
+            updated |= ImGui::MenuItem("Enable skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -121,22 +124,26 @@ void UInterface::interface(Statistics statistics) {
         //ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
         // ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight()));
         // ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2));
-        this->scene_editor();
+        updated |= this->scene_editor();
 
         // ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
         // ImGui::SetNextWindowPos(ImVec2(0, viewport->Size.y / 2 + ImGui::GetFrameHeight()));
         // ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2 - ImGui::GetFrameHeight()));
-        this->texture_viewer();
+        updated |= this->texture_viewer();
 
-        this->stats_viewer(statistics);
+        updated |= this->stats_viewer(statistics);
 
-        this->skybox_editor();
+        updated |= this->skybox_editor();
     }
+
+    return updated;
 }
 
-void UInterface::scene_editor() {
+bool UInterface::scene_editor() {
+    bool updated = false;
+
     if (!this->p_open[SCENE_EDITOR]) {
-        return;
+        return false;
     }
 
     const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
@@ -149,33 +156,37 @@ void UInterface::scene_editor() {
         ImGui::Text("Scene");
         ImGui::Separator();
         ImGui::PushItemWidth(-1);
-        ImGui::Combo("##SceneList", &get_settings().scene_index, scenes.data(), static_cast<int>(scenes.size()));
+        updated |= ImGui::Combo("##SceneList", &get_settings().scene_index, scenes.data(), static_cast<int>(scenes.size()));
         ImGui::PopItemWidth();
         ImGui::NewLine();
 
         ImGui::Text("Camera");
         ImGui::Separator();
-        ImGui::SliderFloat("Speed", &get_settings().speed, 0.01f, 100.0f);
+        updated |= ImGui::SliderFloat("Speed", &get_settings().speed, 0.01f, 100.0f);
         ImGui::SliderFloat("FOV", &get_settings().fov, 0.0f, 360.0f);
         // ImGui::SliderFloat("Aspect", &get_settings().aspect, 0.0f, 1.0f);
-        ImGui::SliderFloat("Z-Near", &get_settings().z_near, 0.0f, 10.0f);
-        ImGui::SliderFloat("Z-Far", &get_settings().z_far, 0.0f, 500.0f);
+        updated |= ImGui::SliderFloat("Z-Near", &get_settings().z_near, 0.0f, 10.0f);
+        updated |= ImGui::SliderFloat("Z-Far", &get_settings().z_far, 0.0f, 500.0f);
         ImGui::NewLine();
 
         ImGui::Text("Light");
         ImGui::Separator();
-        ImGui::InputFloat3("Position", get_settings().coordinates, 0);
-        ImGui::SliderFloat("Ambient", &get_settings().ambient, 0.0f, 0.005f, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-        ImGui::SliderFloat("Specular", &get_settings().specular, 0.0f, 1.0f);
-        ImGui::InputInt3("Color (RGB)", get_settings().colors, 0);
+        updated |= ImGui::InputFloat3("Position", get_settings().coordinates, 0);
+        updated |= ImGui::SliderFloat("Ambient", &get_settings().ambient, 0.0f, 0.005f, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+        updated |= ImGui::SliderFloat("Specular", &get_settings().specular, 0.0f, 1.0f);
+        updated |= ImGui::InputInt3("Color (RGB)", get_settings().colors, 0);
     }
 
     ImGui::End();
+
+    return updated;
 }
 
-void UInterface::texture_viewer() {
+bool UInterface::texture_viewer() {
+    bool updated = false;
+
     if (!this->p_open[TEXTURE_VIEWER]) {
-        return;
+        return false;
     }
 
     const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
@@ -183,11 +194,15 @@ void UInterface::texture_viewer() {
         ImGui::Text("TO DO");
     }
     ImGui::End();
+
+    return updated;
 }
 
-void UInterface::stats_viewer(const Statistics& statistics) {
+bool UInterface::stats_viewer(const Statistics& statistics) {
+    bool updated = false;
+
     if (!this->p_open[STATS_VIEWER]) {
-        return;
+        return false;
     }
 
     const auto& io = ImGui::GetIO();
@@ -217,12 +232,17 @@ void UInterface::stats_viewer(const Statistics& statistics) {
         ImGui::Text("Rotation (%.0f, %.0f, %.0f)", statistics.rotation[0], statistics.rotation[1], statistics.rotation[2]);
     }
     ImGui::End();
+
+    return updated;
 }
 
-void UInterface::skybox_editor() {
+bool UInterface::skybox_editor() {
+    bool updated = false;
 
     if (!this->p_open[SKYBOX_EDITOR]) {
-        return;
+        return false;
     }
+
+    return updated;
 }
 

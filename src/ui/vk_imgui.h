@@ -49,7 +49,7 @@ public:
     ~UInterface();
 
     void init_imgui();
-    void render(VkCommandBuffer cmd, Statistics stats);
+    bool render(VkCommandBuffer cmd, Statistics stats);
     static bool want_capture_mouse();
 
     Settings& get_settings() { return _settings; };
@@ -61,9 +61,9 @@ private:
     void clean_up();
     void new_frame();
 
-    void interface(Statistics statistics);
-    void scene_editor();
-    void texture_viewer();
-    void stats_viewer(const Statistics& statistics);
-    void skybox_editor();
+    bool interface(Statistics statistics);
+    bool scene_editor();
+    bool texture_viewer();
+    bool stats_viewer(const Statistics& statistics);
+    bool skybox_editor();
 };
