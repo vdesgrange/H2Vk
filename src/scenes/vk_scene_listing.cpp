@@ -23,7 +23,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
 
     camera.inverse(false);
     camera.set_position({ 1.f, 1.f, 1.f });
-    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+    camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.type = Camera::Type::pov;
 
     std::shared_ptr<Model> lightModel = ModelPOLY::create_sphere(engine->_device.get(), {0.f, 0.f, 0.0f}, 0.1f);
@@ -70,7 +70,7 @@ Renderables SceneListing::karibu(Camera& camera, VulkanEngine* engine) {
 
     camera.inverse(true);
     camera.set_position({ 0.0f, 10.0f, 0.0f });
-    camera.set_perspective(70.f, 1700.f / 1200.f, 0.1f, 200.0f);
+    camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.type = Camera::Type::axis;
 
     ModelGLB* karibuModel = new ModelGLB(engine->_device.get());
