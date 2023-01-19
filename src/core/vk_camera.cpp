@@ -133,16 +133,17 @@ bool Camera::on_cursor_position(double xpos, double ypos) {
 
     mousePositionX = xpos;
     mousePositionY = ypos;
-    return mouseRight;
+
+    return mouseLeft;
 }
 
 bool Camera::on_mouse_button(int button, int action, int mods) {
     switch(button) {
-        case GLFW_MOUSE_BUTTON_LEFT: mouseLeft = action == GLFW_PRESS;
-        case GLFW_MOUSE_BUTTON_RIGHT: mouseRight = action == GLFW_PRESS;
+        case GLFW_MOUSE_BUTTON_LEFT: mouseLeft = action == GLFW_PRESS; return mouseLeft;
+        case GLFW_MOUSE_BUTTON_RIGHT: mouseRight = action == GLFW_PRESS; return mouseRight;
     };
 
-    return true;
+    return false;
 }
 
 const glm::mat4 Camera::get_projection_matrix() {
