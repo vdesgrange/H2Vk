@@ -35,6 +35,7 @@ void VulkanEngine::init()
     init_descriptors();
     init_pipelines();
 
+    // update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
 	_isInitialized = true;
 }
 
@@ -336,14 +337,29 @@ void VulkanEngine::update_buffers() {
 void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
 //    std::cout << "Update storage buffer" << std::endl;
     // Objects : write into the buffer by copying the render matrices from our render objects into it
+
+//    for (uint32_t i = 0; i < FRAME_OVERLAP; i++) {
+//        FrameData frame = _frames[i]; // get_current_frame()
+//        void* objectData;
+//        vmaMapMemory(_device->_allocator, frame.objectBuffer._allocation, &objectData);
+//        GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
+//        for (int i = 0; i < count; i++) {
+//            RenderObject& object = first[i];
+//            objectSSBO[i].model = object.transformMatrix;
+//        }
+//        vmaUnmapMemory(_device->_allocator, frame.objectBuffer._allocation);
+//    }
+
+    FrameData frame = get_current_frame();
     void* objectData;
-    vmaMapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation, &objectData);
+    vmaMapMemory(_device->_allocator, frame.objectBuffer._allocation, &objectData);
     GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
     for (int i = 0; i < count; i++) {
         RenderObject& object = first[i];
         objectSSBO[i].model = object.transformMatrix;
     }
-    vmaUnmapMemory(_device->_allocator, get_current_frame().objectBuffer._allocation);
+    vmaUnmapMemory(_device->_allocator, frame.objectBuffer._allocation);
+
 }
 
 void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *first, int count) {
@@ -433,7 +449,7 @@ void VulkanEngine::ui_overlay(Statistics stats) {
     // Interface
     bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
 
-    std::cout << "Interaction with UI" << std::endl;
+    // std::cout << "Interaction with UI" << std::endl;
     // Camera
     _camera->set_speed(_ui->get_settings().speed);
     _reset = _camera->update_camera(1. / stats.FrameRate);
@@ -489,6 +505,7 @@ void VulkanEngine::render(int imageIndex) {
             if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
                 _scene->load_scene(_ui->get_settings().scene_index, *_camera);
                 setup_descriptors();
+                // update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
             }
             // Draw
             draw_objects(get_current_frame()._commandBuffer->_commandBuffer, _scene->_renderables.data(),
@@ -538,7 +555,7 @@ void VulkanEngine::cleanup()
         }
 
         _scene->_renderables.clear();
-        _skybox->destroy();
+        _skybox.reset();
         _ui.reset();
         _samplerManager.reset();
         _textureManager.reset();

@@ -10,7 +10,7 @@
 Model::Model(Device* device) : _device(device) {}
 
 Model::~Model() {
-    // this->destroy(); // break for some reason
+    this->destroy(); // break for some reason
 }
 
 Model::Model(const Model& rhs) : _device(rhs._device) {

@@ -96,7 +96,7 @@ public:
     std::vector<Vertex> _verticesBuffer {};
 
     struct {
-        uint32_t count {};
+        uint32_t count {}; // useless?
         AllocatedBuffer allocation {};
     } _indexBuffer {};
     AllocatedBuffer _vertexBuffer {};

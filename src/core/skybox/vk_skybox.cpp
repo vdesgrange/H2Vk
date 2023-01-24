@@ -14,13 +14,13 @@ Skybox::Skybox(Device& device, PipelineBuilder& pipelineBuilder, TextureManager&
 }
 
 Skybox::~Skybox() {
-    // this->_cube->destroy(); // smart pointer, break because destroy automatically.
-    // this->_texture.destroy(this->_device);  // Must be called before vmaDestroyAllocator
+    this->destroy();
 }
 
 void Skybox::destroy() {
-    // this->_cube->destroy();
-    this->_texture.destroy(this->_device);
+    // must be done before device allocator destruction otherwise buffer memory not all freed
+    this->_cube.reset(); // smart pointer. Carefull, might break because destroyed automatically.
+    this->_texture.destroy(this->_device); // Must be called before vmaDestroyAllocator
 }
 
 void Skybox::load() {
@@ -28,7 +28,7 @@ void Skybox::load() {
     // _cube = ModelPOLY::create_sphere(&_device, {0.0f, 0.0f, 0.0f},  10.0f);
     load_texture();
     _meshManager.upload_mesh(*_cube);
-    _meshManager._models.emplace("skybox", _cube);
+    // _meshManager._models.emplace("skybox", _cube);
 }
 
 void Skybox::load_texture() {

@@ -219,32 +219,3 @@ void ModelGLTF::load_scene(tinygltf::Model &input, std::vector<uint32_t>& indexB
         this->load_node(node, input, nullptr, indexBuffer, vertexBuffer);
     }
 }
-
-//void ModelGLTF::descriptors(VulkanEngine& engine) {
-//    std::vector<VkDescriptorPoolSize> sizes = {
-//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-//            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(this->_images.size()) }
-//    };
-//
-////    _camBuffer = Buffer::create_buffer(*engine._device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-////
-////    VkDescriptorBufferInfo camBInfo{};
-////    camBInfo.buffer = _camBuffer._buffer; // frames[i]
-////    camBInfo.offset = 0;
-////    camBInfo.range = sizeof(GPUCameraData);
-////
-////    DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
-////        .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-////        .build(_descriptorSet, _descriptorSetLayouts.matrices, sizes);
-//
-//    for (auto& image : this->_images) {
-//        VkDescriptorImageInfo imageBInfo;
-//        imageBInfo.sampler = image._sampler;
-//        imageBInfo.imageView = image._imageView;
-//        imageBInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-//
-//        DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
-//            .bind_image(imageBInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-//            .build(image._descriptorSet, engine._descriptorSetLayouts.textures, sizes);
-//    }
-//}

@@ -30,7 +30,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     engine->_meshManager->upload_mesh(*lightModel);
     engine->_meshManager->_models.emplace("light", lightModel);
 
-    ModelOBJ* monkeyModel = new ModelOBJ(engine->_device.get());
+    std::shared_ptr<ModelOBJ> monkeyModel = std::make_shared<ModelOBJ>(engine->_device.get());
     monkeyModel->load_model(*engine, "../assets/monkey/monkey_smooth.obj");
     for (auto& node : monkeyModel->_nodes) {
         node->matrix =  glm::mat4{ 1.0f };
@@ -73,7 +73,7 @@ Renderables SceneListing::karibu(Camera& camera, VulkanEngine* engine) {
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.type = Camera::Type::axis;
 
-    ModelGLB* karibuModel = new ModelGLB(engine->_device.get());
+    std::shared_ptr<ModelGLB> karibuModel = std::make_shared<ModelGLB>(engine->_device.get());
     karibuModel->load_model(*engine, "../assets/karibu_hippo_zanzibar/karibu_hippo_zanzibar.glb");
     engine->_meshManager->upload_mesh(*karibuModel);
     engine->_meshManager->_models.emplace("karibu", std::shared_ptr<Model>(karibuModel));
@@ -95,7 +95,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);  // 1700.f / 1200.f
     camera.type = Camera::Type::axis;
 
-    ModelGLB* helmetModel = new ModelGLB(engine->_device.get());
+    std::shared_ptr<ModelGLB> helmetModel = std::make_shared<ModelGLB>(engine->_device.get());
     helmetModel->load_model(*engine, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");
     engine->_meshManager->upload_mesh(*helmetModel);
     engine->_meshManager->_models.emplace("helmet", std::shared_ptr<Model>(helmetModel));

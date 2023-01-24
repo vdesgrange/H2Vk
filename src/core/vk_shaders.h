@@ -28,7 +28,7 @@ struct ShaderPass {
     std::shared_ptr<ShaderEffect> effect;
 
     ~ShaderPass() {
-        std::cout << "Material/ShaderPass destroyed" << std::endl;
+        std::cout << "Material/ShaderPass destroyed" << std::endl;  // todo: move _materials destruction of pipeline here?
     }
 };
 
