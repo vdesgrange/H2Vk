@@ -35,7 +35,7 @@ void VulkanEngine::init()
     init_descriptors();
     init_pipelines();
 
-    // update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
+    update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
 	_isInitialized = true;
 }
 
@@ -297,7 +297,6 @@ void VulkanEngine::recreate_swap_chain() {
     if (_window->_windowExtent.width > 0.0f && _window->_windowExtent.height > 0.0f) {
         _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
 //        update_buffers();
-//        update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
     }
 
 }
@@ -338,27 +337,27 @@ void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
 //    std::cout << "Update storage buffer" << std::endl;
     // Objects : write into the buffer by copying the render matrices from our render objects into it
 
-//    for (uint32_t i = 0; i < FRAME_OVERLAP; i++) {
-//        FrameData frame = _frames[i]; // get_current_frame()
-//        void* objectData;
-//        vmaMapMemory(_device->_allocator, frame.objectBuffer._allocation, &objectData);
-//        GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
-//        for (int i = 0; i < count; i++) {
-//            RenderObject& object = first[i];
-//            objectSSBO[i].model = object.transformMatrix;
-//        }
-//        vmaUnmapMemory(_device->_allocator, frame.objectBuffer._allocation);
-//    }
-
-    FrameData frame = get_current_frame();
-    void* objectData;
-    vmaMapMemory(_device->_allocator, frame.objectBuffer._allocation, &objectData);
-    GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
-    for (int i = 0; i < count; i++) {
-        RenderObject& object = first[i];
-        objectSSBO[i].model = object.transformMatrix;
+    for (uint32_t i = 0; i < FRAME_OVERLAP; i++) {
+        FrameData frame = _frames[i]; // get_current_frame()
+        void* objectData;
+        vmaMapMemory(_device->_allocator, frame.objectBuffer._allocation, &objectData);
+        GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
+        for (int i = 0; i < count; i++) {
+            RenderObject& object = first[i];
+            objectSSBO[i].model = object.transformMatrix;
+        }
+        vmaUnmapMemory(_device->_allocator, frame.objectBuffer._allocation);
     }
-    vmaUnmapMemory(_device->_allocator, frame.objectBuffer._allocation);
+
+//    FrameData frame = get_current_frame();
+//    void* objectData;
+//    vmaMapMemory(_device->_allocator, frame.objectBuffer._allocation, &objectData);
+//    GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
+//    for (int i = 0; i < count; i++) {
+//        RenderObject& object = first[i];
+//        objectSSBO[i].model = object.transformMatrix;
+//    }
+//    vmaUnmapMemory(_device->_allocator, frame.objectBuffer._allocation);
 
 }
 
@@ -367,9 +366,12 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer, RenderObject *fir
     std::shared_ptr<Material> lastMaterial = nullptr;
     int frameIndex = _frameNumber % FRAME_OVERLAP;
 
+    const auto prevTime =  _window->get_time();
     update_buffers();
-    update_buffer_objects(first, count);
+    // update_buffer_objects(first, count);
+    const auto timeDelta =  _window->get_time() - prevTime;
 
+    std::cout << static_cast<float>(1000 * timeDelta) << std::endl;
     // === Drawing ===
     skybox(commandBuffer);
 
@@ -505,7 +507,7 @@ void VulkanEngine::render(int imageIndex) {
             if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
                 _scene->load_scene(_ui->get_settings().scene_index, *_camera);
                 setup_descriptors();
-                // update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
+                update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
             }
             // Draw
             draw_objects(get_current_frame()._commandBuffer->_commandBuffer, _scene->_renderables.data(),
