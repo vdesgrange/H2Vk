@@ -298,6 +298,43 @@ void VulkanEngine::recreate_swap_chain() {
 
 }
 
+Statistics VulkanEngine::monitoring() {
+    // Record delta time between calls to Render.
+    const auto prevTime = _time;
+    _time = _window->get_time();
+    const auto timeDelta = _time - prevTime;
+
+    Statistics stats = {};
+    stats.FramebufferSize = _window->get_framebuffer_size();
+    stats.FrameRate = static_cast<float>(1 / timeDelta); // FPS
+    stats.coordinates[0] = _camera->get_position_vector().x;
+    stats.coordinates[1] = _camera->get_position_vector().y;
+    stats.coordinates[2] = _camera->get_position_vector().z;
+    return stats;
+}
+
+void VulkanEngine::ui_overlay(Statistics stats) {
+    // Interface
+    bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
+
+    if (updated) {
+        // Camera
+        _camera->set_speed(_ui->get_settings().speed);
+        _camera->set_perspective(_ui->get_settings().fov, _camera->aspect, _ui->get_settings().z_near,_ui->get_settings().z_far); // _ui->get_settings().aspect
+
+        // Scene
+        _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
+        _sceneParameters.sunlightDirection = {_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2], _ui->get_settings().ambient};
+        _sceneParameters.specularFactor = _ui->get_settings().specular;
+
+        // Skybox
+        _skyboxDisplay = _ui->p_open[SKYBOX_EDITOR];
+    }
+
+    // Move camera when key press
+    _reset = _camera->update_camera(1. / stats.FrameRate);
+}
+
 void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
     if (_skyboxDisplay) {
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipeline);
@@ -381,81 +418,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer) {
     }
 }
 
-void VulkanEngine::draw() { // todo : what need to be called at each frame? draw()? commandBuffers?
-    // Wait GPU to render latest frame
-    VK_CHECK(get_current_frame()._renderFence->wait(1000000000));  // wait until the GPU has finished rendering the last frame. Timeout of 1 second
-    VK_CHECK(get_current_frame()._renderFence->reset());
-
-    uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, get_current_frame()._presentSemaphore->_semaphore, nullptr, &imageIndex);
-
-    if (result == VK_ERROR_OUT_OF_DATE_KHR) { // || result == VK_SUBOPTIMAL_KHR
-        recreate_swap_chain();
-        return;
-    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR){
-        throw std::runtime_error("failed to acquire swap chain image");
-    }
-
-    render(imageIndex);
-
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.pNext = nullptr;
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &(_swapchain->_swapchain);
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
-    presentInfo.pImageIndices = &imageIndex;
-    presentInfo.pResults = nullptr;
-
-    result = vkQueuePresentKHR(_device->get_graphics_queue(), &presentInfo);
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        framebufferResized = false;
-        recreate_swap_chain();
-    } else if (result != VK_SUCCESS) {
-        throw std::runtime_error("failed to present swap chain image!");
-    }
-
-    _frameNumber++;
-}
-
-Statistics VulkanEngine::monitoring() {
-    // Record delta time between calls to Render.
-    const auto prevTime = _time;
-    _time = _window->get_time();
-    const auto timeDelta = _time - prevTime;
-
-    Statistics stats = {};
-    stats.FramebufferSize = _window->get_framebuffer_size();
-    stats.FrameRate = static_cast<float>(1 / timeDelta); // FPS
-    stats.coordinates[0] = _camera->get_position_vector().x;
-    stats.coordinates[1] = _camera->get_position_vector().y;
-    stats.coordinates[2] = _camera->get_position_vector().z;
-    return stats;
-}
-
-void VulkanEngine::ui_overlay(Statistics stats) {
-    // Interface
-    bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
-
-    if (updated) {
-        // Camera
-        _camera->set_speed(_ui->get_settings().speed);
-        _camera->set_perspective(_ui->get_settings().fov, _camera->aspect, _ui->get_settings().z_near,_ui->get_settings().z_far); // _ui->get_settings().aspect
-
-        // Scene
-        _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
-        _sceneParameters.sunlightDirection = {_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2], _ui->get_settings().ambient};
-        _sceneParameters.specularFactor = _ui->get_settings().specular;
-
-        // Skybox
-        _skyboxDisplay = _ui->p_open[SKYBOX_EDITOR];
-    }
-
-    // Move camera when key press
-    _reset = _camera->update_camera(1. / stats.FrameRate);
-}
-
 void VulkanEngine::render(int imageIndex) {
     Statistics stats = monitoring();
 
@@ -525,6 +487,44 @@ void VulkanEngine::render(int imageIndex) {
     submitInfo.pCommandBuffers = &get_current_frame()._commandBuffer->_commandBuffer;
 
     VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, get_current_frame()._renderFence->_fence));
+}
+
+void VulkanEngine::draw() { // todo : what need to be called at each frame? draw()? commandBuffers?
+    // Wait GPU to render latest frame. Timeout of 1 second
+    VK_CHECK(get_current_frame()._renderFence->wait(1000000000));
+    VK_CHECK(get_current_frame()._renderFence->reset());
+
+    uint32_t imageIndex;
+    VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, get_current_frame()._presentSemaphore->_semaphore, nullptr, &imageIndex);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        recreate_swap_chain();
+        return;
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR){
+        throw std::runtime_error("failed to acquire swap chain image");
+    }
+
+    render(imageIndex);
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.pNext = nullptr;
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &(_swapchain->_swapchain);
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pResults = nullptr;
+
+    result = vkQueuePresentKHR(_device->get_graphics_queue(), &presentInfo);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _window->_framebufferResized) {
+        _window->_framebufferResized = false;
+        recreate_swap_chain();
+    } else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
+
+    _frameNumber++;
 }
 
 void VulkanEngine::run()

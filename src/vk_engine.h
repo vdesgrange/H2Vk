@@ -89,7 +89,6 @@ struct FrameData {
 class VulkanEngine {
 public:
 	bool _isInitialized = false;
-    bool framebufferResized = false;
     bool _skyboxDisplay = true;
     uint32_t _frameNumber = 0;
     double _time = 0;

@@ -23,7 +23,7 @@ Window::~Window() {
 
 void Window::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
     auto app = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    app->framebufferResized = true;
+    app->_framebufferResized = true;
 }
 
 double Window::get_time() {

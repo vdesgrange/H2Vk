@@ -10,6 +10,7 @@ class Window final {
 public:
     GLFWwindow* _window;
     VkExtent2D _windowExtent{ CWIDTH , CHEIGHT };
+    bool _framebufferResized = false;
 
     Window();
     ~Window();
@@ -28,7 +29,5 @@ public:
     std::function<void(double xpos, double ypos)> on_cursor_position;
 
 private:
-    bool framebufferResized = false;
-
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 };
