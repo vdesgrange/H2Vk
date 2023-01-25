@@ -27,8 +27,7 @@ void VulkanEngine::init()
     init_default_renderpass();
     init_framebuffers();
     init_sync_structures();
-	load_meshes();
-    load_images();
+	init_managers();
     init_interface();
     init_camera();
     init_scene();
@@ -254,11 +253,8 @@ FrameData& VulkanEngine::get_current_frame() {
     return _frames[_frameNumber % FRAME_OVERLAP];
 }
 
-void VulkanEngine::load_meshes() {
+void VulkanEngine::init_managers() {
     _meshManager = std::make_unique<MeshManager>(*_device, _uploadContext); // move to sceneListing ?
-}
-
-void VulkanEngine::load_images() {
     _textureManager = std::make_unique<TextureManager>(*this);
     _samplerManager = std::make_unique<SamplerManager>(*this);
 }

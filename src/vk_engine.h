@@ -150,8 +150,7 @@ private:
     void init_descriptors(); // can be call before choice of model
     void setup_descriptors(); // when switching model
     void init_pipelines();
-    void load_meshes();
-    void load_images();
+    void init_managers();
     void recreate_swap_chain();
     void skybox(VkCommandBuffer commandBuffer);
     void update_buffers();
