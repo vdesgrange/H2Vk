@@ -30,6 +30,10 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     engine->_meshManager->upload_mesh(*lightModel);
     engine->_meshManager->_models.emplace("light", lightModel);
 
+    std::shared_ptr<Model> triangleModel = ModelPOLY::create_triangle(engine->_device.get(), {0.0f, 1.0f, 0.0f});
+    engine->_meshManager->upload_mesh(*triangleModel);
+    engine->_meshManager->_models.emplace("triangle", triangleModel);
+
     std::shared_ptr<ModelOBJ> monkeyModel = std::make_shared<ModelOBJ>(engine->_device.get());
     monkeyModel->load_model(*engine, "../assets/monkey/monkey_smooth.obj");
     for (auto& node : monkeyModel->_nodes) {
@@ -50,17 +54,17 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     monkey.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(monkey);
 
-//    for (int x = -10; x <= 10; x++) {
-//        for (int y = -10; y <= 10; y++) {
-//            RenderObject tri;
-//            tri.model = engine->_meshManager->get_model("triangle");
-//            tri.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
-//            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(0, 0, 0)); // vec3(x, 0, y)
-//            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
-//            tri.transformMatrix = translation * scale;
-//            renderables.push_back(tri);
-//        }
-//    }
+    for (int x = -50; x <= 50; x++) {
+        for (int y = -50; y <= 50; y++) {
+            RenderObject tri;
+            tri.model = engine->_meshManager->get_model("triangle");
+            tri.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
+            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y)); // vec3(x, 0, y)
+            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
+            tri.transformMatrix = translation * scale;
+            renderables.push_back(tri);
+        }
+    }
 
     return renderables;
 }
@@ -91,7 +95,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
     camera.inverse(false);
-    camera.set_position({ 0.0f, 0.0f, -3.0f });
+    camera.set_position({ 0.0f, 0.0f, -3.0f }); // Re-initialize position after scene change = camera jumping.
     camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);  // 1700.f / 1200.f
     camera.type = Camera::Type::axis;
 
