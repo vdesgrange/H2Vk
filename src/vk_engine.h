@@ -130,7 +130,6 @@ public:
 
 	void init();
 	void cleanup();
-	void draw();
 	void run();
 
 private:
@@ -152,11 +151,13 @@ private:
     void init_managers();
     void recreate_swap_chain();
     void skybox(VkCommandBuffer commandBuffer);
-    void update_buffers();
+    void ui_overlay();
+    void update_uniform_buffers();
     void update_buffer_objects(RenderObject *first, int count);
-    void draw_objects(VkCommandBuffer commandBuffer);
-    void ui_overlay(Statistics stats);
-    void render(int imageIndex); // ImDrawData* draw_data,
+    void render_objects(VkCommandBuffer commandBuffer);
+    void build_command_buffers(FrameData frame, int imageIndex);
+    void render(int imageIndex);
+    void draw();
     Statistics monitoring();
     FrameData& get_current_frame();
 };

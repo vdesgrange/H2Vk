@@ -13,6 +13,7 @@
 #include <GLFW/glfw3.h>
 #include "glm/glm.hpp"
 #include <iostream>
+#include <chrono>
 
 #include "vk_engine.h"
 
@@ -34,7 +35,7 @@ void VulkanEngine::init()
     init_descriptors();
     init_pipelines();
 
-    // update_buffers();
+    // update_uniform_buffers();
     update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
 	_isInitialized = true;
 }
@@ -71,16 +72,13 @@ void VulkanEngine::init_camera() {
         if (_ui->want_capture_mouse()) return;
         bool updated = _camera->on_cursor_position(xpos, ypos);
 //        if (updated) {
-//            update_buffers();
+//            update_uniform_buffers();
 //        }
     };
 
     _window->on_mouse_button = [this](int button, int action, int mods) {
         if (_ui->want_capture_mouse()) return;
         bool updated = _camera->on_mouse_button(button, action, mods);
-//        if (updated) {
-//            update_buffers();
-//        }
     };
 }
 
@@ -293,7 +291,7 @@ void VulkanEngine::recreate_swap_chain() {
 
     if (_window->_windowExtent.width > 0.0f && _window->_windowExtent.height > 0.0f) {
         _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
-        update_buffers();
+        update_uniform_buffers();
     }
 
 }
@@ -313,10 +311,10 @@ Statistics VulkanEngine::monitoring() {
     return stats;
 }
 
-void VulkanEngine::ui_overlay(Statistics stats) {
-    // Interface
-    bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
+void VulkanEngine::ui_overlay() {
+    Statistics stats = monitoring();
 
+    bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
     if (updated) {
         // Camera
         _camera->set_speed(_ui->get_settings().speed);
@@ -343,30 +341,28 @@ void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
     }
 }
 
-void VulkanEngine::update_buffers() {
-    for (uint32_t i = 0; i < FRAME_OVERLAP; i++) {
-        FrameData frame = _frames[i]; // get_current_frame()
-        uint32_t frameIndex = i; //  _frameNumber % FRAME_OVERLAP;
+void VulkanEngine::update_uniform_buffers() {
+    FrameData frame =  get_current_frame(); // _frames[i];
+    uint32_t frameIndex = _frameNumber % FRAME_OVERLAP; // i;
 
-        // === Camera & Objects & Environment ===
-        GPUCameraData camData{};
-        camData.proj = _camera->get_projection_matrix();
-        camData.view = _camera->get_view_matrix();
-        camData.pos = _camera->get_position_vector();
+    // === Camera & Objects & Environment ===
+    GPUCameraData camData{};
+    camData.proj = _camera->get_projection_matrix();
+    camData.view = _camera->get_view_matrix();
+    camData.pos = _camera->get_position_vector();
 
-        // Camera : write into the buffer by copying the render matrices from camera object into it
-        void *data;
-        vmaMapMemory(_device->_allocator, frame.cameraBuffer._allocation, &data);
-        memcpy(data, &camData, sizeof(GPUCameraData));
-        vmaUnmapMemory(_device->_allocator, frame.cameraBuffer._allocation);
+    // Camera : write into the buffer by copying the render matrices from camera object into it
+    void *data;
+    vmaMapMemory(_device->_allocator, frame.cameraBuffer._allocation, &data);
+    memcpy(data, &camData, sizeof(GPUCameraData));
+    vmaUnmapMemory(_device->_allocator, frame.cameraBuffer._allocation);
 
-        // Environment : write scene data into environment buffer
-        char *sceneData;
-        vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation, (void **) &sceneData);
-        sceneData += Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData)) * frameIndex;
-        memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
-        vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
-    }
+    // Environment : write scene data into environment buffer
+    char *sceneData;
+    vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation, (void **) &sceneData);
+    sceneData += Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData)) * frameIndex;
+    memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
+    vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
 }
 
 void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
@@ -385,7 +381,7 @@ void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
     }
 }
 
-void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer) {
+void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
     std::shared_ptr<Model> lastModel = nullptr;
     std::shared_ptr<Material> lastMaterial = nullptr;
     int frameIndex = _frameNumber % FRAME_OVERLAP;
@@ -393,7 +389,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer) {
     RenderObject *first = _scene->_renderables.data();
 
     // === Update required uniform buffers
-    update_buffers(); // If called at every frame: fix the position jump of the camera when moving
+    update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
     // update_buffer_objects(first, count);
 
     // === Bind ===
@@ -418,11 +414,20 @@ void VulkanEngine::draw_objects(VkCommandBuffer commandBuffer) {
     }
 }
 
-void VulkanEngine::render(int imageIndex) {
-    Statistics stats = monitoring();
+void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
+    // Record command buffers
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[1].depthStencil.depth = 1.0f;
 
-    // --- Command Buffer
-    VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, 0));
+    // === Render pass ====
+    // Collection of attachments, subpasses, and dependencies between the subpasses
+    VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass,
+                                                                         _window->_windowExtent,
+                                                                         _frameBuffers->_frameBuffers[imageIndex]);
+    renderPassInfo.clearValueCount = clearValues.size();
+    renderPassInfo.pClearValues = clearValues.data();
+
 
     VkCommandBufferBeginInfo cmdBeginInfo{};
     cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -430,47 +435,39 @@ void VulkanEngine::render(int imageIndex) {
     cmdBeginInfo.pInheritanceInfo = nullptr;
     cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    VK_CHECK(vkBeginCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, &cmdBeginInfo));
+    VK_CHECK(vkBeginCommandBuffer(frame._commandBuffer->_commandBuffer, &cmdBeginInfo));
     {
-        // -- Clear value
-        VkClearValue clearValue;
-        clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-        VkClearValue depthValue;
-        depthValue.depthStencil.depth = 1.0f;
-        std::array<VkClearValue, 2> clearValues = {clearValue, depthValue};
-
-        // -- Render pass
-        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass,
-                                                                             _window->_windowExtent,
-                                                                             _frameBuffers->_frameBuffers[imageIndex]);
-        renderPassInfo.clearValueCount = 2;
-        renderPassInfo.pClearValues = &clearValues[0];
-
-        vkCmdBeginRenderPass(get_current_frame()._commandBuffer->_commandBuffer, &renderPassInfo,
-                             VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
             VkViewport viewport = vkinit::get_viewport((float) _window->_windowExtent.width, (float) _window->_windowExtent.height);
-            vkCmdSetViewport(get_current_frame()._commandBuffer->_commandBuffer, 0, 1, &viewport);
+            vkCmdSetViewport(frame._commandBuffer->_commandBuffer, 0, 1, &viewport);
 
             VkRect2D scissor = vkinit::get_scissor((float) _window->_windowExtent.width, (float) _window->_windowExtent.height);
-            vkCmdSetScissor(get_current_frame()._commandBuffer->_commandBuffer, 0, 1, &scissor);
+            vkCmdSetScissor(frame._commandBuffer->_commandBuffer, 0, 1, &scissor);
 
             // Scene
             if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
                 _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-                setup_descriptors();
-                update_buffers(); // Re-initialize position after scene change = camera jumping.
-                update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
+                this->setup_descriptors();
+                // update_uniform_buffers(); // Re-initialize position after scene change = camera jumping.
+                this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
             }
             // Draw
-            draw_objects(get_current_frame()._commandBuffer->_commandBuffer);
+            this->render_objects(frame._commandBuffer->_commandBuffer);
 
-            this->ui_overlay(stats);
+            this->ui_overlay();
         }
         vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);
 
     }
     VK_CHECK(vkEndCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer));
+
+}
+
+void VulkanEngine::render(int imageIndex) {
+    // === Command Buffer ===
+    VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, 0));
+    this->build_command_buffers(get_current_frame(), imageIndex);
 
     // --- Submit queue
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -479,24 +476,25 @@ void VulkanEngine::render(int imageIndex) {
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.pNext = nullptr;
     submitInfo.pWaitDstStageMask = &waitStage;
-    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.waitSemaphoreCount = 1; // Semaphore to wait before executing the command buffers
     submitInfo.pWaitSemaphores = &(get_current_frame()._presentSemaphore->_semaphore);
-    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.signalSemaphoreCount = 1; // Number of semaphores to be signaled once the commands
     submitInfo.pSignalSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
-    submitInfo.commandBufferCount = 1;
+    submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
     submitInfo.pCommandBuffers = &get_current_frame()._commandBuffer->_commandBuffer;
 
     VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, get_current_frame()._renderFence->_fence));
 }
 
 void VulkanEngine::draw() { // todo : what need to be called at each frame? draw()? commandBuffers?
+    // === Prepare frame ===
     // Wait GPU to render latest frame. Timeout of 1 second
-    VK_CHECK(get_current_frame()._renderFence->wait(1000000000));
-    VK_CHECK(get_current_frame()._renderFence->reset());
+     VK_CHECK(get_current_frame()._renderFence->wait(1000000000));
+     VK_CHECK(get_current_frame()._renderFence->reset());
 
+    // Acquire next image
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, get_current_frame()._presentSemaphore->_semaphore, nullptr, &imageIndex);
-
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         recreate_swap_chain();
         return;
@@ -504,17 +502,19 @@ void VulkanEngine::draw() { // todo : what need to be called at each frame? draw
         throw std::runtime_error("failed to acquire swap chain image");
     }
 
+    // === Rendering commands
     render(imageIndex);
 
+    // === Submit frame ===
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.pNext = nullptr;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &(_swapchain->_swapchain);
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
 
     result = vkQueuePresentKHR(_device->get_graphics_queue(), &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _window->_framebufferResized) {
