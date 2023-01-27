@@ -1,11 +1,14 @@
 .idea/
 /build
 /bin
-/assets/
 cmake-build-debug/
-/shaders/*.spv
 /src/shaders/*.spv
 /src/shaders/**/*.spv
 .DS_Store
 /src/.DS_Store
 /assets/.DS_Store
+/assets/debug
+/assets/karibu_hippo_zanzibar
+/assets/lost_empire
+/assets/old_brick_bridge
+/assets/sponza
