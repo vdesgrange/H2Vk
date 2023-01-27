@@ -1,5 +1,5 @@
 find_package(Vulkan REQUIRED)
-FIND_PACKAGE(SDL2 REQUIRED)
+# FIND_PACKAGE(SDL2 REQUIRED)
 
 add_library(vkbootstrap STATIC)
 add_library(glm INTERFACE)
@@ -40,17 +40,17 @@ set(TINYGLTF_HEADER_ONLY ON CACHE INTERNAL "" FORCE)
 set(TINYGLTF_INSTALL OFF CACHE INTERNAL "" FORCE)
 target_include_directories(tinygltf PUBLIC tinygltf)
 
-add_library(sdl2 INTERFACE)
+# add_library(sdl2 INTERFACE)
 
-if (WIN32)
-target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include ${sdl2_image_DIR}/include)
-target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib/x64 ${sdl2_image_DIR}/lib/x64)
-elseif (UNIX)
-target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include/SDL2 ${sdl2_image_DIR}/include/SDL2)
-target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib ${sdl2_image_DIR}/lib)
-endif()
+#if (WIN32)
+#target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include ${sdl2_image_DIR}/include)
+#target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib/x64 ${sdl2_image_DIR}/lib/x64)
+#elseif (UNIX)
+#target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include/SDL2 ${sdl2_image_DIR}/include/SDL2)
+#target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib ${sdl2_image_DIR}/lib)
+#endif()
 
-target_link_libraries(sdl2 INTERFACE ${SDL2_LIBRARY}) # SDL2 SDL2main
+# target_link_libraries(sdl2 INTERFACE ${SDL2_LIBRARY}) # SDL2 SDL2main
 
 add_library(imgui STATIC)
 
@@ -68,6 +68,6 @@ target_sources(imgui PRIVATE
     imgui/backends/imgui_impl_glfw.cpp
     )
 
-target_link_libraries(imgui PUBLIC Vulkan::Vulkan sdl2)
+target_link_libraries(imgui PUBLIC Vulkan::Vulkan) # sdl2
 
 target_include_directories(stb_image INTERFACE stb_image)

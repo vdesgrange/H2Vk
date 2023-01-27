@@ -27,7 +27,7 @@ add_subdirectory(src)
 add_subdirectory(third_party/tracy/)
 
 include_directories(/usr/local/include/ src/)
-include_directories(SDL2_HEADER /Library/Frameworks/SDL2.framework/Headers)
+# include_directories(SDL2_HEADER /Library/Frameworks/SDL2.framework/Headers)
 
 set(VK_ICD_FILENAMES ~/VulkanSDK/1.3.204.1/macOS/share/vulkan/icd.d/MoltenVK_icd.json)
 set(VK_LAYER_PATH ~/VulkanSDK/1.3.204.1/macOS/share/vulkan/explicit_layer.d)
