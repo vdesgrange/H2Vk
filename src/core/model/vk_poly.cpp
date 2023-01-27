@@ -112,11 +112,8 @@ std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, const glm::vec3& p
     return model;
 }
 
-std::shared_ptr<Model> ModelPOLY::create_sphere(Device* device, const glm::vec3& center, float radius, glm::vec3 color) {
+std::shared_ptr<Model> ModelPOLY::create_uv_sphere(Device* device, const glm::vec3& center, float radius, const uint32_t stacks, const uint32_t sectors, glm::vec3 color) {
     std::shared_ptr<Model> model = std::make_shared<ModelPOLY>(device);
-
-    const uint32_t stacks = 16;
-    const uint32_t sectors = 16;
     float x, y, z, xy = 0;
 
     for (uint32_t i = 0; i <= stacks; i++) {

@@ -30,7 +30,7 @@ void Skybox::load() {
         _model = ModelPOLY::create_cube(&_device, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
         load_cube_texture();
     } else {
-        _model = ModelPOLY::create_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f);
+        _model = ModelPOLY::create_uv_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
         load_sphere_texture();
     }
 
