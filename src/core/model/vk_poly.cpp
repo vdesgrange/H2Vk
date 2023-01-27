@@ -115,12 +115,12 @@ std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, const glm::vec3& p
 std::shared_ptr<Model> ModelPOLY::create_sphere(Device* device, const glm::vec3& center, float radius, glm::vec3 color) {
     std::shared_ptr<Model> model = std::make_shared<ModelPOLY>(device);
 
-    const uint32_t stacks = 8;
+    const uint32_t stacks = 16;
     const uint32_t sectors = 16;
     float x, y, z, xy = 0;
 
     for (uint32_t i = 0; i <= stacks; i++) {
-        float phi = M_PI / 2 - M_PI * i / stacks;
+        float phi = - M_PI / 2 - M_PI * i / stacks;
         xy = cos(phi);
         z = sin(phi);
 
@@ -130,9 +130,9 @@ std::shared_ptr<Model> ModelPOLY::create_sphere(Device* device, const glm::vec3&
             y = xy * sin(theta);
 
             Vertex vertex{};
-            vertex.position = center + radius * glm::vec3({x, y, z});
-            vertex.normal = glm::vec3({x, y, z});
-            vertex.uv = glm::vec2({static_cast<float>(i) / sectors, static_cast<float>(j) / stacks});
+            vertex.position = center + radius * glm::vec3({x, z, y});
+            vertex.normal = glm::normalize(glm::vec3({x, z, y}));
+            vertex.uv = glm::vec2({ static_cast<float>(j) / sectors, static_cast<float>(i) / stacks});
             vertex.color = color;
 
             model->_verticesBuffer.push_back(vertex);

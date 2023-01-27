@@ -243,8 +243,9 @@ void VulkanEngine::init_pipelines() {
     _pipelineBuilder->scene_damaged_helmet(setLayouts);
 
     // === Skybox === (Build by default to handle if skybox enabled later)
-    _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
-    _skybox->_material = this->_pipelineBuilder->get_material("skyboxMaterial");
+    // _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
+    _skybox->setup_pipeline(*_pipelineBuilder, {_descriptorSetLayouts.skybox});
+    // _skybox->_material = this->_pipelineBuilder->get_material("skyboxMaterial");
 }
 
 FrameData& VulkanEngine::get_current_frame() {
@@ -259,6 +260,7 @@ void VulkanEngine::init_managers() {
 
 void VulkanEngine::init_scene() {
     _skybox = std::make_unique<Skybox>(*_device, *_pipelineBuilder, *_textureManager, *_meshManager, _uploadContext);
+    _skybox->_type = Skybox::sphere;
     _skybox->load();
 
     _sceneListing = std::make_unique<SceneListing>();
@@ -337,7 +339,7 @@ void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
     if (_skyboxDisplay) {
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipeline);
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 0,1, &get_current_frame().skyboxDescriptor, 0, nullptr);
-        _skybox->_cube->draw(commandBuffer, _skybox->_material->pipelineLayout, 0, true);
+        _skybox->draw(commandBuffer);
     }
 }
 

@@ -1,10 +1,12 @@
 #!/bin/bash
 
-glslc scene.frag -o scene.frag.spv
-glslc mesh.vert -o mesh.vert.spv
-glslc mesh_tex.vert -o mesh_tex.vert.spv
-glslc scene_tex.frag -o scene_tex.frag.spv
+glslc mesh/scene.frag -o mesh/scene.frag.spv
+glslc mesh/mesh.vert -o mesh/mesh.vert.spv
+glslc mesh/mesh_tex.vert -o mesh/mesh_tex.vert.spv
+glslc mesh/scene_tex.frag -o mesh/scene_tex.frag.spv
 glslc light/light.vert -o light/light.vert.spv
 glslc light/light.frag -o light/light.frag.spv
-glslc atmosphere/skybox.vert -o atmosphere/skybox.vert.spv
-glslc atmosphere/skybox.frag -o atmosphere/skybox.frag.spv
+glslc skybox/skybox.vert -o skybox/skybox.vert.spv
+glslc skybox/skybox.frag -o skybox/skybox.frag.spv
+glslc skybox/skysphere.vert -o skybox/skysphere.vert.spv
+glslc skybox/skysphere.frag -o skybox/skysphere.frag.spv
