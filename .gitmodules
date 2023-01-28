@@ -13,3 +13,6 @@
 [submodule "third_party/glm"]
 	path = third_party/glm
 	url = git@github.com:g-truc/glm.git
+[submodule "third_party/vk-bootstrap"]
+	path = third_party/vk-bootstrap
+	url = git@github.com:charles-lunarg/vk-bootstrap.git
