@@ -20,7 +20,7 @@ option(TRACY_ON_DEMAND "" ON) # keep
 option(VMA_RECORDING_ENABLED "" ON) # keep
 option(VMA_DEBUG_LOG "" ON) # keep
 
-#find_package(Vulkan REQUIRED)
+find_package(Vulkan REQUIRED)
 
 add_subdirectory(src) # keep
 add_subdirectory(third_party) # keep
@@ -30,32 +30,3 @@ add_subdirectory(third_party/tracy/) # keep
 
 #set(VK_ICD_FILENAMES ~/VulkanSDK/1.3.204.1/macOS/share/vulkan/icd.d/MoltenVK_icd.json)
 #set(VK_LAYER_PATH ~/VulkanSDK/1.3.204.1/macOS/share/vulkan/explicit_layer.d)
-
-find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
-
-## find all the shader files under the shaders folder
-file(GLOB_RECURSE GLSL_SOURCE_FILES
-    "${PROJECT_SOURCE_DIR}/src/shaders/*.frag"
-    "${PROJECT_SOURCE_DIR}/src/shaders/*.vert"
-    "${PROJECT_SOURCE_DIR}/src/shaders/*.comp"
-    )
-
-## iterate each shader
-foreach(GLSL ${GLSL_SOURCE_FILES})
-  message(STATUS "BUILDING SHADER")
-  get_filename_component(FILE_DIR ${GLSL} DIRECTORY)
-  get_filename_component(FILE_NAME ${GLSL} NAME)
-  set(SPIRV "${FILE_DIR}/${FILE_NAME}.spv") # ${PROJECT_SOURCE_DIR}/src/shaders/
-  message(STATUS ${GLSL})
-  ##execute glslang command to compile that specific shader
-  add_custom_command(
-    OUTPUT ${SPIRV}
-    COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
-    DEPENDS ${GLSL})
-  list(APPEND SPIRV_BINARY_FILES ${SPIRV})
-endforeach(GLSL)
-
-add_custom_target(
-    Shaders 
-    DEPENDS ${SPIRV_BINARY_FILES}
-    )
