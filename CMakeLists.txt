@@ -26,7 +26,7 @@ add_subdirectory(src) # keep
 add_subdirectory(third_party) # keep
 add_subdirectory(third_party/tracy/) # keep
 
-# include_directories(/usr/local/include/ src/)
+# include_directories(/usr/local/include/)
 
 #set(VK_ICD_FILENAMES ~/VulkanSDK/1.3.204.1/macOS/share/vulkan/icd.d/MoltenVK_icd.json)
 #set(VK_LAYER_PATH ~/VulkanSDK/1.3.204.1/macOS/share/vulkan/explicit_layer.d)

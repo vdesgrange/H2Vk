@@ -7,6 +7,7 @@
 #include <deque>
 #include <functional>
 #include <cmath>
+#include <memory>
 
 #include "vk_mem_alloc.h"
 #include "VkBootstrap.h"

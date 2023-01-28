@@ -8,6 +8,7 @@
 #include <vector>
 #include <utility>
 #include <string>
+#include <memory>
 
 class VulkanEngine;
 class Camera;
