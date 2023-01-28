@@ -5,6 +5,7 @@ add_subdirectory(tinygltf)
 add_subdirectory(tinyobjloader)
 add_subdirectory(vk-bootstrap)
 add_subdirectory(VulkanMemoryAllocator)
+add_subdirectory(volk)
 
 add_library(imgui STATIC)
 target_sources(imgui PRIVATE
