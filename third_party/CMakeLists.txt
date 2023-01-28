@@ -1,10 +1,11 @@
 find_package(Vulkan REQUIRED)
 
-add_library(glm INTERFACE)
+add_subdirectory(glm INTERFACE)
 # add_library(vma INTERFACE)
 add_library(stb_image INTERFACE)
-add_library(tinyobjloader STATIC)
+# add_library(tinyobjloader STATIC)
 # add_library(tinygltf STATIC)
+add_subdirectory(tinyobjloader)
 add_subdirectory(tinygltf)
 add_subdirectory(vk-bootstrap) # keep
 add_subdirectory(VulkanMemoryAllocator) # keep
@@ -12,13 +13,13 @@ add_subdirectory(VulkanMemoryAllocator) # keep
 #both vma and glm and header only libs so we only need the include path
 # target_include_directories(vma INTERFACE vma)
 
-target_include_directories(glm INTERFACE glm)
+# target_include_directories(glm INTERFACE glm)
 
-target_sources(tinyobjloader PRIVATE
-    tinyobjloader/tiny_obj_loader.h
-    tinyobjloader/tiny_obj_loader.cc
-    )
-target_include_directories(tinyobjloader PUBLIC tinyobjloader)
+#target_sources(tinyobjloader PRIVATE
+#    tinyobjloader/tiny_obj_loader.h
+#    tinyobjloader/tiny_obj_loader.cc
+#    )
+#target_include_directories(tinyobjloader PUBLIC tinyobjloader)
 
 #target_sources(tinygltf PRIVATE tinygltf/tiny_gltf.h tinygltf/tiny_gltf.cc)
 #set(TINYGLTF_HEADER_ONLY ON CACHE INTERNAL "" FORCE)
