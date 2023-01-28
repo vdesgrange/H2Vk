@@ -1,5 +1,5 @@
 ﻿cmake_minimum_required (VERSION 3.8)
-project ("vulkan_guide")
+project ("h2vk")
 
 IF(APPLE)
   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
