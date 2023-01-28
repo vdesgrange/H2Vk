@@ -10,9 +10,9 @@
 [submodule "third_party/tinyobjloader"]
 	path = third_party/tinyobjloader
 	url = git@github.com:tinyobjloader/tinyobjloader.git
-[submodule "third_party/glm"]
-	path = third_party/glm
-	url = git@github.com:g-truc/glm.git
 [submodule "third_party/vk-bootstrap"]
 	path = third_party/vk-bootstrap
 	url = git@github.com:charles-lunarg/vk-bootstrap.git
+[submodule "third_party/VulkanMemoryAllocator"]
+	path = third_party/VulkanMemoryAllocator
+	url = git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git

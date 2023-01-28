@@ -6,7 +6,7 @@ add_executable(h2vk ${CORE} ${TRACY_CLIENT}) # keep
 set_property(TARGET h2vk PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:h2vk>")
 
 target_include_directories(h2vk PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}") # keep
-target_link_libraries(h2vk vk-bootstrap vma glm tinyobjloader tinygltf imgui stb_image ${LIBGLFW3}) #  ${LIBVULKAN13} ${LIBVULKAN1} # keep
+target_link_libraries(h2vk vk-bootstrap VulkanMemoryAllocator glm tinyobjloader tinygltf imgui stb_image ${LIBGLFW3}) #  ${LIBVULKAN13} ${LIBVULKAN1} # keep
 target_link_libraries(h2vk Tracy::TracyClient) # keep
 
 add_dependencies(h2vk Shaders) # keep
