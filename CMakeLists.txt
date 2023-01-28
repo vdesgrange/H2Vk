@@ -21,6 +21,7 @@ option(VMA_RECORDING_ENABLED "" ON) # keep
 option(VMA_DEBUG_LOG "" ON) # keep
 
 find_package(Vulkan REQUIRED)
+find_package(glfw3 REQUIRED)
 
 add_subdirectory(src) # keep
 add_subdirectory(third_party) # keep

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+#include <functional>
+
 #include "VkBootstrap.h"
 
 const uint32_t CWIDTH = 800;
