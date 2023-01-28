@@ -1,6 +1,6 @@
 find_package(Vulkan REQUIRED)
 
-add_subdirectory(glm INTERFACE)
+add_subdirectory(glm)
 add_subdirectory(tinygltf)
 add_subdirectory(tinyobjloader)
 add_subdirectory(vk-bootstrap)
