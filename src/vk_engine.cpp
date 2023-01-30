@@ -40,11 +40,11 @@ void VulkanEngine::init()
 }
 
 void VulkanEngine::init_window() {
-    _window = std::make_unique<class Window>();
+    _window = std::make_unique<Window>();
 }
 
 void VulkanEngine::init_vulkan() {
-    _device = std::make_unique<class Device>(*_window);
+    _device = std::make_unique<Device>(*_window);
     std::cout << "GPU has a minimum buffer alignment = " << _device->_gpuProperties.limits.minUniformBufferOffsetAlignment << std::endl;
 }
 
@@ -99,7 +99,7 @@ void VulkanEngine::init_commands() {
 }
 
 void VulkanEngine::init_default_renderpass() {
-    _renderPass = std::make_unique<class RenderPass>(*_device, *_swapchain);
+    _renderPass = std::make_unique<RenderPass>(*_device, *_swapchain);
 }
 
 void VulkanEngine::init_framebuffers() {

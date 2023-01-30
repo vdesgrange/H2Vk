@@ -159,7 +159,7 @@ void Skybox::load_cube_texture() {
 }
 
 void Skybox::load_sphere_texture() {
-    const char* file = "../assets/skybox/tokyo_bigsight_8k.jpg"; // "../assets/skybox/grand_canyon_yuma_point_8k.jpg"; // "../assets/debug/uv_checker_4k.png"; //
+    const char* file = "../assets/skybox/grand_canyon_yuma_point_8k.jpg"; // "../assets/skybox/tokyo_bigsight_8k.jpg"; // "../assets/debug/uv_checker_4k.png"; //
 
     int texWidth, texHeight, texChannels;
 

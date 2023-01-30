@@ -29,9 +29,22 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     engine->_meshManager->upload_mesh(*lightModel);
     engine->_meshManager->_models.emplace("light", lightModel);
 
-    std::shared_ptr<Model> triangleModel = ModelPOLY::create_triangle(engine->_device.get(), {0.0f, 1.0f, 0.0f});
-    engine->_meshManager->upload_mesh(*triangleModel);
-    engine->_meshManager->_models.emplace("triangle", triangleModel);
+    RenderObject light;
+    light.model = engine->_meshManager->get_model("light");
+    light.material = engine->_pipelineBuilder->get_material("light");
+    light.transformMatrix = glm::mat4{ 1.0f };
+    renderables.push_back(light);
+
+    std::shared_ptr<Model> planeModel = ModelPOLY::create_plane(engine->_device.get(), {-10.0f, 1.0f, -10.0f}, {10.0f, 1.0f, 10.0f});
+    engine->_meshManager->upload_mesh(*planeModel);
+    engine->_meshManager->_models.emplace("plane", planeModel);
+
+    RenderObject plane;
+    plane.model = engine->_meshManager->get_model("plane");
+    plane.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
+    plane.transformMatrix = glm::mat4{ 1.0f };
+    renderables.push_back(plane);
+
 
     std::shared_ptr<ModelOBJ> monkeyModel = std::make_shared<ModelOBJ>(engine->_device.get());
     monkeyModel->load_model(*engine, "../assets/monkey/monkey_smooth.obj");
@@ -41,20 +54,18 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     engine->_meshManager->upload_mesh(*monkeyModel);
     engine->_meshManager->_models.emplace("monkey", std::shared_ptr<Model>(monkeyModel));
 
-    RenderObject light;
-    light.model = engine->_meshManager->get_model("light");
-    light.material = engine->_pipelineBuilder->get_material("light");
-    light.transformMatrix = glm::mat4{ 1.0f };
-    renderables.push_back(light);
-
     RenderObject monkey;
     monkey.model = engine->_meshManager->get_model("monkey");
     monkey.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
     monkey.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(monkey);
 
-    for (int x = -50; x <= 50; x++) {
-        for (int y = -50; y <= 50; y++) {
+    std::shared_ptr<Model> triangleModel = ModelPOLY::create_triangle(engine->_device.get(), {0.0f, 1.0f, 0.0f});
+    engine->_meshManager->upload_mesh(*triangleModel);
+    engine->_meshManager->_models.emplace("triangle", triangleModel);
+
+    for (int x = -5; x <= 5; x++) {
+        for (int y = -5; y <= 5; y++) {
             RenderObject tri;
             tri.model = engine->_meshManager->get_model("triangle");
             tri.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
