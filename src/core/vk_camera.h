@@ -16,7 +16,7 @@ public:
     Type type = Type::axis;
     float aspect {1.0f};
     float speed {1.0f};
-    float radius {2.0f};
+    float radius {1.0f};
     glm::vec3 target = glm::vec3(0.0f);
 
     glm::mat4 get_projection_matrix();

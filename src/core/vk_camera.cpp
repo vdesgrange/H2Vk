@@ -4,6 +4,7 @@
 
 #include "vk_camera.h"
 #include <iostream>
+#include <cmath>
 
 
 glm::mat4 Camera::get_projection_matrix() {
@@ -49,16 +50,19 @@ bool Camera::on_mouse_button(int button, int action, int mods) {
 }
 
 bool Camera::on_cursor_position(double xpos, double ypos) {
-    const auto deltaY = static_cast<float>(xpos - mousePositionX);
-    const auto deltaX = static_cast<float>(ypos - mousePositionY);
+    const auto deltaY = this->speed * 0.001f * static_cast<float>(xpos - mousePositionX);
+    const auto deltaX = this->speed * 0.001f * static_cast<float>(ypos - mousePositionY);
 
     if (mouseLeft) {
         if (this->type == Type::look_at) {
             glm::vec3 pos = this->position;
+            float radius = sqrt(pow(pos.x, 2) + pow(pos.y, 2) + pow(pos.z, 2));
+            float theta = atan2(pos.x, pos.z) +  deltaY;
+            float phi = acos(pos.y / radius) - deltaX;
 
-            float x = radius * sin(asin(pos.x / radius) + 0.1f * deltaX);
-            float z = radius * cos(acos(pos.z / radius) + 0.1f * deltaX);
-            this->set_position(glm::vec3(x, 0.0, z));
+            phi = fmax(fmin(phi, float(M_PI - 0.1f)), 0.1f);
+
+            this->set_position(radius * glm::vec3(sin(phi) * sin(theta), cos(phi), cos(theta) * sin(phi)));
         } else {
             this->set_rotation(this->rotation + 0.1f * glm::vec3({deltaX, deltaY, 0}));
         }
@@ -96,22 +100,18 @@ bool Camera::update_camera(float delta) {
     if (this->type == Type::pov) {
     } else if (this->type == Type::look_at) {
         glm::vec3 pos = this->position;
+        float radius = sqrt(pow(pos.x, 2) + pow(pos.y, 2) + pow(pos.z, 2));
+        float theta = atan2(pos.x, pos.z);
+        float phi = acos(pos.y / radius);
 
+        if (forwardAction) radius -= d;
+        if (backwardAction) radius += d;
+        if (rightAction) theta += d;
+        if (leftAction) theta -= d;
+        if (upAction) phi = fmax(phi - d, 0.1f);
+        if (downAction) phi = fmin(phi + d, float(M_PI - 0.1f));
 
-//        float x = radius * sin(d);
-//        float z = radius * cos(d);
-//        this->set_position(glm::vec3(x, 0.0, z));
-
-        if (rightAction) {
-            float x = radius * sin(asin(pos.x / radius) + 0.1f * d);
-            float z = radius * cos(acos(pos.z / radius) + 0.1f * d);
-            this->set_position(glm::vec3(x, 0.0, z));
-        }
-        if (leftAction) {
-            float x = radius * sin(asin(pos.x / radius) - 0.1f * d);
-            float z = radius * cos(acos(pos.z / radius) - 0.1f * d);
-            this->set_position(glm::vec3(x, 0.0, z));
-        }
+        this->set_position(radius * glm::vec3(sin(phi) * sin(theta), cos(phi), cos(theta) * sin(phi)));
     }
 
     this->update_view();

@@ -21,7 +21,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     Renderables renderables{};
 
     camera.inverse(false);
-    camera.set_position({ 1.f, 1.f, 1.f });
+    camera.set_position({ 1.f, 0.0f, 1.f });
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.type = Camera::Type::look_at;
 
