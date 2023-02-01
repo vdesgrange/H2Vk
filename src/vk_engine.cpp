@@ -291,7 +291,8 @@ void VulkanEngine::recreate_swap_chain() {
     init_framebuffers();
 
     if (_window->_windowExtent.width > 0.0f && _window->_windowExtent.height > 0.0f) {
-        _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
+        // _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
+        _camera->aspect = (float)_window->_windowExtent.width / (float)_window->_windowExtent.height;
         update_uniform_buffers();
     }
 
@@ -318,7 +319,8 @@ void VulkanEngine::ui_overlay() {
     bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
     if (updated) {
         // Camera
-        _camera->set_speed(_ui->get_settings().speed);
+        _camera->speed = _ui->get_settings().speed;
+        // _camera->set_speed(_ui->get_settings().speed);
         _camera->set_perspective(_ui->get_settings().fov, _camera->aspect, _ui->get_settings().z_near,_ui->get_settings().z_far); // _ui->get_settings().aspect
 
         // Scene

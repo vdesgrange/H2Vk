@@ -23,7 +23,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     camera.inverse(false);
     camera.set_position({ 1.f, 1.f, 1.f });
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
-    camera.type = Camera::Type::pov;
+    camera.type = Camera::Type::look_at;
 
     std::shared_ptr<Model> lightModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.f, 0.f, 0.0f}, 0.1f);
     engine->_meshManager->upload_mesh(*lightModel);
@@ -85,7 +85,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     camera.inverse(false);
     camera.set_position({ 0.0f, 0.0f, -3.0f }); // Re-initialize position after scene change = camera jumping.
     camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);  // 1700.f / 1200.f
-    camera.type = Camera::Type::axis;
+    camera.type = Camera::Type::look_at;
 
     std::shared_ptr<ModelGLB> helmetModel = std::make_shared<ModelGLB>(engine->_device.get());
     helmetModel->load_model(*engine, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");
