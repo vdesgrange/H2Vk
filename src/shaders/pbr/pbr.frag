@@ -22,43 +22,34 @@ layout (push_constant) uniform Material {
     vec3 albedo;
 } material;
 
-struct ObjectData {
-    mat4 model;
-};
-
-layout (std140, set = 1, binding = 0) readonly buffer ObjectBuffer {
-    ObjectData primitives[];
-} objectBuffer;
-
 layout (location = 0) out vec4 outFragColor;
 
 const float PI = 3.14159265359;
 
 float D_GGX(float dotNH, float roughness) {
-    float a = roughness * roughness;
-    float a2 = a * a;
+    float alpha = roughness * roughness;
+    float alpha2 = alpha * alpha;
     float dotNH2 = dotNH * dotNH;
-    float denom = (dotNH2 * (a2 - 1) + 1);
+    float denom = dotNH2 * (alpha2 - 1.0) + 1.0;
     denom = PI * denom * denom;
 
-    return a2 / denom;
+    return alpha2 / denom;
 }
 
 float G_Smith(float dotNV, float dotNL, float roughness) {
     float r = roughness + 1.0;
     float k = r * r / 8;
-    float ggx1 = dotNV / (dotNV * (1.0 - k) + k);
-    float ggx2 = dotNL / (dotNL * (1.0 - k) + k);
+    float ggx1 = dotNL / (dotNL * (1.0 - k) + k);
+    float ggx2 = dotNV / (dotNV * (1.0 - k) + k);
 
     return ggx1 * ggx2;
 }
 
-
 vec3 F_Schlick(float cosTheta) {
-    float albedo;
-  vec3 F0 = mix(vec3(0.04), material.albedo, material.metallic);
-  return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+    vec3 F0 = mix(vec3(0.04), material.albedo, material.metallic);
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
+
 
 vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, float roughness) {
     vec3 color = vec3(0.0);
@@ -70,17 +61,22 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, float roughness) {
     float dotNH = clamp(dot(N, H), 0.0, 1.0);
     float dotNV = clamp(dot(N, V), 0.0, 1.0);
     float dotNL = clamp(dot(N, L), 0.0, 1.0);
+    float dotHV = clamp(dot(H, V), 0.0, 1.0);
 
-    float D = D_GGX(dotNH, roughness);
-    vec3 F = F_Schlick(dotNV);
-    float G = G_Smith(dotNV, dotNL, roughness);
+    if (dotNL > 0.0) {
+        float rroughness = max(0.05, roughness);
 
-    vec3 spec = (D * F * G) / (4.0 * dotNL * dotNV + 0.0001);
+        float D = D_GGX(dotNH, rroughness);
+        vec3 F = F_Schlick(dotNV);
+        float G = G_Smith(dotNV, dotNL, rroughness);
 
-    vec3 kd = (vec3(1.0) - F) * (1.0 - material.metallic);
+        vec3 spec = (D * F * G) / (4.0 * dotNL * dotNV + 0.0001);
 
-    color += spec * radiance * dotNL;
-    color += kd * material.albedo / PI * radiance * dotNL;
+        vec3 kd = (vec3(1.0) - F) * (1.0 - material.metallic);
+
+        color += spec * radiance * dotNL;
+        // color += kd * material.albedo / PI * radiance * dotNL;
+    }
 
     return color;
 }
@@ -88,22 +84,26 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, float roughness) {
 void main()
 {
     int sources = 1;
+    float roughness = material.roughness;
 
     vec3 lightPos = sceneData.sunlightDirection.xyz;
+    float lightFactor = sceneData.sunlightDirection.w;
 
     vec3 C = sceneData.sunlightColor.xyz;
     vec3 N = normalize(inNormal);
     vec3 V = normalize(inCameraPos - inFragPos);
-
     vec3 Lo = vec3(0.0);
     for (int i = 0; i < sources; i++) {
         vec3 L = normalize(lightPos - inFragPos);
-        Lo += BRDF(L, V, N, C, material.roughness);
+
+        Lo += BRDF(L, V, N, C, roughness);
     };
 
-    vec3 ambient = vec3(0.03) * material.albedo;
-
+    vec3 ambient = 0.02 * material.albedo * material.ao; // lightFactor
     vec3 color = ambient + Lo;
+    color = color / (color + vec3(1.0));
+
     color = pow(color, vec3(0.4545));
+
     outFragColor = vec4(color, 1.0);
 }

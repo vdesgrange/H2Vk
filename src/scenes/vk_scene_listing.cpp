@@ -5,6 +5,7 @@
 #include "core/model/vk_obj.h"
 #include "core/model/vk_poly.h"
 #include "core/model/vk_glb.h"
+#include "core/model/vk_pbr_material.h"
 #include "core/vk_descriptor_builder.h"
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
@@ -25,8 +26,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.type = Camera::Type::axis;
 
-    PBRProperties gold = {1.0f, 0.1f, 1.0f, {1.0, 0.765557f, 0.336057f}};
-    std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {-5.0f, 0.0f, 0.0f}, 1.0f, 16, 16, {1.f, 1.f, 1.f}, gold);
+    std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.f, 1.f, 1.f}, PBR::cobalt);
     engine->_meshManager->upload_mesh(*sphereModel);
     engine->_meshManager->_models.emplace("sphere", sphereModel);
 

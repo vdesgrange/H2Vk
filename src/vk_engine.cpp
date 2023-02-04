@@ -247,9 +247,7 @@ void VulkanEngine::init_pipelines() {
     _pipelineBuilder->scene_damaged_helmet(setLayouts);
 
     // === Skybox === (Build by default to handle if skybox enabled later)
-    // _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
     _skybox->setup_pipeline(*_pipelineBuilder, {_descriptorSetLayouts.skybox});
-    // _skybox->_material = this->_pipelineBuilder->get_material("skyboxMaterial");
 }
 
 FrameData& VulkanEngine::get_current_frame() {
