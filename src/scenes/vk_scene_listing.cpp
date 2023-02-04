@@ -25,49 +25,50 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.type = Camera::Type::axis;
 
-    std::shared_ptr<Model> lightModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.f, 0.f, 0.0f}, 0.1f);
-    engine->_meshManager->upload_mesh(*lightModel);
-    engine->_meshManager->_models.emplace("light", lightModel);
+    PBRProperties gold = {1.0f, 0.1f, 1.0f, {1.0, 0.765557f, 0.336057f}};
+    std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {-5.0f, 0.0f, 0.0f}, 1.0f, 16, 16, {1.f, 1.f, 1.f}, gold);
+    engine->_meshManager->upload_mesh(*sphereModel);
+    engine->_meshManager->_models.emplace("sphere", sphereModel);
 
-    RenderObject light;
-    light.model = engine->_meshManager->get_model("light");
-    light.material = engine->_pipelineBuilder->get_material("light");
-    light.transformMatrix = glm::mat4{ 1.0f };
-    renderables.push_back(light);
+    RenderObject sphere;
+    sphere.model = engine->_meshManager->get_model("sphere");
+    sphere.material = engine->_pipelineBuilder->get_material("pbrMaterial");
+    sphere.transformMatrix = glm::mat4{ 1.0f };
+    renderables.push_back(sphere);
 
-    std::shared_ptr<Model> planeModel = ModelPOLY::create_plane(engine->_device.get(), {-10.0f, 1.0f, -10.0f}, {10.0f, 1.0f, 10.0f});
-    engine->_meshManager->upload_mesh(*planeModel);
-    engine->_meshManager->_models.emplace("plane", planeModel);
+//    std::shared_ptr<Model> planeModel = ModelPOLY::create_plane(engine->_device.get(), {-10.0f, 1.0f, -10.0f}, {10.0f, 1.0f, 10.0f});
+//    engine->_meshManager->upload_mesh(*planeModel);
+//    engine->_meshManager->_models.emplace("plane", planeModel);
+//
+//    RenderObject plane;
+//    plane.model = engine->_meshManager->get_model("plane");
+//    plane.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
+//    plane.transformMatrix = glm::mat4{ 1.0f };
+//    renderables.push_back(plane);
 
-    RenderObject plane;
-    plane.model = engine->_meshManager->get_model("plane");
-    plane.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
-    plane.transformMatrix = glm::mat4{ 1.0f };
-    renderables.push_back(plane);
+//    std::shared_ptr<ModelOBJ> monkeyModel = std::make_shared<ModelOBJ>(engine->_device.get());
+//    monkeyModel->load_model(*engine, "../assets/monkey/monkey_smooth.obj");
+//    for (auto& node : monkeyModel->_nodes) {
+//        node->matrix =  glm::mat4{ 1.0f };
+//    }
+//    engine->_meshManager->upload_mesh(*monkeyModel);
+//    engine->_meshManager->_models.emplace("monkey", std::shared_ptr<Model>(monkeyModel));
+//
+//    RenderObject monkey;
+//    monkey.model = engine->_meshManager->get_model("monkey");
+//    monkey.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
+//    monkey.transformMatrix = glm::mat4{ 1.0f };
+//    renderables.push_back(monkey);
 
-    std::shared_ptr<Model> cubeModel = ModelPOLY::create_cube(engine->_device.get(), {-2.0f, 0.0f, -2.0f}, {-1.0f, 1.0f, -1.0f});
-    engine->_meshManager->upload_mesh(*cubeModel);
-    engine->_meshManager->_models.emplace("cube", cubeModel);
-
-    RenderObject cube;
-    cube.model = engine->_meshManager->get_model("cube");
-    cube.material = engine->_pipelineBuilder->get_material("pbrMaterial");
-    cube.transformMatrix = glm::mat4{ 1.0f };
-    renderables.push_back(cube);
-
-    std::shared_ptr<ModelOBJ> monkeyModel = std::make_shared<ModelOBJ>(engine->_device.get());
-    monkeyModel->load_model(*engine, "../assets/monkey/monkey_smooth.obj");
-    for (auto& node : monkeyModel->_nodes) {
-        node->matrix =  glm::mat4{ 1.0f };
-    }
-    engine->_meshManager->upload_mesh(*monkeyModel);
-    engine->_meshManager->_models.emplace("monkey", std::shared_ptr<Model>(monkeyModel));
-
-    RenderObject monkey;
-    monkey.model = engine->_meshManager->get_model("monkey");
-    monkey.material = engine->_pipelineBuilder->get_material("monkeyMaterial");
-    monkey.transformMatrix = glm::mat4{ 1.0f };
-    renderables.push_back(monkey);
+//    std::shared_ptr<Model> lightModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.f, 0.f, 0.0f}, 0.1f);
+//    engine->_meshManager->upload_mesh(*lightModel);
+//    engine->_meshManager->_models.emplace("light", lightModel);
+//
+//    RenderObject light;
+//    light.model = engine->_meshManager->get_model("light");
+//    light.material = engine->_pipelineBuilder->get_material("light");
+//    light.transformMatrix = glm::mat4{ 1.0f };
+//    renderables.push_back(light);
 
 //    std::shared_ptr<Model> triangleModel = ModelPOLY::create_triangle(engine->_device.get(), {0.0f, 1.0f, 0.0f});
 //    engine->_meshManager->upload_mesh(*triangleModel);

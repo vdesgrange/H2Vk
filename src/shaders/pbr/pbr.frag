@@ -101,10 +101,9 @@ void main()
         Lo += BRDF(L, V, N, C, material.roughness);
     };
 
-    vec3 ambient = vec3(0.03) * inColor;
+    vec3 ambient = vec3(0.03) * material.albedo;
+
     vec3 color = ambient + Lo;
-
     color = pow(color, vec3(0.4545));
-
     outFragColor = vec4(color, 1.0);
 }

@@ -83,6 +83,8 @@ struct Materials {
         glm::vec3 albedo;
     } properties;
 };
+typedef Materials::Properties PBRProperties;
+
 
 struct Image {
     Texture _texture;

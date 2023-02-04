@@ -4,7 +4,7 @@
 #include <array>
 
 
-std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, const glm::vec3& p0, const glm::vec3& p1) {
+std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, const glm::vec3& p0, const glm::vec3& p1, std::optional<PBRProperties> props) {
     std::shared_ptr<Model> model = std::make_shared<ModelPOLY>(device);
     Node *node = new Node{};
     node->matrix = glm::mat4(1.f);
@@ -101,25 +101,32 @@ std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, const glm::vec3& p
 //        }
     }
 
-    Materials material {};
-    material.properties = {1.0, 0.75, 1.0, {0.0f, 0.5f, 0.5f}};
-    material.pbr = true;
-    model->_materials.push_back(material);
-
     Primitive primitive{};
     primitive.firstIndex = 0;
     primitive.indexCount = model->_indexesBuffer.size();
-    primitive.materialIndex = 0; // not used here?
-    node->mesh.primitives.push_back(primitive);
+    primitive.materialIndex = -1;
 
+    if (props) {
+        primitive.materialIndex = 0;
+
+        Materials material {};
+        material.properties = props.value();
+        material.pbr = true;
+        model->_materials.push_back(material);
+    }
+
+    node->mesh.primitives.push_back(primitive);
     model->_nodes.push_back(node);
 
     return model;
 }
 
-std::shared_ptr<Model> ModelPOLY::create_uv_sphere(Device* device, const glm::vec3& center, float radius, const uint32_t stacks, const uint32_t sectors, glm::vec3 color) {
+std::shared_ptr<Model> ModelPOLY::create_uv_sphere(Device* device, const glm::vec3& center, float radius, uint32_t stacks, uint32_t sectors, glm::vec3 color, std::optional<PBRProperties> props) {
     std::shared_ptr<Model> model = std::make_shared<ModelPOLY>(device);
     float x, y, z, xy = 0;
+    Node* node = new Node{};
+    node->matrix = glm::mat4(1.f);
+    node->parent = nullptr;
 
     for (uint32_t i = 0; i <= stacks; i++) {
         float phi = - M_PI / 2 - M_PI * i / stacks;
@@ -165,18 +172,26 @@ std::shared_ptr<Model> ModelPOLY::create_uv_sphere(Device* device, const glm::ve
     primitive.indexCount = model->_indexesBuffer.size();
     primitive.materialIndex = -1;
 
-    Node* node = new Node{};
-    node->matrix = glm::mat4(1.f);
-    node->parent = nullptr;
-    node->mesh.primitives.push_back(primitive);
+    if (props) {
+        primitive.materialIndex = 0;
 
+        Materials material {};
+        material.properties = props.value();
+        material.pbr = true;
+        model->_materials.push_back(material);
+    }
+
+    node->mesh.primitives.push_back(primitive);
     model->_nodes.push_back(node);
 
     return model;
 }
 
-std::shared_ptr<Model> ModelPOLY::create_triangle(Device* device, glm::vec3 color) {
+std::shared_ptr<Model> ModelPOLY::create_triangle(Device* device, glm::vec3 color, std::optional<PBRProperties> props) {
     std::shared_ptr<Model> model = std::make_shared<ModelPOLY>(device);
+    Node* node = new Node{};
+    node->matrix = glm::mat4(1.f);
+    node->parent = nullptr;
 
     model->_verticesBuffer.resize(3);
     model->_verticesBuffer[0].position = { 1.f, 1.f, 0.0f };
@@ -194,17 +209,22 @@ std::shared_ptr<Model> ModelPOLY::create_triangle(Device* device, glm::vec3 colo
     primitive.indexCount = model->_indexesBuffer.size();
     primitive.materialIndex = -1;
 
-    Node* node = new Node{};
-    node->matrix = glm::mat4(1.f);
-    node->parent = nullptr;
-    node->mesh.primitives.push_back(primitive);
+    if (props) {
+        primitive.materialIndex = 0;
 
+        Materials material {};
+        material.properties = props.value();
+        material.pbr = true;
+        model->_materials.push_back(material);
+    }
+
+    node->mesh.primitives.push_back(primitive);
     model->_nodes.push_back(node);
 
     return model;
 }
 
-std::shared_ptr<Model> ModelPOLY::create_plane(Device* device, const glm::vec3& p0, const glm::vec3& p1, glm::vec3 color) {
+std::shared_ptr<Model> ModelPOLY::create_plane(Device* device, const glm::vec3& p0, const glm::vec3& p1, glm::vec3 color, std::optional<PBRProperties> props) {
     std::shared_ptr<Model> model = std::make_shared<ModelPOLY>(device);
     Node *node = new Node{};
     node->matrix = glm::mat4(1.f);
@@ -232,9 +252,18 @@ std::shared_ptr<Model> ModelPOLY::create_plane(Device* device, const glm::vec3& 
     Primitive primitive{};
     primitive.firstIndex = 0;
     primitive.indexCount = model->_indexesBuffer.size();
-    primitive.materialIndex = -1; // not used here?
-    node->mesh.primitives.push_back(primitive);
+    primitive.materialIndex = -1;
 
+    if (props) {
+        primitive.materialIndex = 0;
+
+        Materials material {};
+        material.properties = props.value();
+        material.pbr = true;
+        model->_materials.push_back(material);
+    }
+
+    node->mesh.primitives.push_back(primitive);
     model->_nodes.push_back(node);
 
     return model;
