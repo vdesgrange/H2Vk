@@ -74,6 +74,14 @@ struct Materials {
     glm::vec4 baseColorFactor = glm::vec4(1.0f);
     uint32_t baseColorTextureIndex;
     uint32_t normalTextureIndex;
+    bool pbr = false;
+
+    struct Properties {
+        float metallic;
+        float roughness;
+        float ao;
+        glm::vec3 albedo;
+    } properties;
 };
 
 struct Image {
@@ -111,7 +119,6 @@ public:
 
     void destroy();
     void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);
-    void draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind=false);
     VkDescriptorImageInfo get_texture_descriptor(const size_t index);
 
 protected:

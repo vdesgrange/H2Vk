@@ -213,11 +213,29 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene.frag.spv"},
     };
 
-    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {}, modules);
+    VkPushConstantRange push_constant;
+    push_constant.offset = 0;
+    push_constant.size = sizeof(Materials::Properties);
+    push_constant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {push_constant}, modules);
     std::shared_ptr<ShaderPass> pass_mesh = this->build_pass(effect_mesh);
     create_material("monkeyMaterial", pass_mesh);
 
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr.frag.spv"},
+    };
+
+    std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {push_constant}, pbr_modules);
+    std::shared_ptr<ShaderPass> pass_pbr = this->build_pass(effect_pbr);
+    create_material("pbrMaterial", pass_pbr);
+
     for (auto& shader : effect_mesh->shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+    }
+
+    for (auto& shader : effect_pbr->shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }

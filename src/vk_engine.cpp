@@ -220,14 +220,19 @@ void VulkanEngine::setup_descriptors(){
         };
 
         for (auto &material: renderable.model->_materials) {
-            VkDescriptorImageInfo colorMap =  renderable.model->_images[material.baseColorTextureIndex]._texture._descriptor;
-            VkDescriptorImageInfo normalMap =  renderable.model->_images[material.normalTextureIndex]._texture._descriptor;
+            if (material.pbr == false) {
+                VkDescriptorImageInfo colorMap = renderable.model->_images[material.baseColorTextureIndex]._texture._descriptor;
+                VkDescriptorImageInfo normalMap = renderable.model->_images[material.normalTextureIndex]._texture._descriptor;
 
-            DescriptorBuilder::begin(*_layoutCache, *_allocator)
-            .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .layout(_descriptorSetLayouts.textures)
-            .build(renderable.model->_images[material.baseColorTextureIndex]._descriptorSet, _descriptorSetLayouts.textures, poolSizes);
+                DescriptorBuilder::begin(*_layoutCache, *_allocator)
+                        .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
+                                    0)
+                        .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
+                                    1)
+                        .layout(_descriptorSetLayouts.textures)
+                        .build(renderable.model->_images[material.baseColorTextureIndex]._descriptorSet,
+                               _descriptorSetLayouts.textures, poolSizes);
+            }
         }
     }
 }

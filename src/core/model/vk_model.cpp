@@ -85,9 +85,11 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
             if (primitive.indexCount > 0) {
                 if (!_materials.empty() && primitive.materialIndex != -1) { // handle non-gltf meshes // !_textures.empty()
                     Materials material = _materials[primitive.materialIndex];
-                    // Textures texture = _textures[_materials[primitive.materialIndex].baseColorTextureIndex];  // Get the texture index for this primitive
-                    // vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, &_images[material.baseColorTextureIndex]);
-                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[material.baseColorTextureIndex]._descriptorSet, 0, nullptr);
+                    if (material.pbr) {
+                        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Materials::Properties), &material.properties);
+                    } else {
+                        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[material.baseColorTextureIndex]._descriptorSet, 0, nullptr);
+                    }
                 }
                 vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance);
             }
@@ -109,17 +111,6 @@ void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayou
     for (auto& node : _nodes) {
         draw_node(node, commandBuffer, pipelineLayout, instance);
     }
-}
-
-void Model::draw_obj(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind) {
-    if (bind) {
-        VkDeviceSize offsets[1] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBuffer._buffer, offsets);
-        vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.allocation._buffer, 0, VK_INDEX_TYPE_UINT32);
-    }
-
-    // vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(this->_indexesBuffer.size()), 1, 0, 0, instance);
-    vkCmdDraw(commandBuffer,  static_cast<uint32_t>(this->_verticesBuffer.size()), 1, 0, instance);
 }
 
 VertexInputDescription Vertex::get_vertex_description()

@@ -10,3 +10,5 @@ glslc skybox/skybox.vert -o skybox/skybox.vert.spv
 glslc skybox/skybox.frag -o skybox/skybox.frag.spv
 glslc skybox/skysphere.vert -o skybox/skysphere.vert.spv
 glslc skybox/skysphere.frag -o skybox/skysphere.frag.spv
+glslc pbr/pbr.vert -o pbr/pbr.vert.spv
+glslc pbr/pbr.frag -o pbr/pbr.frag.spv

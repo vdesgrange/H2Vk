@@ -101,10 +101,15 @@ std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, const glm::vec3& p
 //        }
     }
 
+    Materials material {};
+    material.properties = {1.0, 0.75, 1.0, {0.0f, 0.5f, 0.5f}};
+    material.pbr = true;
+    model->_materials.push_back(material);
+
     Primitive primitive{};
     primitive.firstIndex = 0;
     primitive.indexCount = model->_indexesBuffer.size();
-    primitive.materialIndex = -1; // not used here?
+    primitive.materialIndex = 0; // not used here?
     node->mesh.primitives.push_back(primitive);
 
     model->_nodes.push_back(node);
@@ -154,31 +159,6 @@ std::shared_ptr<Model> ModelPOLY::create_uv_sphere(Device* device, const glm::ve
             model->_indexesBuffer.push_back(j0 + i1);
         }
     }
-
-    //    for (int i = 0; i < stacks; i++) {
-    //        uint32_t s_cur = i * sectors;
-    //        uint32_t s_nex = (i + 1) * sectors;
-    //        for (int j = 1; j <= sectors; j++) {
-    //            if (i == 0) {
-    //                model->_indexesBuffer.push_back(0);
-    //                model->_indexesBuffer.push_back(j);
-    //                model->_indexesBuffer.push_back(j % sectors + 1);
-    //            } else if (i == stacks - 1) {
-    //                 model->_indexesBuffer.push_back((stacks - 2) * sectors + j);
-    //                 model->_indexesBuffer.push_back((stacks - 1) * sectors + 1);
-    //                 model->_indexesBuffer.push_back((stacks - 2) * sectors + j % sectors + 1);
-    //            } else {
-    //                 model->_indexesBuffer.push_back(s_cur + j);
-    //                 model->_indexesBuffer.push_back(s_nex + j);
-    //                 model->_indexesBuffer.push_back(s_cur + j % sectors + 1);
-    //
-    //                 model->_indexesBuffer.push_back(s_cur + j % sectors + 1);
-    //                 model->_indexesBuffer.push_back(s_nex + j);
-    //                 model->_indexesBuffer.push_back(s_nex + (j % sectors + 1));
-    //            }
-    //        }
-    //    }
-
 
     Primitive primitive{};
     primitive.firstIndex = 0;

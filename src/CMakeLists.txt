@@ -14,7 +14,7 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
     "${PROJECT_SOURCE_DIR}/src/shaders/*.comp"
 )
 
-## Iterate each shader
+### Iterate each shader
 foreach(GLSL ${GLSL_SOURCE_FILES})
     message(STATUS "BUILDING SHADER")
     get_filename_component(FILE_DIR ${GLSL} DIRECTORY)
