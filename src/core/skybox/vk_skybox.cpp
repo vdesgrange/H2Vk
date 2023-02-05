@@ -272,7 +272,12 @@ void Skybox::setup_pipeline(PipelineBuilder& pipelineBuilder, std::vector<VkDesc
 //        };
 //    }
 
-    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect(setLayouts, {}, modules);
+    VkPushConstantRange push_constant;
+    push_constant.offset = 0;
+    push_constant.size = sizeof(glm::mat4);
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect(setLayouts, {push_constant}, modules);
     std::shared_ptr<ShaderPass> pass = pipelineBuilder.build_pass(effect);
     pipelineBuilder.create_material("skyboxMaterial", pass);
     this->_material = pipelineBuilder.get_material("skyboxMaterial");
