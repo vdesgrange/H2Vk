@@ -26,7 +26,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.type = Camera::Type::axis;
 
-    std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.f, 1.f, 1.f}, PBR::cobalt);
+    std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.f, 1.f, 1.f}, PBR::gold);
     engine->_meshManager->upload_mesh(*sphereModel);
     engine->_meshManager->_models.emplace("sphere", sphereModel);
 

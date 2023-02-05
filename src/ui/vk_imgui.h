@@ -32,7 +32,7 @@ struct Settings final {
 
     // Light
     float coordinates[3] {1.0f, 0.0f, 0.0f};
-    int colors[3] {250, 248, 241};
+    float colors[3] {1.0f, 1.0f, 1.0f};
     float ambient {0.0005};
     float specular {0.75};
 

@@ -18,13 +18,6 @@ struct GPUObjectData {
     glm::mat4 model;
 };
 
-struct GPUMaterialData {
-    float metallic;
-    float roughness;
-    float ao;
-    glm::vec3 albedo;
-};
-
 struct DeletionQueue
 {
     std::deque<std::function<void()>> deletors;

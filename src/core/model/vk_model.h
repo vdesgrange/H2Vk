@@ -77,10 +77,10 @@ struct Materials {
     bool pbr = false;
 
     struct Properties {
+        glm::vec4 albedo; // rgb + w for opacity
         float metallic;
         float roughness;
         float ao;
-        glm::vec3 albedo;
     } properties;
 };
 typedef Materials::Properties PBRProperties;

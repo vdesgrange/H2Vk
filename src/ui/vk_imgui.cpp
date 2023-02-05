@@ -171,10 +171,10 @@ bool UInterface::scene_editor() {
 
         ImGui::Text("Light");
         ImGui::Separator();
-        updated |= ImGui::InputFloat3("Position", get_settings().coordinates, 0);
+        updated |= ImGui::InputFloat3("Position", get_settings().coordinates, "%.2f");
         updated |= ImGui::SliderFloat("Ambient", &get_settings().ambient, 0.0f, 0.005f, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
         updated |= ImGui::SliderFloat("Specular", &get_settings().specular, 0.0f, 1.0f);
-        updated |= ImGui::InputInt3("Color (RGB)", get_settings().colors, 0);
+        updated |= ImGui::InputFloat3("Color (RGB)", get_settings().colors, "%.2f");
     }
 
     ImGui::End();

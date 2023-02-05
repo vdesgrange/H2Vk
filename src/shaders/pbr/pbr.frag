@@ -16,10 +16,10 @@ layout (location = 3) in vec3 inFragPos;
 layout (location = 4) in vec3 inCameraPos;
 
 layout (push_constant) uniform Material {
+    vec4 albedo; // w for opacity
     float metallic;
     float roughness;
     float ao;
-    vec3 albedo;
 } material;
 
 layout (location = 0) out vec4 outFragColor;
@@ -46,7 +46,7 @@ float G_Smith(float dotNV, float dotNL, float roughness) {
 }
 
 vec3 F_Schlick(float cosTheta) {
-    vec3 F0 = mix(vec3(0.04), material.albedo, material.metallic);
+    vec3 F0 = mix(vec3(0.04), material.albedo.xyz, material.metallic);
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
@@ -55,7 +55,7 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, float roughness) {
     vec3 color = vec3(0.0);
     float distance = length(L);
     float attenuation = 1.0 / (distance * distance);
-    vec3 radiance = C * attenuation;
+    vec3 radiance = C;  // * attenuation
 
     vec3 H = normalize(V + L);
     float dotNH = clamp(dot(N, H), 0.0, 1.0);
@@ -75,7 +75,7 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, float roughness) {
         vec3 kd = (vec3(1.0) - F) * (1.0 - material.metallic);
 
         color += spec * radiance * dotNL;
-        // color += kd * material.albedo / PI * radiance * dotNL;
+        // color += kd * material.albedo.rgb / PI * radiance * dotNL;
     }
 
     return color;
@@ -99,11 +99,11 @@ void main()
         Lo += BRDF(L, V, N, C, roughness);
     };
 
-    vec3 ambient = 0.02 * material.albedo * material.ao; // lightFactor
+    vec3 ambient = 0.02 * material.albedo.xyz * material.ao; // lightFactor
     vec3 color = ambient + Lo;
     color = color / (color + vec3(1.0));
 
     color = pow(color, vec3(0.4545));
 
-    outFragColor = vec4(color, 1.0);
+    outFragColor = vec4(color, 1.0f); //  material.albedo.w
 }
