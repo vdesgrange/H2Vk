@@ -268,4 +268,17 @@ void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> se
     for (auto& shader : effect_mesh->shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
+
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr_tex.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_tex.frag.spv"},
+    };
+
+    std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {}, pbr_modules); // {push_constant}
+    std::shared_ptr<ShaderPass> pass_pbr = this->build_pass(effect_pbr);
+    create_material("pbrTextureMaterial", pass_pbr);
+
+    for (auto& shader : effect_pbr->shaderStages) {
+        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+    }
 }
