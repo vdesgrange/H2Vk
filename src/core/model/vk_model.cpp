@@ -88,6 +88,7 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
                     if (material.pbr) {
                         vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Materials::Properties), &material.properties);
                     } else {
+                        // descriptor set of baseColorTextureIndex contains all textures?
                         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[material.baseColorTextureIndex]._descriptorSet, 0, nullptr);
                     }
                 }

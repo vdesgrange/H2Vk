@@ -74,6 +74,10 @@ struct Materials {
     glm::vec4 baseColorFactor = glm::vec4(1.0f);
     uint32_t baseColorTextureIndex;
     uint32_t normalTextureIndex;
+    uint32_t metallicRoughnessTextureIndex;
+    uint32_t aoTextureIndex;
+    uint32_t emissiveTextureIndex;
+
     bool pbr = false;
 
     struct Properties {

@@ -82,6 +82,18 @@ void ModelGLTF::load_materials(tinygltf::Model &input) {
         if (gltfMaterial.additionalValues.find("normalTexture") != gltfMaterial.additionalValues.end()) {
             _materials[i].normalTextureIndex = gltfMaterial.additionalValues["normalTexture"].TextureIndex();
         }
+
+        if (gltfMaterial.additionalValues.find("metallicRoughnessTexture") != gltfMaterial.additionalValues.end()) {
+            _materials[i].metallicRoughnessTextureIndex = gltfMaterial.additionalValues["metallicRoughnessTexture"].TextureIndex();
+        }
+
+        if (gltfMaterial.additionalValues.find("occlusionTexture") != gltfMaterial.additionalValues.end()) {
+            _materials[i].aoTextureIndex = gltfMaterial.additionalValues["occlusionTexture"].TextureIndex();
+        }
+
+        if (gltfMaterial.additionalValues.find("emissiveTexture") != gltfMaterial.additionalValues.end()) {
+            _materials[i].emissiveTextureIndex = gltfMaterial.additionalValues["emissiveTexture"].TextureIndex();
+        }
     }
 }
 

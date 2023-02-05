@@ -54,17 +54,16 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
     float dotNH = clamp(dot(N, H), 0.0, 1.0);
     float dotHV = clamp(dot(H, V), 0.0, 1.0);
 
-    if (dotNL > 0.0)
-    {
-        float D = D_GGX(dotNH, roughness);
-        float G = G_Smith(dotNL, dotNV, roughness);
-        vec3 F = F_Schlick(dotHV, albedo, metallic); // dotNV
-        vec3 spec = D * G * F / (4.0 * dotNL * dotNV);
-        color += spec * C * dotNL;
 
-        vec3 kd = (vec3(1.0) - F) * (1.0 - metallic);
-        color += kd * albedo / PI * C * dotNL;
-    }
+    float D = D_GGX(dotNH, roughness);
+    float G = G_Smith(dotNL, dotNV, roughness);
+    vec3 F = F_Schlick(dotHV, albedo, metallic); // dotNV
+    vec3 spec = D * G * F / (4.0 * dotNL * dotNV + 0.0001);
+    color += spec * C * dotNL;
+
+    vec3 kd = (vec3(1.0) - F) * (1.0 - metallic);
+    color += kd * albedo / PI * C * dotNL;
+
     return color;
 }
 
@@ -89,7 +88,7 @@ void main()
     for (int i = 0; i < sources; i++) {
         vec3 L = normalize(lightPos - inFragPos);
         Lo += BRDF(L, V, N, C, albedo, roughness, metallic);
-        Lo += vec3(0.03) * albedo * ao * vec3(dot(N, L) / sources); // ambient
+        Lo += vec3(0.03) * albedo * ao * emissive / sources;
     };
 
     vec3 color = Lo;

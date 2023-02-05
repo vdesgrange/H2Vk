@@ -194,6 +194,9 @@ void VulkanEngine::init_descriptors() {
     DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
             .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
             .layout(_descriptorSetLayouts.textures);
 
     // === Clean up ===
@@ -223,12 +226,21 @@ void VulkanEngine::setup_descriptors(){
             if (material.pbr == false) {
                 VkDescriptorImageInfo colorMap = renderable.model->_images[material.baseColorTextureIndex]._texture._descriptor;
                 VkDescriptorImageInfo normalMap = renderable.model->_images[material.normalTextureIndex]._texture._descriptor;
+                VkDescriptorImageInfo metallicRoughnessMap = renderable.model->_images[material.metallicRoughnessTextureIndex]._texture._descriptor;
+                VkDescriptorImageInfo aoMap = renderable.model->_images[material.aoTextureIndex]._texture._descriptor;
+                VkDescriptorImageInfo emissiveMap = renderable.model->_images[material.emissiveTextureIndex]._texture._descriptor;
 
                 DescriptorBuilder::begin(*_layoutCache, *_allocator)
                         .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
                                     0)
                         .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
                                     1)
+                        .bind_image(metallicRoughnessMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
+                                    2)
+                        .bind_image(aoMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
+                                    3)
+                        .bind_image(emissiveMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
+                                    4)
                         .layout(_descriptorSetLayouts.textures)
                         .build(renderable.model->_images[material.baseColorTextureIndex]._descriptorSet,
                                _descriptorSetLayouts.textures, poolSizes);

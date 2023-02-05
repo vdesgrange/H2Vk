@@ -125,7 +125,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
 
     RenderObject helmet;
     helmet.model = engine->_meshManager->get_model("helmet");
-    helmet.material = engine->_pipelineBuilder->get_material("helmetMaterial");
+    helmet.material = engine->_pipelineBuilder->get_material("pbrTextureMaterial");
     helmet.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(helmet);
 
