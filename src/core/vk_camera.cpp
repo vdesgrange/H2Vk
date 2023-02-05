@@ -69,6 +69,10 @@ glm::mat4 Camera::get_rotation_matrix() {
     return rot;
 }
 
+bool Camera::get_flip() {
+    return this->flip_y;
+}
+
 void Camera::inverse(bool flip) {
     this->flip_y = flip;
     update_view();
@@ -164,5 +168,5 @@ void Camera::update_view() {
         glm::mat4 rotation = this->get_rotation_matrix();
         this->view = rotation * translation;  // Rotation around camera's origin. Swap for world origin.
     }
-    this->view = this->flip_y ? glm::inverse(this->view) : this->view;
+    // this->view = this->flip_y ? glm::inverse(this->view) : this->view;
 }

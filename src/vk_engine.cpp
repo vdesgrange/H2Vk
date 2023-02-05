@@ -368,6 +368,7 @@ void VulkanEngine::update_uniform_buffers() {
     camData.proj = _camera->get_projection_matrix();
     camData.view = _camera->get_view_matrix();
     camData.pos = _camera->get_position_vector();
+    camData.flip = _camera->get_flip();
 
     // Camera : write into the buffer by copying the render matrices from camera object into it
     void *data;

@@ -5,9 +5,10 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 struct GPUCameraData{
-    glm::mat4 view;
-    glm::mat4 proj;
-    glm::vec3 pos;
+    alignas(sizeof(glm::mat4)) glm::mat4 view;
+    alignas(sizeof(glm::mat4)) glm::mat4 proj;
+    alignas(sizeof(glm::vec4)) glm::vec3 pos;
+    alignas(sizeof(bool)) bool flip;
 };
 
 class Camera final {
@@ -26,6 +27,7 @@ public:
     glm::mat4 get_view_matrix();
     glm::vec3 get_position_vector();
     glm::mat4 get_rotation_matrix();
+    bool get_flip();
 
     void inverse(bool flip);
     void set_position(glm::vec3 position);
