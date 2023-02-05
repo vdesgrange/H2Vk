@@ -18,6 +18,7 @@ layout(set = 0, binding = 0) uniform  CameraBuffer
     mat4 view;
     mat4 proj;
     vec3 pos;
+    bool flip;
 } cameraData;
 
 struct ObjectData {
@@ -28,9 +29,13 @@ layout (std140, set = 1, binding = 0) readonly buffer ObjectBuffer {
     ObjectData objects[];
 } objectBuffer;
 
+layout (push_constant) uniform NodeModel {
+    mat4 model;
+} nodeData;
+
 void main()
 {
-    mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model;
+    mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * nodeData.model;
     mat4 transformMatrix = (cameraData.proj * cameraData.view * modelMatrix);
     gl_Position = transformMatrix * vec4(vPosition , 1.0f);
 

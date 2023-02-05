@@ -178,20 +178,6 @@ std::shared_ptr<Material> PipelineBuilder::get_material(const std::string &name)
     }
 }
 
-void PipelineBuilder::skybox(std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/skybox/skybox.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/skybox/skybox.frag.spv"},
-    };
-
-    std::shared_ptr<ShaderEffect> effect = this->build_effect(setLayouts, {}, modules);
-    std::shared_ptr<ShaderPass> pass = this->build_pass(effect);
-    create_material("skyboxMaterial", pass);
-    for (auto& shader : effect->shaderStages) {
-        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
-    }
-}
-
 void PipelineBuilder::scene_light(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/light/light.vert.spv"},
@@ -213,12 +199,17 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene.frag.spv"},
     };
 
-    VkPushConstantRange push_constant;
-    push_constant.offset = 0;
-    push_constant.size = sizeof(Materials::Properties);
-    push_constant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    VkPushConstantRange push_model;
+    push_model.offset = 0;
+    push_model.size = sizeof(glm::mat4);
+    push_model.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {push_constant}, modules);
+    VkPushConstantRange push_properties;
+    push_properties.offset = sizeof(glm::mat4);
+    push_properties.size = sizeof(Materials::Properties);
+    push_properties.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {push_model, push_properties}, modules);
     std::shared_ptr<ShaderPass> pass_mesh = this->build_pass(effect_mesh);
     create_material("monkeyMaterial", pass_mesh);
 
@@ -227,7 +218,7 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr.frag.spv"},
     };
 
-    std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {push_constant}, pbr_modules);
+    std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {push_model, push_properties}, pbr_modules);
     std::shared_ptr<ShaderPass> pass_pbr = this->build_pass(effect_pbr);
     create_material("pbrMaterial", pass_pbr);
 
@@ -246,7 +237,12 @@ void PipelineBuilder::scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setL
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene_tex.frag.spv"},
     };
 
-    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {}, modules);
+    VkPushConstantRange push_constant;
+    push_constant.offset = 0;
+    push_constant.size = sizeof(glm::mat4);
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {push_constant}, modules);
     std::shared_ptr<ShaderPass> pass = this->build_pass(effect_mesh);
     create_material("karibuMaterial", pass);
 
@@ -261,7 +257,12 @@ void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> se
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene_tex.frag.spv"},
     };
 
-    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {}, modules); // {push_constant}
+    VkPushConstantRange push_constant;
+    push_constant.offset = 0;
+    push_constant.size = sizeof(glm::mat4);
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {push_constant}, modules); // {push_constant}
     std::shared_ptr<ShaderPass> pass = this->build_pass(effect_mesh);
     create_material("helmetMaterial", pass);
 
@@ -274,7 +275,7 @@ void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> se
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_tex.frag.spv"},
     };
 
-    std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {}, pbr_modules); // {push_constant}
+    std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {push_constant}, pbr_modules);
     std::shared_ptr<ShaderPass> pass_pbr = this->build_pass(effect_pbr);
     create_material("pbrTextureMaterial", pass_pbr);
 

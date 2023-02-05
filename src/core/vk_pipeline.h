@@ -27,7 +27,7 @@ public:
     ~PipelineBuilder();
 
     std::shared_ptr<ShaderPass> get_material(const std::string &name);
-    void skybox(std::vector<VkDescriptorSetLayout> setLayouts);
+    // void skybox(std::vector<VkDescriptorSetLayout> setLayouts);
     void scene_light(std::vector<VkDescriptorSetLayout> setLayouts);
     void scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts);
     void scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setLayouts);

@@ -81,12 +81,14 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
             parent = parent->parent;
         }
 
+        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
+
         for (Primitive& primitive : node->mesh.primitives) {
             if (primitive.indexCount > 0) {
                 if (!_materials.empty() && primitive.materialIndex != -1) { // handle non-gltf meshes // !_textures.empty()
                     Materials material = _materials[primitive.materialIndex];
                     if (material.pbr) {
-                        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Materials::Properties), &material.properties);
+                        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Materials::Properties), &material.properties);
                     } else {
                         // descriptor set of baseColorTextureIndex contains all textures?
                         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[material.baseColorTextureIndex]._descriptorSet, 0, nullptr);

@@ -88,10 +88,12 @@ void main()
     for (int i = 0; i < sources; i++) {
         vec3 L = normalize(lightPos - inFragPos);
         Lo += BRDF(L, V, N, C, albedo, roughness, metallic);
-        Lo += vec3(0.03) * albedo * ao * emissive / sources;
     };
 
     vec3 color = Lo;
+    color += vec3(0.03) * albedo * ao;
+    color += emissive;
+
     color = color / (color + vec3(1.0)); // Reinhard operator
     outFragColor = vec4(color, albedo);
 }

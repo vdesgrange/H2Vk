@@ -15,10 +15,10 @@ layout (location = 3) in vec3 inFragPos;
 layout (location = 4) in vec3 inCameraPos;
 
 layout (push_constant) uniform Material {
-    vec4 albedo; // w for opacity
-    float metallic;
-    float roughness;
-    float ao;
+    layout(offset = 64) vec4 albedo; // w for opacity
+    layout(offset = 80) float metallic;
+    layout(offset = 84) float roughness;
+    layout(offset = 88) float ao;
 } material;
 
 layout (location = 0) out vec4 outFragColor;

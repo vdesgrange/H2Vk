@@ -113,7 +113,7 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
 Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
-    camera.inverse(false);
+    camera.inverse(true);
     camera.set_position({ 0.0f, 0.0f, -3.0f }); // Re-initialize position after scene change = camera jumping.
     camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);  // 1700.f / 1200.f
     camera.type = Camera::Type::look_at;
