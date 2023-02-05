@@ -1,6 +1,5 @@
 #version 460
-//#extension GL_ARB_shading_language_include : require
-
+// #extension GL_ARB_shading_language_include : require
 layout(std140, set = 0, binding = 1) uniform SceneData {
     vec4 fogColor; // w is for exponent
     vec4 fogDistances; //x for min, y for max, zw unused.
@@ -61,13 +60,14 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C) {
     {
         float D = D_GGX(dotNH, roughness);
         float G = G_Smith(dotNL, dotNV, roughness);
-        vec3 F = F_Schlick(dotNV); // dotNV
-        vec3 spec = D * G * F / (4.0 * dotNL * dotNV); //  + 0.0001
+        vec3 F = F_Schlick(dotHV); // dotNV
+        vec3 spec = D * G * F / (4.0 * dotNL * dotNV + 0.0001);
         color += spec * C * dotNL;
 
         vec3 kd = (vec3(1.0) - F) * (1.0 - material.metallic);
         color += kd * material.albedo.rgb / PI * C * dotNL;
-     }
+    }
+
     return color;
 }
 
@@ -91,7 +91,7 @@ void main()
 
         Lo += BRDF(L, V, N, C);
 
-        vec3 ambient = vec3(0.03) * material.albedo.xyz * material.ao * vec3(dot(N, L) / sources); // * lightFactor
+        vec3 ambient = vec3(0.03) * material.albedo.xyz * material.ao * vec3(dot(N, L) / sources); // lightFactor
         Lo += ambient;
     };
 
