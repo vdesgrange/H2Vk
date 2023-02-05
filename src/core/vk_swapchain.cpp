@@ -21,9 +21,13 @@ SwapChain::SwapChain(Window& window, const Device& device) : _device(device) {
     VkExtent2D extent2d = choose_swap_extent(window, capabilities);
     window._windowExtent = extent2d;
 
+    VkSurfaceFormatKHR formatKHR{};
+    formatKHR.format = VK_FORMAT_B8G8R8A8_SRGB; // standard RGB. _USCALED or _SFLOAT ok-ish for linear space
+    formatKHR.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+
     vkb::SwapchainBuilder swapchainBuilder{device._physicalDevice, device._logicalDevice, device._surface };
     vkb::Swapchain vkbSwapchain = swapchainBuilder
-            .use_default_format_selection()
+            .set_desired_format(formatKHR)  // .use_default_format_selection()
             .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
             .set_desired_extent(window._windowExtent.width, window._windowExtent.height)
             .build()

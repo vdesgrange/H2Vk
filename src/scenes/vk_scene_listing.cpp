@@ -24,17 +24,38 @@ Renderables SceneListing::monkeyAndTriangles(Camera& camera, VulkanEngine* engin
     camera.inverse(false);
     camera.set_position({ 1.f, 0.0f, 1.f });
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
-    camera.type = Camera::Type::axis;
+    camera.type = Camera::Type::look_at;
 
-    std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.f, 1.f, 1.f}, PBR::gold);
-    engine->_meshManager->upload_mesh(*sphereModel);
-    engine->_meshManager->_models.emplace("sphere", sphereModel);
+//    std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.f, 1.f, 1.f}, PBR::gold);
+//    engine->_meshManager->upload_mesh(*sphereModel);
+//    engine->_meshManager->_models.emplace("sphere", sphereModel);
+//
+//    RenderObject sphere;
+//    sphere.model = engine->_meshManager->get_model("sphere");
+//    sphere.material = engine->_pipelineBuilder->get_material("pbrMaterial");
+//    sphere.transformMatrix = glm::mat4{ 1.0f };
+//    renderables.push_back(sphere);
 
-    RenderObject sphere;
-    sphere.model = engine->_meshManager->get_model("sphere");
-    sphere.material = engine->_pipelineBuilder->get_material("pbrMaterial");
-    sphere.transformMatrix = glm::mat4{ 1.0f };
-    renderables.push_back(sphere);
+    for (int x = 0; x <= 6; x++) {
+        for (int y = 0; y <= 6; y++) {
+            float ratio_x = float(x) / 6.0f;
+            float ratio_y = float(y) / 6.0f;
+            PBRProperties gold = {{1.0f,  0.765557f, 0.336057f, 1.0f}, ratio_y * 1.0f, ratio_x * 1.0f, 1.0f};
+            std::string name = "sphere_" + std::to_string(x) + "_" + std::to_string(y);
+            std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f}, gold);
+            engine->_meshManager->upload_mesh(*sphereModel);
+            engine->_meshManager->_models.emplace(name, sphereModel);
+
+            RenderObject sphere;
+            sphere.model = engine->_meshManager->get_model(name);
+            sphere.material = engine->_pipelineBuilder->get_material("pbrMaterial");
+            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x - 3, y - 3, 0)); // vec3(x, 0, y)
+            glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.5, 0.5, 0.5));
+            sphere.transformMatrix = translation * scale;
+            renderables.push_back(sphere);
+        }
+    }
+
 
 //    std::shared_ptr<Model> planeModel = ModelPOLY::create_plane(engine->_device.get(), {-10.0f, 1.0f, -10.0f}, {10.0f, 1.0f, 10.0f});
 //    engine->_meshManager->upload_mesh(*planeModel);
