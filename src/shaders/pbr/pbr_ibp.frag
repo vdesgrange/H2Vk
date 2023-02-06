@@ -80,26 +80,21 @@ vec2 sample_spherical_map(vec3 v) {
     return uv;
 }
 
-
 void main()
 {
     int sources = 1;
-
     vec3 lightPos = sceneData.sunlightDirection.xyz;
     float lightFactor = sceneData.sunlightDirection.w;
 
-    vec3 A = texture(irradianceMap, inUV).rgb; // vec3(0.03)
     vec3 V = normalize(inCameraPos - inFragPos);
     vec3 N = normalize(inNormal);
     vec3 C = sceneData.sunlightColor.rgb;
+    vec2 uv = sample_spherical_map(N);
+    vec3 A = texture(irradianceMap, uv).rgb; // vec3(0.03)
 
     vec3 Lo = vec3(0.0);
     for (int i = 0; i < sources; i++) {
         vec3 L = normalize(lightPos - inFragPos);
-//        float distance = length(lightPos - inFragPos);
-//        float attenuation = 1.0 / (distance * distance);
-//        vec3 radiance = C * attenuation;
-
         Lo += BRDF(L, V, N, C);
 
         vec3 ambient = A * material.albedo.xyz * material.ao * vec3(dot(N, L) / sources); // lightFactor

@@ -128,8 +128,8 @@ void VulkanEngine::init_sync_structures() {
 
 void VulkanEngine::init_descriptors() {
     std::vector<VkDescriptorPoolSize> skyboxPoolSizes = {
-           {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2}
+           {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}
     };
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
@@ -164,6 +164,7 @@ void VulkanEngine::init_descriptors() {
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
                 .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
                 .bind_buffer(sceneBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
                 .layout(_descriptorSetLayouts.environment) // use reference instead?
                 .build(_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 

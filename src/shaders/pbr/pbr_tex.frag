@@ -10,6 +10,8 @@ layout(std140, set = 0, binding = 1) uniform SceneData {
     float specularFactor;
 } sceneData;
 
+layout(set = 0, binding = 2) uniform sampler2D irradianceMap; // aka. environment map
+
 layout(set = 2, binding = 0) uniform sampler2D samplerAlbedoMap;
 layout(set = 2, binding = 1) uniform sampler2D samplerNormalMap;
 layout(set = 2, binding = 2) uniform sampler2D samplerMetalRoughnessMap;
@@ -67,6 +69,13 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
     return color;
 }
 
+vec2 sample_spherical_map(vec3 v) {
+    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+    uv *= vec2(0.1591f, 0.3183f);
+    uv += 0.5;
+    return -1 * uv;
+}
+
 void main()
 {
     vec3 albedo = texture(samplerAlbedoMap, inUV).rgb; // no gamma correction pow 2.2
@@ -83,6 +92,8 @@ void main()
     vec3 V = normalize(inCameraPos - inFragPos);
     vec3 N = normalize(inNormal);
     vec3 C = sceneData.sunlightColor.rgb;
+    vec2 uv = sample_spherical_map(N);
+    vec3 A = texture(irradianceMap, uv).rgb; // vec3(0.03)
 
     vec3 Lo = vec3(0.0);
     for (int i = 0; i < sources; i++) {
@@ -91,7 +102,7 @@ void main()
     };
 
     vec3 color = Lo;
-    color += vec3(0.03) * albedo * ao;
+    color += A * albedo * ao;
     color += emissive;
 
     color = color / (color + vec3(1.0)); // Reinhard operator

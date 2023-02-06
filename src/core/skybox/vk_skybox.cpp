@@ -22,6 +22,7 @@ void Skybox::destroy() {
     // must be done before device allocator destruction otherwise buffer memory not all freed
     this->_model.reset(); // smart pointer. Carefull, might break because destroyed automatically.
     this->_texture.destroy(this->_device); // Must be called before vmaDestroyAllocator
+    this->_environment.destroy(this->_device);
 }
 
 void Skybox::load() {
@@ -31,7 +32,9 @@ void Skybox::load() {
         load_cube_texture();
     } else {
         _model = ModelPOLY::create_uv_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
-        load_sphere_texture();
+        //load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg");
+        load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", _texture);
+        load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment);
     }
 
 //    _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
@@ -158,11 +161,8 @@ void Skybox::load_cube_texture() {
     std::cout << "Skybox texture loaded successfully" << std::endl;
 }
 
-void Skybox::load_sphere_texture() {
-    const char* file = "../assets/skybox/grand_canyon_yuma_point_8k.jpg"; // "../assets/skybox/tokyo_bigsight_8k.jpg"; // "../assets/debug/uv_checker_4k.png"; //
-
+void Skybox::load_sphere_texture(const char* file, Texture& texture) {
     int texWidth, texHeight, texChannels;
-
     stbi_uc* pixels = stbi_load(file, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     if (!pixels) {
         std::cout << "Failed to load texture file " << file << std::endl;
@@ -190,7 +190,7 @@ void Skybox::load_sphere_texture() {
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(_device._allocator, &imgInfo, &imgAllocinfo, &_texture._image, &_texture._allocation, nullptr);
+    vmaCreateImage(_device._allocator, &imgInfo, &imgAllocinfo, &texture._image, &texture._allocation, nullptr);
 
     CommandBuffer::immediate_submit(_device, _uploadContext, [&](VkCommandBuffer cmd) {
         VkImageSubresourceRange range;
@@ -204,7 +204,7 @@ void Skybox::load_sphere_texture() {
         imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toTransfer.image = _texture._image;
+        imageBarrier_toTransfer.image = texture._image;
         imageBarrier_toTransfer.subresourceRange = range;
         imageBarrier_toTransfer.srcAccessMask = 0;
         imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -224,7 +224,7 @@ void Skybox::load_sphere_texture() {
         copyRegion.imageExtent = imageExtent;
 
         //copy the buffer into the image
-        vkCmdCopyBufferToImage(cmd, buffer._buffer, _texture._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+        vkCmdCopyBufferToImage(cmd, buffer._buffer, texture._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
         VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
         imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -235,19 +235,58 @@ void Skybox::load_sphere_texture() {
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
 
         // Change texture image layout to shader read after all mip levels have been copied
-        _texture._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        texture._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &_texture._sampler);
+        vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &texture._sampler);
 
-        VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-        vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &_texture._imageView);
+        VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
+        vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &texture._imageView);
 
-        _texture.updateDescriptor();
+        texture.updateDescriptor();
     });
 
     vmaDestroyBuffer(_device._allocator, buffer._buffer, buffer._allocation);
     std::cout << "Sphere map loaded successfully " << file << std::endl;
+}
+
+
+void Skybox::load_sphere_hdr() {
+    // todo use .ibl file
+    const char* back = "../assets/skybox/TropicalRuins_8k.jpg";
+    const char* refl = "../assets/skybox/TropicalRuins_3k.hdr";
+    const char* envi = "../assets/skybox/TropicalRuins_Env.hdr";
+
+    int bgWidth, bgHeight, bgChannels;
+    stbi_uc* bgData = stbi_load(back, &bgWidth, &bgHeight, &bgChannels, STBI_rgb_alpha);
+    if (!bgData) {
+        std::cout << "Failed to load background texture file " << back << std::endl;
+    }
+
+    void* bg_ptr = bgData;
+    VkDeviceSize imageSize = bgWidth * bgHeight * bgChannels;
+    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+    AllocatedBuffer buffer = Buffer::create_buffer(_device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+
+    void* bg_data;
+    vmaMapMemory(_device._allocator, buffer._allocation, &bg_data);
+    memcpy(bg_data, bg_ptr, static_cast<size_t>(imageSize));
+    vmaUnmapMemory(_device._allocator, buffer._allocation);
+    stbi_image_free(bgData);
+
+
+    int envWidth, envHeight, envChannels;
+    stbi_uc* envData = stbi_load(envi, &envWidth, &envHeight, &envChannels, STBI_rgb_alpha);
+    if (!envData) {
+        std::cout << "Failed to load environment texture file " << envi << std::endl;
+    }
+
+    int reflWidth, reflHeight, reflChannels;
+    stbi_uc* reflData = stbi_load(refl, &reflWidth, &reflHeight, &reflChannels, STBI_rgb_alpha);
+    if (!reflData) {
+        std::cout << "Failed to load reflection texture file " << refl << std::endl;
+    }
+
 }
 
 void  Skybox::setup_descriptor() {
