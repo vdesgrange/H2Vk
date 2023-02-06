@@ -20,7 +20,8 @@ void main()
 {
     mat4 transformMatrix = cameraData.proj * cameraData.view;
     transformMatrix[3] = vec4(0.0f, 0.0f, 0.0f, 1.0f); //  Cancel translation
-    gl_Position = transformMatrix * vec4(vPosition , 1.0f);
+    vec4 clipPos = transformMatrix * vec4(vPosition , 1.0f);
+    gl_Position = clipPos.xyww; // fix depth with VK_COMPARE_OP_LESS_OR_EQUAL
 
     float coeff = (cameraData.flip == true) ? -1.0 : 1.0;
     outUV = coeff * vUV;

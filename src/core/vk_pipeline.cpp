@@ -27,23 +27,10 @@ PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, Ren
 {
     this->_viewport = vkinit::get_viewport((float) window._windowExtent.width, (float) window._windowExtent.height);
     this->_scissor = vkinit::get_scissor((float) window._windowExtent.width, (float) window._windowExtent.height);
-//    VkViewport viewport{};
-//    viewport.x = 0.0f;
-//    viewport.y = 0.0f;
-//    viewport.width = (float) window._windowExtent.width;
-//    viewport.height = (float) window._windowExtent.height;
-//    viewport.minDepth = 0.0f;
-//    viewport.maxDepth = 1.0f;
-//    this->_viewport = viewport;
-
-//    VkRect2D scissor{};
-//    scissor.offset = {0, 0};
-//    scissor.extent = window._windowExtent;
-//    this->_scissor = scissor;
 
     // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
     this->_inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    this->_depthStencil = vkinit::pipeline_depth_stencil_state_create_info(true, true, VK_COMPARE_OP_LESS);
+    this->_depthStencil = vkinit::pipeline_depth_stencil_state_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL); // VK_COMPARE_OP_LESS
     this->_rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
     this->_multisampling = vkinit::multisampling_state_create_info();
     this->_colorBlendAttachment = vkinit::color_blend_attachment_state();
