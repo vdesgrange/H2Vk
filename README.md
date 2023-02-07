@@ -16,10 +16,12 @@ A long term goal aim at using this work to render solutions obtained from physic
 ![gold material!](./snapshots/gold.png "Golden spheres")
 ![damaged helmet!](./snapshots/helmet.png "Damaged helmet")
 
-## Building
+## How to build
+
+Coming soon...
 
 ## References
 
-[Vulkan tutoriel](https://vulkan-tutorial.com)
-[Introduction to vulkan](https://vkguide.dev/)
-[Examples and demos](https://github.com/SaschaWillems/Vulkan)
+- [Vulkan tutoriel](https://vulkan-tutorial.com)
+- [Introduction to vulkan](https://vkguide.dev/)
+- [Examples and demos](https://github.com/SaschaWillems/Vulkan)
