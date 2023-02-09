@@ -16,6 +16,13 @@
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
 
+void EnvMap::init_pipeline() {
+
+}
+
+void EnvMap::clean_up() {
+
+}
 
 void EnvMap::loader(const char* file, Device& device, Texture& texture, UploadContext& uploadContext) {
     stbi_uc* pixels = stbi_load(file, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
@@ -112,12 +119,24 @@ void EnvMap::cube_map_converter(const char* file, Window& window, Device& device
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     clearValues[1].depthStencil.depth = 1.0f;
 
-    std::array<FrameBuffers, 6> framebuffers;
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.pNext = nullptr;
+    framebufferInfo.renderPass = renderPass._renderPass;
+    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.width = texWidth;
+    framebufferInfo.height = texHeight;
+    framebufferInfo.layers = 1;
+
+    std::array<VkFramebuffer, 6> framebuffers;
     std::array<VkImageView, 6> imagesViews;
 
     for (int face = 0; face < 6; face++) {
         VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
         vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &imagesViews[face]);
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments = &imagesViews[face];
+        VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &framebuffers[face]));
     }
 
     VkDescriptorSetLayout setLayout;
@@ -131,12 +150,21 @@ void EnvMap::cube_map_converter(const char* file, Window& window, Device& device
         .build(descriptor, setLayout, poolSizes);
 
     PipelineBuilder pipelineBuilder = PipelineBuilder(window, device, renderPass);
+    pipelineBuilder._viewport = vkinit::get_viewport((float) texWidth, (float) texHeight);
+    pipelineBuilder._scissor = vkinit::get_scissor((float) texWidth, (float) texHeight);
+
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules = {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/env_map/converter.vert.spv"},
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/env_map/converter.frag.spv"},
     };
 
-    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {}, modules);
+    VkPushConstantRange pushCst;
+    pushCst.offset = 0;
+    pushCst.size = sizeof(glm::mat4);
+    pushCst.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+
+    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {pushCst}, modules);
     std::shared_ptr<ShaderPass> converterPass = pipelineBuilder.build_pass(effect);
     // pipelineBuilder.create_material("converter", converterPass);
 
@@ -162,7 +190,7 @@ void EnvMap::cube_map_converter(const char* file, Window& window, Device& device
         extent.width = static_cast<uint32_t>(texWidth);
         extent.height = static_cast<uint32_t>(texHeight);
 
-        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers[face]._frameBuffers[0]);
+        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers[face]);
         renderPassInfo.clearValueCount = clearValues.size();
         renderPassInfo.pClearValues = clearValues.data();
 
@@ -209,12 +237,119 @@ void EnvMap::cube_map_converter(const char* file, Window& window, Device& device
 
     // destroy renderPass
     // destroy pipeline
-    // _frameBuffers.reset();
-    for (int i = 0; i < 6; i++) {
-        // destroy frame buffers
-        vkDestroyImageView(device._logicalDevice, imagesViews[i], nullptr);
+
+    for (int face = 0; face < 6; face++) {
+        vkDestroyFramebuffer(device._logicalDevice, framebuffers[face], nullptr);
+        vkDestroyImageView(device._logicalDevice, imagesViews[face], nullptr);
     }
 }
+
+
+//void EnvMap::irradiance_mapping(Window& window, Device& device, SwapChain& swapchain) {
+//    RenderPass renderPass = RenderPass(device, swapchain); // no depth maybe?
+//    std::array<VkClearValue, 2> clearValues{};
+//    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+//    clearValues[1].depthStencil.depth = 1.0f;
+//
+//    uint32_t convolveWidth = 32;
+//    uint32_t convolveHeight = 32;
+//
+//    UploadContext ctx{};
+//    ctx._commandPool = {};
+//    ctx._commandBuffer = {};
+//    ctx._uploadFence = {};
+//
+//    Texture irradiance {};
+//    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+//
+//    VkExtent3D imageExtent;
+//    imageExtent.width = static_cast<uint32_t>(texWidth);
+//    imageExtent.height = static_cast<uint32_t>(texHeight);
+//    imageExtent.depth = 1;
+//
+//    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
+//    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+//    VmaAllocationCreateInfo imgAllocinfo = {};
+//    imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+//    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &irradiance._image, &irradiance._allocation, nullptr);
+//
+//    // Get irradiance image view
+//    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, irradiance._image, VK_IMAGE_ASPECT_COLOR_BIT);
+//    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &irradiance._imageView);
+//
+//    // Descriptor set
+//    VkDescriptorSetLayout setLayout;
+//    VkDescriptorSet descriptor;
+//    DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
+//    DescriptorAllocator allocator = DescriptorAllocator(device);
+//    std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}};
+//    DescriptorBuilder::begin(layoutCache, allocator)
+//            .bind_image(irradiance._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+//            .layout(setLayout)
+//            .build(descriptor, setLayout, poolSizes);
+//
+//    // Build pipeline
+//    PipelineBuilder pipelineBuilder = PipelineBuilder(window, device, renderPass);
+//    pipelineBuilder._viewport = vkinit::get_viewport((float) convolveWidth, (float) convolveHeight);
+//    pipelineBuilder._scissor = vkinit::get_scissor((float) convolveWidth, (float) convolveHeight);
+//
+//    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules = {
+//            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/env_map/irradiance.vert.spv"},
+//            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/env_map/irradiance.frag.spv"},
+//    };
+//
+//    VkPushConstantRange pushCst;
+//    pushCst.offset = 0;
+//    pushCst.size = sizeof(glm::mat4);
+//    pushCst.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+//
+//    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {pushCst}, modules);
+//    std::shared_ptr<ShaderPass> irradiancePass = pipelineBuilder.build_pass(effect);
+//
+//    // Irradiance
+//    VkDeviceSize offset = 0;
+//
+//    CommandPool commandPool = CommandPool(device);
+//    CommandBuffer commandBuffer =  CommandBuffer(device, commandPool);
+//
+//    VkExtent2D extent;
+//    extent.width = static_cast<uint32_t>(texWidth);
+//    extent.height = static_cast<uint32_t>(texHeight);
+//
+//    VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers[face]._frameBuffers[0]);
+//    renderPassInfo.clearValueCount = clearValues.size();
+//    renderPassInfo.pClearValues = clearValues.data();
+//
+//    VkCommandBufferBeginInfo cmdBeginInfo{};
+//    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+//    cmdBeginInfo.pNext = nullptr;
+//    cmdBeginInfo.pInheritanceInfo = nullptr;
+//    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+//
+//    glm::mat4 projection = glm::perspective(glm::radians(90.0f), texWidth / static_cast<float>(texHeight),  0.1f, 10.0f);
+//    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f,  0.0f), glm::vec3(0.0f, 1.0f,  0.0f));
+//    glm::mat4 viewProj = projection * view;
+//
+//    std::shared_ptr<Model> plane = ModelPOLY::create_plane(&device, {-1.0f, -1.0f, 0.0f},  {1.f, 1.f, 0.0f});
+//
+//    VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
+//    {
+//        vkCmdBeginRenderPass(commandBuffer._commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
+//        {
+//            vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irradiancePass->pipeline);
+//            vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &viewProj);
+//            vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irradiancePass->pipelineLayout, 0,1, &descriptor, 0, nullptr);
+//            plane->draw(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, 0, true);
+//        }
+//        vkCmdEndRenderPass(commandBuffer._commandBuffer);
+//    }
+//    VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
+//
+//}
+
+void EnvMap::prefilter_mapping() {}
+
+void EnvMap::brdf_convolution() {}
 
 void EnvMap::main() {
     // to do

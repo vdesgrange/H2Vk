@@ -11,5 +11,5 @@ layout (location = 0) out vec3 outPos;
 void main()
 {
     outPos = vPosition;
-    gl_Position = viewProj * vec4(vPosition , 1.0f);
+    gl_Position = view.viewProj * vec4(vPosition , 1.0f);
 }
