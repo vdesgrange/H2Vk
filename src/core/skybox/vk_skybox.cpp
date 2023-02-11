@@ -1,4 +1,6 @@
 #include "vk_skybox.h"
+#include "core/vk_window.h"
+#include "core/vk_swapchain.h"
 #include "core/vk_device.h"
 #include "core/vk_buffer.h"
 #include "core/vk_mesh_manager.h"
@@ -6,6 +8,7 @@
 #include "core/utilities/vk_initializers.h"
 #include "core/vk_command_buffer.h"
 #include "core/model/vk_poly.h"
+#include "tools/vk_env_map.h"
 
 #include <stb_image.h>
 
@@ -27,13 +30,16 @@ void Skybox::destroy() {
 
 void Skybox::load() {
 
+    EnvMap envMap{};
+
     if (_type == Type::box) {
         _model = ModelPOLY::create_cube(&_device, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
         load_cube_texture();
     } else {
         _model = ModelPOLY::create_uv_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
-        //load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg");
         load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", _texture);
+        // envMap.irradiance_mapping(Window(), _device)
+
         load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment);
     }
 

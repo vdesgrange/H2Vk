@@ -24,9 +24,9 @@ public:
     void clean_up();
     void loader(const char* file, Device& device, Texture& texture, UploadContext& uploadContext);
     void init_pipeline();
-    void cube_map_converter(const char* file, Window& window, Device& device, SwapChain& swapchain, Texture& texture);
+    void cube_map_converter(Window& window, Device& device, Texture& inTexture, Texture& outTexture);
+    Texture irradiance_mapping(Window& window, Device& device, Texture& inTexture);
 
-    void irradiance_mapping();
     void prefilter_mapping();
     void brdf_convolution();
 };

@@ -10,7 +10,7 @@
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
         {"None", SceneListing::empty},
-        {"Monkey and triangles", SceneListing::monkeyAndTriangles},
+        {"Spheres", SceneListing::monkeyAndTriangles},
         {"DamagedHelmet", SceneListing::damagedHelmet},
 };
 

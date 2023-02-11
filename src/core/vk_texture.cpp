@@ -50,6 +50,9 @@ bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
         return false;
     }
 
+    this->_width = texWidth;
+    this->_height = texHeight;
+
     void* pixel_ptr = pixels;
     VkDeviceSize imageSize = texWidth * texHeight * 4;
     VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
@@ -144,6 +147,9 @@ bool Texture::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDevic
     imageExtent.width = static_cast<uint32_t>(texWidth);
     imageExtent.height = static_cast<uint32_t>(texHeight);
     imageExtent.depth = 1;
+
+    this->_width = texWidth;
+    this->_height = texHeight;
 
     VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
     imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;

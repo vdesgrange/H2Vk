@@ -15,6 +15,8 @@ struct Texture {
     VkImageView _imageView;  // duplicate
     VkSampler _sampler;  // duplicate
     VkDescriptorImageInfo _descriptor;
+    uint32_t _width;
+    uint32_t _height;
 
     bool load_image_from_file(VulkanEngine &engine, const char *file); // , AllocatedImage &outImage
     bool load_image_from_buffer(VulkanEngine &engine, void *buffer, VkDeviceSize bufferSize, VkFormat format,
