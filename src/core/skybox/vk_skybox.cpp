@@ -38,9 +38,9 @@ void Skybox::load() {
     } else {
         _model = ModelPOLY::create_uv_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
         load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", _texture);
-        // envMap.irradiance_mapping(Window(), _device)
-
-        load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment);
+        Window tmp = Window();
+        _environment = envMap.irradiance_mapping(tmp, _device, _uploadContext, _texture);
+        //load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment);
     }
 
 //    _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
@@ -190,7 +190,7 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture) {
     imageExtent.height = static_cast<uint32_t>(texHeight);
     imageExtent.depth = 1;
 
-    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
+    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT, imageExtent);
     imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 

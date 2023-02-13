@@ -14,6 +14,9 @@ class RenderPass;
 
 class PipelineBuilder {
 public:
+    enum Type { graphic, compute };
+
+    Type _type = Type::graphic;
     VkViewport _viewport;
     VkRect2D _scissor;
     VkPipelineInputAssemblyStateCreateInfo _inputAssembly;

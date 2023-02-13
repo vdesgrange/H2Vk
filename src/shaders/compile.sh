@@ -12,3 +12,4 @@ glslc skybox/skysphere.vert -o skybox/skysphere.vert.spv
 glslc skybox/skysphere.frag -o skybox/skysphere.frag.spv
 glslc pbr/pbr.vert -o pbr/pbr.vert.spv
 glslc pbr/pbr.frag -o pbr/pbr.frag.spv
+glslc env_map/irradiance.comp -o env_map/irradiance.comp.spv
