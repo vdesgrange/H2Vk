@@ -38,9 +38,10 @@ void Skybox::load() {
     } else {
         _model = ModelPOLY::create_uv_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
         load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", _texture);
+        // load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment);
+
         Window tmp = Window();
         _environment = envMap.irradiance_mapping(tmp, _device, _uploadContext, _texture);
-        //load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment);
     }
 
 //    _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
@@ -174,9 +175,18 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture) {
         std::cout << "Failed to load texture file " << file << std::endl;
     }
 
+
+    VkFormatProperties formatProperties;
+
+    // Get device properties for the requested texture format
+    vkGetPhysicalDeviceFormatProperties(_device._physicalDevice, VK_FORMAT_B8G8R8A8_UNORM, &formatProperties);
+    // Check if requested image format supports image storage operations
+    assert(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT);
+
+
     void* pixel_ptr = pixels;
     VkDeviceSize imageSize = texWidth * texHeight * 4;
-    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+    VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // VK_FORMAT_R8G8B8A8_UNORM
     AllocatedBuffer buffer = Buffer::create_buffer(_device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
     void* data;
@@ -197,6 +207,12 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture) {
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     vmaCreateImage(_device._allocator, &imgInfo, &imgAllocinfo, &texture._image, &texture._allocation, nullptr);
+
+    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &texture._imageView);
+
+    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &texture._sampler);
 
     CommandBuffer::immediate_submit(_device, _uploadContext, [&](VkCommandBuffer cmd) {
         VkImageSubresourceRange range;
@@ -222,7 +238,6 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture) {
         copyRegion.bufferOffset = 0;
         copyRegion.bufferRowLength = 0;
         copyRegion.bufferImageHeight = 0;
-
         copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         copyRegion.imageSubresource.mipLevel = 0;
         copyRegion.imageSubresource.baseArrayLayer = 0;
@@ -234,23 +249,17 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture) {
 
         VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
         imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_GENERAL; // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
+        // VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
 
         // Change texture image layout to shader read after all mip levels have been copied
-        texture._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-        VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &texture._sampler);
-
-        VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-        vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &texture._imageView);
-
-        texture.updateDescriptor();
+        texture._imageLayout = VK_IMAGE_LAYOUT_GENERAL; // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     });
+
+    texture.updateDescriptor();
 
     vmaDestroyBuffer(_device._allocator, buffer._buffer, buffer._allocation);
     std::cout << "Sphere map loaded successfully " << file << std::endl;

@@ -1,7 +1,7 @@
 #version 460
 
 layout (binding = 0, rgba8) uniform readonly image2D inputImage;
-layout (binding = 1, rgba16f) uniform writeonly image2D outputImage;
+layout (binding = 1, rgba8) uniform writeonly image2D outputImage;
 
 #define PI 3.1415926535897932384626433832795
 
@@ -9,6 +9,29 @@ const float TWO_PI = PI * 2.0;
 const float HALF_PI = PI * 0.5;
 const float deltaPhi = 0.025;
 const float deltaTheta = 0.025;
+
+const vec2 invATan = vec2(0.1591, 0.3183);
+
+vec3 equirectangular_to_spherical_map(ivec2 p) {
+    vec3 v = vec3(0);
+    return v;
+}
+
+
+vec2 sample_spherical_map(vec3 v) {
+    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+    uv *= invATan;
+    uv += 0.5;
+    return uv;
+}
+
+vec3 texCoord_to_world(ivec2 coord) {
+    return vec3(0, 0, 0);
+}
+
+ivec2 sample_spherical_map(vec3 v) {
+    return ivec2(0, 0);
+}
 
 void main()
 {
@@ -34,12 +57,13 @@ void main()
 
             vec3 tempVec = cosPhi * right + sinPhi * up;
             vec3 sampleVector = cosTheta * N + sinTheta * tempVec;
+            ivec2 sampleCoord = ivec2(sampleVector);
 
-            irradiance += pixel * cosTheta * sinTheta;
+            irradiance += imageLoad(inputImage, sampleCoord).rgb * cosTheta * sinTheta;
             sampleCount++;
         }
     }
     vec3 outColor = vec3(PI * irradiance / float(sampleCount));
 
-    imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), vec4(outColor, 1.0));
+    imageStore(outputImage, pos, vec4(outColor, 1.0));
 }

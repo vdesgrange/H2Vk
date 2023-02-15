@@ -24,7 +24,7 @@ public:
     void clean_up();
     void loader(const char* file, Device& device, Texture& texture, UploadContext& uploadContext);
     void init_pipeline();
-    void cube_map_converter(Window& window, Device& device, Texture& inTexture, Texture& outTexture);
+    Texture cube_map_converter(Window& window, Device& device, UploadContext& uploadContext, Texture& inTexture);
     Texture irradiance_mapping(Window& window, Device& device, UploadContext& uploadContext, Texture& inTexture);
 
     void prefilter_mapping();
