@@ -100,6 +100,14 @@ void VulkanEngine::init_commands() {
 
 void VulkanEngine::init_default_renderpass() {
     _renderPass = std::make_unique<RenderPass>(*_device, *_swapchain);
+
+    RenderPass::Attachment color = _renderPass->color(_swapchain->_swapChainImageFormat);
+    RenderPass::Attachment depth = _renderPass->depth(_swapchain->_depthFormat);
+    VkSubpassDescription subpass = _renderPass->subpass_description(&color.ref, &depth.ref);
+    std::vector<VkAttachmentDescription> attachments = {color.description, depth.description};
+    std::vector<VkSubpassDependency> dependencies = {color.dependency, depth.dependency};
+
+    _renderPass->init(attachments, dependencies, subpass);
 }
 
 void VulkanEngine::init_framebuffers() {
