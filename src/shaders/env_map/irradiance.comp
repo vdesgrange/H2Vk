@@ -17,7 +17,6 @@ vec3 equirectangular_to_spherical_map(ivec2 p) {
     return v;
 }
 
-
 vec2 sample_spherical_map(vec3 v) {
     vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
     uv *= invATan;
@@ -29,7 +28,7 @@ vec3 texCoord_to_world(ivec2 coord) {
     return vec3(0, 0, 0);
 }
 
-ivec2 sample_spherical_map(vec3 v) {
+ivec2 world_to_texCoord(vec3 v) {
     return ivec2(0, 0);
 }
 

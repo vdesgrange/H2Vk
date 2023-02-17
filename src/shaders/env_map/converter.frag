@@ -5,7 +5,9 @@ layout (set = 0, binding = 0) uniform sampler2D samplerMap; // 360 equirectangul
 layout (location = 0) in vec3 inPos;
 layout (location = 0) out vec4 outFragColor;
 
-const vec2 invAtan = vec2(0.1591, 0.3183);
+#define PI 3.1415926535897932384626433832795
+
+const vec2 invAtan = vec2(1.0 / (2.0 * PI), 1.0 / PI);
 
 vec2 sample_spherical_map(vec3 v) {
     vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
