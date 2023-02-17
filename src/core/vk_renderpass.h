@@ -21,7 +21,7 @@ public:
 
     VkRenderPass _renderPass;
 
-    RenderPass(const Device& device, SwapChain& swapChain);
+    RenderPass(const Device& device);
     ~RenderPass();
 
     void init(std::vector<VkAttachmentDescription> attachments, std::vector<VkSubpassDependency> dependencies, VkSubpassDescription subpass);

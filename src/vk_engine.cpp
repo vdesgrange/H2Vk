@@ -99,7 +99,7 @@ void VulkanEngine::init_commands() {
 }
 
 void VulkanEngine::init_default_renderpass() {
-    _renderPass = std::make_unique<RenderPass>(*_device, *_swapchain);
+    _renderPass = std::make_unique<RenderPass>(*_device); // , *_swapchain
 
     RenderPass::Attachment color = _renderPass->color(_swapchain->_swapChainImageFormat);
     RenderPass::Attachment depth = _renderPass->depth(_swapchain->_depthFormat);
@@ -283,7 +283,7 @@ void VulkanEngine::init_managers() {
 
 void VulkanEngine::init_scene() {
     _skybox = std::make_unique<Skybox>(*_device, *_pipelineBuilder, *_textureManager, *_meshManager, _uploadContext);
-    _skybox->_type = Skybox::sphere;
+    _skybox->_type = Skybox::box;
     _skybox->load();
 
     _sceneListing = std::make_unique<SceneListing>();

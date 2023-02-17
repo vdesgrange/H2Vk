@@ -11,7 +11,7 @@
  * @param device
  * @param swapchain
  */
-RenderPass::RenderPass(const Device& device, SwapChain& swapchain) : _device(device) { }
+RenderPass::RenderPass(const Device& device) : _device(device) { }
 
 RenderPass::~RenderPass() {
     vkDestroyRenderPass(_device._logicalDevice, _renderPass, nullptr);
