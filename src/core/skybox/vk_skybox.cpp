@@ -31,17 +31,24 @@ void Skybox::destroy() {
 void Skybox::load() {
 
     EnvMap envMap{};
+    Texture test{};
 
     if (_type == Type::box) {
         _model = ModelPOLY::create_cube(&_device, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
-        load_cube_texture();
+        // load_cube_texture();
+        load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", test);
+        Window tmp = Window();
+        _texture = envMap.cube_map_converter(tmp, _device, _uploadContext, _meshManager, test);
+        _environment = _texture;
+
     } else {
         _model = ModelPOLY::create_uv_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
         load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", _texture);
-        // load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment);
+        load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment);
 
-        Window tmp = Window();
-        _environment = envMap.irradiance_mapping(tmp, _device, _uploadContext, _texture);
+        // Window tmp = Window();
+        // test = envMap.cube_map_converter(tmp, _device, _uploadContext, _meshManager, _texture);
+        // _environment = envMap.irradiance_mapping(tmp, _device, _uploadContext, _texture);
     }
 
 //    _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
@@ -175,6 +182,8 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture) {
         std::cout << "Failed to load texture file " << file << std::endl;
     }
 
+    texture._width = texWidth;
+    texture._height = texHeight;
 
     VkFormatProperties formatProperties;
 
@@ -200,7 +209,7 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture) {
     imageExtent.height = static_cast<uint32_t>(texHeight);
     imageExtent.depth = 1;
 
-    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT, imageExtent);
+    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT, imageExtent);
     imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -309,22 +318,18 @@ void  Skybox::setup_descriptor() {
 }
 
 void Skybox::setup_pipeline(PipelineBuilder& pipelineBuilder, std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules = {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/skybox/skysphere.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/skybox/skysphere.frag.spv"},
+    std::unordered_map<Skybox::Type, std::string> shader = {
+            {Type::box, "../src/shaders/skybox/skybox"},
+            {Type::sphere, "../src/shaders/skybox/skysphere"},
     };
 
-//    if (_type == Type::box) {
-//         modules = {
-//                {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/skybox/skybox.vert.spv"},
-//                {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/skybox/skybox.frag.spv"},
-//        };
-//    } else {
-//        modules = {
-//                {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/skybox/skysphere.vert.spv"},
-//                {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/skybox/skysphere.frag.spv"},
-//        };
-//    }
+    std::string vert = shader.at(_type) + ".vert.spv";
+    std::string frag = shader.at(_type) + ".frag.spv";
+
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules = {
+            {VK_SHADER_STAGE_VERTEX_BIT, vert.c_str()},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, frag.c_str()},
+    };
 
     VkPushConstantRange push_constant;
     push_constant.offset = 0;

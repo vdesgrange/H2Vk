@@ -26,7 +26,7 @@ public:
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
     std::unordered_map<std::string, std::shared_ptr<Material>> _materials;
 
-    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass);
+    PipelineBuilder(const Device& device, RenderPass& renderPass);
     ~PipelineBuilder();
 
     std::shared_ptr<ShaderPass> get_material(const std::string &name);

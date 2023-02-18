@@ -259,7 +259,7 @@ void VulkanEngine::setup_descriptors(){
 }
 
 void VulkanEngine::init_pipelines() {
-    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_window, *_device, *_renderPass);
+    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_device, *_renderPass);
 
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
     _pipelineBuilder->scene_light(setLayouts);

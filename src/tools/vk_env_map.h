@@ -13,6 +13,7 @@
 class Window;
 class Device;
 class Texture;
+class MeshManager;
 class SwapChain;
 struct UploadContext;
 
@@ -24,7 +25,7 @@ public:
     void clean_up();
     void loader(const char* file, Device& device, Texture& texture, UploadContext& uploadContext);
     void init_pipeline();
-    Texture cube_map_converter(Window& window, Device& device, UploadContext& uploadContext, Texture& inTexture);
+    Texture cube_map_converter(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture);
     Texture irradiance_mapping(Window& window, Device& device, UploadContext& uploadContext, Texture& inTexture);
 
     void prefilter_mapping();

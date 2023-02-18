@@ -18,15 +18,14 @@
  * pixels in the render targets.
  * vertex/index buffer -> input assembler -> vertex shader -> tesselation -> geometry shader ->
  * rasterization -> fragment shader -> color blending -> framebuffer
- * @param window
  * @param device
  * @param renderPass
  */
-PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass) :
+PipelineBuilder::PipelineBuilder(const Device& device, RenderPass& renderPass) :
     _device(device), _renderPass(renderPass)
 {
-    this->_viewport = vkinit::get_viewport((float) window._windowExtent.width, (float) window._windowExtent.height);
-    this->_scissor = vkinit::get_scissor((float) window._windowExtent.width, (float) window._windowExtent.height);
+    this->_viewport = vkinit::get_viewport((float) Window::CWIDTH, (float) Window::CHEIGHT); // default
+    this->_scissor = vkinit::get_scissor((float) Window::CWIDTH, (float) Window::CHEIGHT); // default
 
     // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
     this->_inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
@@ -54,7 +53,7 @@ std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescri
         if (!Shader::load_shader_module(_device, module.second, &shader)) {
             std::cout << "Error when building the shader module" << std::string(module.second) << std::endl;
         } else {
-            std::cout << "Shader " << std::string(module.second) << " successfully loaded" << std::endl;
+            // std::cout << "Shader " << std::string(module.second) << " successfully loaded" << std::endl;
         }
 
         effect->shaderStages.push_back(ShaderEffect::ShaderStage{module.first, shader});

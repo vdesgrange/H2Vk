@@ -5,11 +5,11 @@
 
 #include "VkBootstrap.h"
 
-const uint32_t CWIDTH = 800;
-const uint32_t CHEIGHT = 600;
-
 class Window final {
 public:
+    static const uint32_t CWIDTH = 800;
+    static const uint32_t CHEIGHT = 600;
+
     GLFWwindow* _window;
     VkExtent2D _windowExtent{ CWIDTH , CHEIGHT };
     bool _framebufferResized = false;
