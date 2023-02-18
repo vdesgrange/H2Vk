@@ -31,14 +31,13 @@ void Skybox::destroy() {
 void Skybox::load() {
 
     EnvMap envMap{};
-    Texture test{};
+    Texture original {};
 
     if (_type == Type::box) {
         _model = ModelPOLY::create_cube(&_device, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
         // load_cube_texture();
-        load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", test);
-        Window tmp = Window();
-        _texture = envMap.cube_map_converter(tmp, _device, _uploadContext, _meshManager, test);
+        load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", original);
+        _texture = envMap.cube_map_converter(_device, _uploadContext, _meshManager, original);
         _environment = _texture;
 
     } else {
@@ -47,7 +46,7 @@ void Skybox::load() {
         load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment);
 
         // Window tmp = Window();
-        // test = envMap.cube_map_converter(tmp, _device, _uploadContext, _meshManager, _texture);
+        // test = envMap.cube_map_converter(_device, _uploadContext, _meshManager, _texture);
         // _environment = envMap.irradiance_mapping(tmp, _device, _uploadContext, _texture);
     }
 
