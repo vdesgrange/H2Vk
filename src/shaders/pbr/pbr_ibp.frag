@@ -15,6 +15,7 @@ layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec3 inFragPos;
 layout (location = 4) in vec3 inCameraPos;
+layout (location = 5) in vec4 inTangent;
 
 layout (push_constant) uniform Material {
     layout(offset = 64) vec4 albedo; // w for opacity
@@ -106,7 +107,7 @@ void main()
     color = color / (color + vec3(1.0)); // Reinhard operator
 
     // Convert from linear to sRGB ! Do not use for Vulkan !
-    // color = pow(color, vec3(0.4545)); // Gamma correction
+    color = pow(color, vec3(0.4545)); // Gamma correction
 
     outFragColor = vec4(color, material.albedo.w);
 }

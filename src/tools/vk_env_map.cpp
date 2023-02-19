@@ -26,99 +26,11 @@ void EnvMap::clean_up() {
 }
 
 void EnvMap::loader(const char* file, Device& device, Texture& texture, UploadContext& uploadContext) {
-    // Load image file
-    stbi_uc* pixels = stbi_load(file, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    if (!pixels) {
-        std::cout << "Failed to load texture file " << file << std::endl;
-    }
-
-    void* pixel_ptr = pixels;
-    VkDeviceSize imageSize = texWidth * texHeight * 4;
-    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
-    AllocatedBuffer buffer = Buffer::create_buffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
-    void* data;
-    vmaMapMemory(device._allocator, buffer._allocation, &data);
-    memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
-    vmaUnmapMemory(device._allocator, buffer._allocation);
-    stbi_image_free(pixels);
-
-    // Create VkImageView and VkImage for loaded texture
-    VkExtent3D imageExtent;
-    imageExtent.width = static_cast<uint32_t>(texWidth);
-    imageExtent.height = static_cast<uint32_t>(texHeight);
-    imageExtent.depth = 1;
-
-    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
-    imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    VmaAllocationCreateInfo imgAllocinfo = {};
-    imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &texture._image, &texture._allocation, nullptr);
-
-    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
-        VkImageSubresourceRange range;
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        range.baseMipLevel = 0;
-        range.levelCount = 1;
-        range.baseArrayLayer = 0;
-        range.layerCount = 1;
-
-        VkImageMemoryBarrier imageBarrier_toTransfer = {};
-        imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toTransfer.image = texture._image;
-        imageBarrier_toTransfer.subresourceRange = range;
-        imageBarrier_toTransfer.srcAccessMask = 0;
-        imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-        //barrier the image into the transfer-receive layout
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
-
-        VkBufferImageCopy copyRegion = {};
-        copyRegion.bufferOffset = 0;
-        copyRegion.bufferRowLength = 0;
-        copyRegion.bufferImageHeight = 0;
-        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        copyRegion.imageSubresource.mipLevel = 0;
-        copyRegion.imageSubresource.baseArrayLayer = 0;
-        copyRegion.imageSubresource.layerCount = 1;
-        copyRegion.imageExtent = imageExtent;
-
-        //copy the buffer into the image
-        vkCmdCopyBufferToImage(cmd, buffer._buffer, texture._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
-
-        VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
-        imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
-
-        // Change texture image layout to shader read after all mip levels have been copied
-        texture._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-        VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &texture._sampler);
-
-        VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-        vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &texture._imageView);
-
-        texture.updateDescriptor();
-    });
-
-    vmaDestroyBuffer(device._allocator, buffer._buffer, buffer._allocation);
-    std::cout << "Sphere map loaded successfully " << file << std::endl;
 };
 
-Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture) {
+Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture) { // , Texture& outTexture
     uint32_t count = 6;
-    VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // VK_FORMAT_R8G8B8A8_SRGB; voir aussi VK_IMAGE_CREATE_MUTABLE_FORMAT a creation d'image
-    const uint32_t ENV_WIDTH = 2048;
-    const uint32_t ENV_HEIGHT = 2048;
+    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB; // VK_FORMAT_R8G8B8A8_SRGB; voir aussi VK_IMAGE_CREATE_MUTABLE_FORMAT a creation d'image
 
     // === Prepare texture target ===
     Texture outTexture{};
@@ -255,19 +167,19 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
         glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
     };
 
-    std::vector<glm::mat4> matrices = {
-            glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // +x
-            glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // -x
-            glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // +y
-            glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // -y
-            glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // +z
-            glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // -z
-    };
+//    std::vector<glm::mat4> matrices = {
+//            glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // +x
+//            glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // -x
+//            glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // +y
+//            glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // -y
+//            glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // +z
+//            glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // -z
+//    };
 
     std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
     meshManager.upload_mesh(*cube);
 
-    for (int face = 0; face < 6; face++) {
+    for (int face = 0; face < count; face++) {
         CommandPool commandPool = CommandPool(device);
         CommandBuffer commandBuffer =  CommandBuffer(device, commandPool);
 

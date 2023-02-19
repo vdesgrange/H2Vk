@@ -22,8 +22,8 @@ SwapChain::SwapChain(Window& window, const Device& device) : _device(device) {
     window._windowExtent = extent2d;
 
     VkSurfaceFormatKHR formatKHR{};
-    formatKHR.format = VK_FORMAT_B8G8R8A8_SRGB; // standard RGB. _USCALED or _SFLOAT ok-ish for linear space
-    formatKHR.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    formatKHR.format = VK_FORMAT_B8G8R8A8_SRGB; // VK_FORMAT_B8G8R8A8_SRGB standard RGB.
+    formatKHR.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR; // VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
 
     vkb::SwapchainBuilder swapchainBuilder{device._physicalDevice, device._logicalDevice, device._surface };
     vkb::Swapchain vkbSwapchain = swapchainBuilder

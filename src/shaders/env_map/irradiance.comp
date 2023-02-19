@@ -1,6 +1,6 @@
 #version 460
 
-layout (binding = 0, rgba8) uniform readonly image2D inputImage;
+layout (binding = 0, rgba8) uniform readonly sampler2D inputImage;
 layout (binding = 1, rgba8) uniform writeonly image2D outputImage;
 
 #define PI 3.1415926535897932384626433832795

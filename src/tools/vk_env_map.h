@@ -19,13 +19,16 @@ struct UploadContext;
 
 class EnvMap final {
 public:
+    const uint32_t ENV_WIDTH = 1600;
+    const uint32_t ENV_HEIGHT = 1600;
+
     int texWidth, texHeight, texChannels;
 
     void main();
     void clean_up();
     void loader(const char* file, Device& device, Texture& texture, UploadContext& uploadContext);
     void init_pipeline();
-    Texture cube_map_converter(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture);
+    Texture cube_map_converter(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture); // , Texture& outTexture
     Texture irradiance_mapping(Window& window, Device& device, UploadContext& uploadContext, Texture& inTexture);
 
     void prefilter_mapping();

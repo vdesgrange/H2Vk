@@ -179,7 +179,7 @@ void VulkanEngine::init_descriptors() {
         // === Skybox === (Build by default to handle if skybox enabled later)
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-            .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .bind_image(_skybox->_texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
             .layout(_descriptorSetLayouts.skybox)
             .build(_frames[i].skyboxDescriptor, _descriptorSetLayouts.skybox, skyboxPoolSizes);
 

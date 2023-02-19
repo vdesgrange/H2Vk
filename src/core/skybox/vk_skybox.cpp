@@ -36,9 +36,9 @@ void Skybox::load() {
     if (_type == Type::box) {
         _model = ModelPOLY::create_cube(&_device, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
         // load_cube_texture();
-        load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", original);
+        load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", original, VK_FORMAT_R8G8B8A8_SRGB);
         _texture = envMap.cube_map_converter(_device, _uploadContext, _meshManager, original);
-        _environment = _texture;
+        load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment, VK_FORMAT_R8G8B8A8_SRGB);
 
     } else {
         _model = ModelPOLY::create_uv_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
@@ -54,6 +54,7 @@ void Skybox::load() {
 //    _material = _pipelineBuilder.get_material("skyboxMaterial");
 
     _meshManager.upload_mesh(*_model);
+    original.destroy(_device);
     // _meshManager._models.emplace("skybox", _model);
 }
 
@@ -174,7 +175,7 @@ void Skybox::load_cube_texture() {
     std::cout << "Skybox texture loaded successfully" << std::endl;
 }
 
-void Skybox::load_sphere_texture(const char* file, Texture& texture) {
+void Skybox::load_sphere_texture(const char* file, Texture& texture, VkFormat format) {
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load(file, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     if (!pixels) {
@@ -187,14 +188,14 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture) {
     VkFormatProperties formatProperties;
 
     // Get device properties for the requested texture format
-    vkGetPhysicalDeviceFormatProperties(_device._physicalDevice, VK_FORMAT_B8G8R8A8_UNORM, &formatProperties);
+    vkGetPhysicalDeviceFormatProperties(_device._physicalDevice, format, &formatProperties);
     // Check if requested image format supports image storage operations
-    assert(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT);
+    // assert(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT);
 
 
     void* pixel_ptr = pixels;
     VkDeviceSize imageSize = texWidth * texHeight * 4;
-    VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // VK_FORMAT_R8G8B8A8_UNORM
+    // VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // VK_FORMAT_R8G8B8A8_UNORM
     AllocatedBuffer buffer = Buffer::create_buffer(_device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
     void* data;
@@ -208,7 +209,7 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture) {
     imageExtent.height = static_cast<uint32_t>(texHeight);
     imageExtent.depth = 1;
 
-    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT, imageExtent);
+    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent); //  | VK_IMAGE_USAGE_STORAGE_BIT
     imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 

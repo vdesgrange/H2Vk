@@ -29,7 +29,7 @@ public:
 
     void load();
     void load_cube_texture();
-    void load_sphere_texture(const char* file, Texture& texture);
+    void load_sphere_texture(const char* file, Texture& texture, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB);
     void load_sphere_hdr();
     void setup_descriptor();
     void setup_pipeline(PipelineBuilder& pipelineBuilder, std::vector<VkDescriptorSetLayout> setLayouts);
