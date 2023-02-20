@@ -24,37 +24,54 @@ Skybox::~Skybox() {
 void Skybox::destroy() {
     // must be done before device allocator destruction otherwise buffer memory not all freed
     this->_model.reset(); // smart pointer. Carefull, might break because destroyed automatically.
-    this->_texture.destroy(this->_device); // Must be called before vmaDestroyAllocator
+    this->_background.destroy(this->_device); // Must be called before vmaDestroyAllocator
     this->_environment.destroy(this->_device);
 }
 
 void Skybox::load() {
 
     EnvMap envMap{};
-    Texture original {};
+
 
     if (_type == Type::box) {
         _model = ModelPOLY::create_cube(&_device, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
         // load_cube_texture();
+        Texture original {};
+        Texture hdr {};
         load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", original, VK_FORMAT_R8G8B8A8_SRGB);
-        _texture = envMap.cube_map_converter(_device, _uploadContext, _meshManager, original);
+        load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_3k.hdr", hdr, VK_FORMAT_R8G8B8A8_SRGB);
         load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment, VK_FORMAT_R8G8B8A8_SRGB);
 
+        Texture tmp = envMap.cube_map_converter(_device, _uploadContext, _meshManager, hdr);
+        _background = envMap.irradiance_cube_mapping(_device, _uploadContext, _meshManager, tmp);
+//        Texture tmp = envMap.irradiance_mapping(_device, _uploadContext, hdr);
+//        _background = envMap.cube_map_converter(_device, _uploadContext, _meshManager, tmp);
+
+        original.destroy(_device);
+        hdr.destroy(_device);
+        tmp.destroy(_device);
     } else {
+        Texture original {};
+        Texture hdr {};
+
         _model = ModelPOLY::create_uv_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
-        load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", _texture);
+
+        load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", original);
+        load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_3k.hdr", hdr, VK_FORMAT_R8G8B8A8_SRGB);
         load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment);
 
-        // Window tmp = Window();
-        // test = envMap.cube_map_converter(_device, _uploadContext, _meshManager, _texture);
-        // _environment = envMap.irradiance_mapping(tmp, _device, _uploadContext, _texture);
+        _background = envMap.irradiance_mapping(_device, _uploadContext, hdr);
+        // _environment = envMap.irradiance_mapping(_device, _uploadContext, hdr);
+
+        hdr.destroy(_device);
+        original.destroy(_device);
     }
 
 //    _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
 //    _material = _pipelineBuilder.get_material("skyboxMaterial");
 
     _meshManager.upload_mesh(*_model);
-    original.destroy(_device);
+
     // _meshManager._models.emplace("skybox", _model);
 }
 
@@ -68,7 +85,7 @@ void Skybox::load_cube_texture() {
             "../assets/skybox/back.jpg",
     };
 
-    _texture = Texture();
+    _background = Texture();
     int count = files.size();
     int texWidth, texHeight, texChannels; // same for all images (otherwise use an array)
     VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
@@ -108,7 +125,7 @@ void Skybox::load_cube_texture() {
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(_device._allocator, &imgInfo, &imgAllocinfo, &_texture._image, &_texture._allocation, nullptr);
+    vmaCreateImage(_device._allocator, &imgInfo, &imgAllocinfo, &_background._image, &_background._allocation, nullptr);
 
     CommandBuffer::immediate_submit(_device, _uploadContext, [&](VkCommandBuffer cmd) {
         VkImageSubresourceRange range;
@@ -122,7 +139,7 @@ void Skybox::load_cube_texture() {
         imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toTransfer.image = this->_texture._image;
+        imageBarrier_toTransfer.image = this->_background._image;
         imageBarrier_toTransfer.subresourceRange = range;
         imageBarrier_toTransfer.srcAccessMask = 0;
         imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -147,7 +164,7 @@ void Skybox::load_cube_texture() {
         }
 
         //copy the buffer into the image
-        vkCmdCopyBufferToImage(cmd, buffer._buffer, this->_texture._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
+        vkCmdCopyBufferToImage(cmd, buffer._buffer, this->_background._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
 
         VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
         imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -158,17 +175,17 @@ void Skybox::load_cube_texture() {
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
 
         // Change texture image layout to shader read after all mip levels have been copied
-        _texture._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        _background._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &_texture._sampler);
+        vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &_background._sampler);
 
-        VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
+        VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _background._image, VK_IMAGE_ASPECT_COLOR_BIT);
         imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
         imageViewInfo.subresourceRange.layerCount = 6;
-        vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &_texture._imageView);
+        vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &_background._imageView);
 
-        _texture.updateDescriptor();
+        _background.updateDescriptor();
     });
 
     vmaDestroyBuffer(_device._allocator, buffer._buffer, buffer._allocation);

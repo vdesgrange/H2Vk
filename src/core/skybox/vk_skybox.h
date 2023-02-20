@@ -18,7 +18,7 @@ public:
     enum Type { box, sphere };
     std::shared_ptr<Model> _model;
     std::shared_ptr<Material> _material;
-    Texture _texture; // aka. background
+    Texture _background; // aka. background
     Texture _environment; // aka. radiance map
     Texture _reflection; // aka. reflection map
 
