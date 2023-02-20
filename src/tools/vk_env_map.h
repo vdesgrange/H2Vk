@@ -25,9 +25,13 @@ public:
     const uint32_t CONVOLVE_WIDTH = 60;
     const uint32_t CONVOLVE_HEIGHT = 60;
 
+    const uint32_t PRE_FILTER_WIDTH = 60;
+    const uint32_t PRE_FILTER_HEIGHT = 60;
+
+
     Texture cube_map_converter(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture);
     Texture irradiance_mapping(Device& device, UploadContext& uploadContext, Texture& inTexture);
     Texture irradiance_cube_mapping(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture);
-    Texture prefilter_mapping();
+    Texture prefilter_cube_mapping(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture);
     Texture brdf_convolution();
 };
