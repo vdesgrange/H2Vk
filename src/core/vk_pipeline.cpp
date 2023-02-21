@@ -217,7 +217,7 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
 
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr_ibp.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_ibp.frag.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_ibl_cube.frag.spv"},
     };
 
     std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {push_model, push_properties}, pbr_modules);

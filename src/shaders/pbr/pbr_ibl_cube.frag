@@ -1,7 +1,5 @@
 #version 460
-
-const float PI = 3.14159265359;
-
+// #extension GL_ARB_shading_language_include : require
 layout(std140, set = 0, binding = 1) uniform SceneData {
     vec4 fogColor; // w is for exponent
     vec4 fogDistances; //x for min, y for max, zw unused.
@@ -11,21 +9,25 @@ layout(std140, set = 0, binding = 1) uniform SceneData {
 } sceneData;
 
 layout(set = 0, binding = 2) uniform samplerCube irradianceMap; // aka. environment map
-
-layout(set = 2, binding = 0) uniform sampler2D samplerAlbedoMap;
-layout(set = 2, binding = 1) uniform sampler2D samplerNormalMap;
-layout(set = 2, binding = 2) uniform sampler2D samplerMetalRoughnessMap;
-layout(set = 2, binding = 3) uniform sampler2D samplerAOMap;
-layout(set = 2, binding = 4) uniform sampler2D samplerEmissiveMap;
+layout(set = 0, binding = 3) uniform samplerCube irradianceMap; // aka. environment map
 
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
-layout (location = 3) in vec3 inFragPos; // fragment/world position
-layout (location = 4) in vec3 inCameraPos; // camera/view position
+layout (location = 3) in vec3 inFragPos;
+layout (location = 4) in vec3 inCameraPos;
 layout (location = 5) in vec4 inTangent;
 
+layout (push_constant) uniform Material {
+    layout(offset = 64) vec4 albedo; // w for opacity
+    layout(offset = 80) float metallic;
+    layout(offset = 84) float roughness;
+    layout(offset = 88) float ao;
+} material;
+
 layout (location = 0) out vec4 outFragColor;
+
+const float PI = 3.14159265359;
 
 float D_GGX(float dotNH, float roughness) {
     float alpha = roughness * roughness;
@@ -42,13 +44,15 @@ float G_Smith(float dotNV, float dotNL, float roughness) {
     return ggx1 * ggx2;
 }
 
-vec3 F_Schlick(float cosTheta, vec3 albedo, float metallic) {
-    vec3 F0 = mix(vec3(0.02), albedo, metallic);
+vec3 F_Schlick(float cosTheta) {
+    vec3 F0 = mix(vec3(0.02), material.albedo.rgb, material.metallic);
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float metallic) {
+
+vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C) {
     vec3 color = vec3(0.0);
+    float roughness = material.roughness;
 
     vec3 H = normalize(V + L);
     float dotNV = clamp(dot(N, V), 0.0, 1.0);
@@ -56,15 +60,17 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
     float dotNH = clamp(dot(N, H), 0.0, 1.0);
     float dotHV = clamp(dot(H, V), 0.0, 1.0);
 
+    if (dotNL > 0.0)
+    {
+        float D = D_GGX(dotNH, roughness);
+        float G = G_Smith(dotNL, dotNV, roughness);
+        vec3 F = F_Schlick(dotHV); // dotNV
+        vec3 spec = D * G * F / (4.0 * dotNL * dotNV + 0.0001);
+        color += spec * C * dotNL;
 
-    float D = D_GGX(dotNH, roughness);
-    float G = G_Smith(dotNL, dotNV, roughness);
-    vec3 F = F_Schlick(dotHV, albedo, metallic); // dotNV
-    vec3 spec = D * G * F / (4.0 * dotNL * dotNV + 0.0001);
-    color += spec * C * dotNL;
-
-    vec3 kd = (vec3(1.0) - F) * (1.0 - metallic);
-    color += kd * albedo / PI * C * dotNL;
+        vec3 kd = (vec3(1.0) - F) * (1.0 - material.metallic);
+        color += kd * material.albedo.rgb / PI * C * dotNL;
+    }
 
     return color;
 }
@@ -73,18 +79,11 @@ vec2 sample_spherical_map(vec3 v) {
     vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
     uv *= vec2(0.1591f, 0.3183f);
     uv += 0.5;
-    return -1 * uv;
+    return uv;
 }
 
 void main()
 {
-    vec3 albedo = texture(samplerAlbedoMap, inUV).rgb; // no gamma correction pow 2.2
-    vec3 normal = texture(samplerNormalMap, inUV).rgb;
-    float metallic = texture(samplerMetalRoughnessMap, inUV).r;
-    float roughness = texture(samplerMetalRoughnessMap, inUV).g;
-    float ao = texture(samplerAOMap, inUV).r;
-    vec3 emissive = texture(samplerEmissiveMap, inUV).rgb;
-
     int sources = 1;
     vec3 lightPos = sceneData.sunlightDirection.xyz;
     float lightFactor = sceneData.sunlightDirection.w;
@@ -93,18 +92,25 @@ void main()
     vec3 N = normalize(inNormal);
     vec3 C = sceneData.sunlightColor.rgb;
     vec2 uv = sample_spherical_map(N);
-    vec3 A = texture(irradianceMap, N).rgb; //  texture(irradianceMap, uv).rgb // if sampler2D
+    // vec3 A = texture(irradianceMap, uv).rgb;
+    vec3 A = texture(irradianceMap, N).rgb;  //  texture(irradianceMap, uv).rgb // if sampler2D
+
 
     vec3 Lo = vec3(0.0);
     for (int i = 0; i < sources; i++) {
         vec3 L = normalize(lightPos - inFragPos);
-        Lo += BRDF(L, V, N, C, albedo, roughness, metallic);
+        Lo += BRDF(L, V, N, C);
+
+        vec3 ambient = A * material.albedo.xyz * material.ao * vec3(dot(N, L) / sources); // lightFactor
+        Lo += ambient;
     };
 
-    vec3 color = Lo;
-    color += A * albedo * ao;
-    color += emissive;
-
+    // vec3 ambient = 0.02 * material.albedo.xyz * material.ao;
+    vec3 color = Lo; // ambient + Lo;
     color = color / (color + vec3(1.0)); // Reinhard operator
-    outFragColor = vec4(color, albedo);
+
+    // Convert from linear to sRGB ! Do not use for Vulkan !
+    // color = pow(color, vec3(0.4545)); // Gamma correction
+
+    outFragColor = vec4(color, material.albedo.w);
 }

@@ -351,7 +351,7 @@ Texture EnvMap::irradiance_mapping(Device& device, UploadContext& uploadContext,
         {
             vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, irradiancePass->pipeline);
             vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, irradiancePass->pipelineLayout, 0,1, &descriptor, 0, nullptr);
-            vkCmdDispatch(commandBuffer._commandBuffer, inTexture._width / 10, inTexture._height / 10, 1);
+            vkCmdDispatch(commandBuffer._commandBuffer, inTexture._width / 32, inTexture._height / 32, 1);
         }
         VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
 
@@ -765,12 +765,17 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/env_map/prefilter.frag.spv"},
     };
 
-    VkPushConstantRange pushCst;
-    pushCst.offset = 0;
-    pushCst.size = 2 * sizeof(glm::mat4) + sizeof(float);
-    pushCst.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    VkPushConstantRange push_vert;
+    push_vert.offset = 0;
+    push_vert.size = 2 * sizeof(glm::mat4);
+    push_vert.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {pushCst}, modules);
+    VkPushConstantRange push_frag;
+    push_frag.offset = 2 * sizeof(glm::mat4);
+    push_frag.size = sizeof(float);
+    push_frag.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {push_vert, push_frag}, modules);
     std::shared_ptr<ShaderPass> irradiancePass = pipelineBuilder.build_pass(effect);
     pipelineBuilder.create_material("prefilter", irradiancePass);
 
@@ -822,7 +827,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
                 vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irradiancePass->pipeline);
                 vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
                                    sizeof(glm::mat4), sizeof(glm::mat4), &viewProj);
-                vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
+                vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
                                    2 * sizeof(glm::mat4), sizeof(float), &roughness);
                 vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                         irradiancePass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
@@ -859,6 +864,149 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
     return outTexture;
 }
 
-Texture EnvMap::brdf_convolution() {
-    return Texture{};
+Texture EnvMap::brdf_convolution(Device& device, UploadContext& uploadContext) {
+    // === Prepare texture target ===
+    Texture outTexture{};
+    VkFormat format = VK_FORMAT_R16G16_SFLOAT;
+    outTexture._width = BRDF_WIDTH;
+    outTexture._height = BRDF_HEIGHT;
+
+    VkExtent3D imageExtent;
+    imageExtent.width = BRDF_WIDTH;
+    imageExtent.height = BRDF_HEIGHT;
+    imageExtent.depth = 1;
+
+    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
+    imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VmaAllocationCreateInfo imgAllocinfo = {};
+    imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &outTexture._image, &outTexture._allocation, nullptr);
+
+    // Create image view
+    VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(device._logicalDevice, &imageinfo, nullptr, &outTexture._imageView);
+
+    // Create sampler
+    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &outTexture._sampler);
+
+    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
+        VkImageSubresourceRange range;
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.baseMipLevel = 0;
+        range.levelCount = 1;
+        range.baseArrayLayer = 0;
+        range.layerCount = 1;
+
+        VkImageMemoryBarrier imageBarrier = {};
+        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.image = outTexture._image;
+        imageBarrier.subresourceRange = range;
+        imageBarrier.srcAccessMask = 0;
+        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+
+        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+        outTexture.updateDescriptor();
+    });
+
+    // === Create compute pipeline ===
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}
+    };
+
+    // Descriptor set
+    VkDescriptorSet descriptor{};
+    VkDescriptorSetLayout setLayout{};
+    DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
+    DescriptorAllocator allocator = DescriptorAllocator(device);
+    DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
+            .bind_image(outTexture._descriptor, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0)
+            .layout(setLayout)
+            .build(descriptor, setLayout, poolSizes);
+
+    // Build pipeline
+    RenderPass renderPass = RenderPass(device);
+    PipelineBuilder pipelineBuilder = PipelineBuilder(device, renderPass); // renderPass useless
+    pipelineBuilder._type = PipelineBuilder::Type::compute;
+    pipelineBuilder._viewport = vkinit::get_viewport((float) BRDF_WIDTH, (float) BRDF_HEIGHT);
+    pipelineBuilder._scissor = vkinit::get_scissor((float) BRDF_WIDTH, (float) BRDF_HEIGHT);
+
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules = {
+            {VK_SHADER_STAGE_COMPUTE_BIT, "../src/shaders/env_map/brdf.comp.spv"},
+    };
+
+    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {}, modules);
+    std::shared_ptr<ShaderPass> brdfPass = pipelineBuilder.build_pass(effect);
+    pipelineBuilder.create_material("brdf", brdfPass);
+
+    // Command pool + command buffer for compute operations
+    {
+        CommandPool commandPool = CommandPool(device); // can use graphic queue for compute work
+        CommandBuffer commandBuffer =  CommandBuffer(device, commandPool);
+
+        VkCommandBufferBeginInfo cmdBeginInfo{};
+        cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cmdBeginInfo.pNext = nullptr;
+        cmdBeginInfo.pInheritanceInfo = nullptr;
+        cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
+
+        VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
+        {
+            vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, brdfPass->pipeline);
+            vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, brdfPass->pipelineLayout, 0,1, &descriptor, 0, nullptr);
+            vkCmdDispatch(commandBuffer._commandBuffer, BRDF_WIDTH / 32, BRDF_HEIGHT / 32, 1);
+        }
+        VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
+
+        VkPipelineStageFlags waitStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.pNext = nullptr;
+        submitInfo.pWaitDstStageMask = &waitStageMask;
+        submitInfo.waitSemaphoreCount = 0; // Semaphore to wait before executing the command buffers
+        submitInfo.pWaitSemaphores = nullptr;
+        submitInfo.signalSemaphoreCount = 0; // Number of semaphores to be signaled once the commands
+        submitInfo.pSignalSemaphores = nullptr;
+        submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
+        submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
+
+        VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
+    }
+
+//    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
+//        VkImageSubresourceRange range;
+//        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//        range.baseMipLevel = 0;
+//        range.levelCount = 1;
+//        range.baseArrayLayer = 0;
+//        range.layerCount = 1;
+//
+//        VkImageMemoryBarrier imageBarrier = {};
+//        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+//        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+//        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+//        imageBarrier.image = outTexture._image;
+//        imageBarrier.subresourceRange = range;
+//        imageBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+//        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+//        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+//    });
+
+    for (auto& shader : effect->shaderStages) {
+        vkDestroyShaderModule(device._logicalDevice, shader.shaderModule, nullptr);
+    }
+
+    // vkDestroyFramebuffer(device._logicalDevice, framebuffer, nullptr);
+    // vkDestroyImageView(device._logicalDevice, imageView, nullptr);
+
+    return outTexture;
 }

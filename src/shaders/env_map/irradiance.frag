@@ -25,8 +25,11 @@ void main()
 
     for (float phi = 0.0; phi < TWO_PI; phi += deltaPhi) {
         for (float theta = 0.0; theta < HALF_PI; theta += deltaTheta) {
-            vec3 tempVec = cos(phi) * right + sin(phi) * up;
-            vec3 sampleVector = cos(theta) * N + sin(theta) * tempVec;
+//            vec3 tempVec = cos(phi) * right + sin(phi) * up;
+//            vec3 sampleVector = cos(theta) * N + sin(theta) * tempVec;
+            vec3 sphereCoord = vec3(sin(theta) * cos(phi),  sin(theta) * sin(phi), cos(theta));
+            vec3 sampleVector = sphereCoord.x * right + sphereCoord.y * up + sphereCoord.z * N;
+
             irradiance += texture(inputImage, sampleVector).rgb * cos(theta) * sin(theta);
             sampleCount++;
         }

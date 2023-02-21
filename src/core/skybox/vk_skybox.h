@@ -20,7 +20,8 @@ public:
     std::shared_ptr<Material> _material;
     Texture _background; // aka. background
     Texture _environment; // aka. radiance map
-    Texture _reflection; // aka. reflection map
+    Texture _prefilter; // aka. reflection map
+    Texture _brdf; // BRDF
 
     Type _type = Type::box;
 
