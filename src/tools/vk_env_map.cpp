@@ -980,26 +980,27 @@ Texture EnvMap::brdf_convolution(Device& device, UploadContext& uploadContext) {
         submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
 
         VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
+        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
     }
 
-//    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
-//        VkImageSubresourceRange range;
-//        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//        range.baseMipLevel = 0;
-//        range.levelCount = 1;
-//        range.baseArrayLayer = 0;
-//        range.layerCount = 1;
-//
-//        VkImageMemoryBarrier imageBarrier = {};
-//        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-//        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-//        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-//        imageBarrier.image = outTexture._image;
-//        imageBarrier.subresourceRange = range;
-//        imageBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-//        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-//        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-//    });
+    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
+        VkImageSubresourceRange range;
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.baseMipLevel = 0;
+        range.levelCount = 1;
+        range.baseArrayLayer = 0;
+        range.layerCount = 1;
+
+        VkImageMemoryBarrier imageBarrier = {};
+        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.image = outTexture._image;
+        imageBarrier.subresourceRange = range;
+        imageBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+    });
 
     for (auto& shader : effect->shaderStages) {
         vkDestroyShaderModule(device._logicalDevice, shader.shaderModule, nullptr);

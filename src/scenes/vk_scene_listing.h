@@ -29,8 +29,7 @@ public:
     static const std::vector<std::pair<std::string, std::function<Renderables (Camera& camera, VulkanEngine* engine)>>> scenes;
 
     static Renderables empty(Camera& camera, VulkanEngine* engine);
-    static Renderables monkeyAndTriangles(Camera& camera, VulkanEngine* engine);
-    static Renderables karibu(Camera& camera, VulkanEngine* engine);
+    static Renderables spheres(Camera& camera, VulkanEngine* engine);
     static Renderables damagedHelmet(Camera& camera, VulkanEngine* engine);
 
 private:

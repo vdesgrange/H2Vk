@@ -37,7 +37,6 @@ void Skybox::load() {
 
     if (_type == Type::box) {
         _model = ModelPOLY::create_cube(&_device, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
-        // load_cube_texture();
         Texture original {};
         Texture hdr {};
 
@@ -52,11 +51,10 @@ void Skybox::load() {
         _prefilter = envMap.prefilter_cube_mapping(_device, _uploadContext, _meshManager, tmp);
         _brdf = envMap.brdf_convolution(_device, _uploadContext);
 
-        // load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_Env.hdr", _environment, VK_FORMAT_R8G8B8A8_SRGB);
-
         original.destroy(_device);
         hdr.destroy(_device);
         tmp.destroy(_device);
+        // load_cube_texture();
     } else {
         Texture original {};
         Texture hdr {};

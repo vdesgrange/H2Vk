@@ -55,12 +55,12 @@ float G_Smith(float dotNV, float dotNL, float roughness) {
 }
 
 vec3 F_Schlick(float cosTheta, vec3 albedo, float metallic) {
-    vec3 F0 = mix(vec3(0.02), albedo, metallic);
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 vec3 F_SchlickR(float cosTheta, vec3 albedo, float metallic, float roughness) {
-    vec3 F0 = mix(vec3(0.02), albedo, metallic);
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
@@ -87,11 +87,11 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
         float D = D_GGX(dotNH, roughness);
         float G = G_Smith(dotNL, dotNV, roughness);
         vec3 F = F_Schlick(dotHV, albedo, metallic);// dotNV
-        vec3 spec = D * G * F / (4.0 * dotNL * dotNV + 0.0001);
-        color += spec * C * dotNL;
+        vec3 spec = D * G * F / (4.0 * dotNL * dotNV + 0.001);
+        color += spec * dotNL;
 
         vec3 kd = (vec3(1.0) - F) * (1.0 - metallic);
-        color += kd * albedo / PI * C * dotNL;
+        color += kd * albedo / PI * dotNL;
     }
 
     return color;
@@ -104,16 +104,24 @@ vec2 sample_spherical_map(vec3 v) {
     return -1 * uv;
 }
 
-vec3 calculateNormal()
-{
-    vec3 tangentNormal = texture(samplerNormalMap, inUV).xyz * 2.0 - 1.0;
-
+vec3 calculateNormal() {
     vec3 N = normalize(inNormal);
-    vec3 T = normalize(inTangent.xyz);
+
+    vec3 pos_dx = dFdx(inFragPos);
+    vec3 pos_dy = dFdy(inFragPos);
+    vec3 tex_dx = dFdx(vec3(inUV, 0.0));
+    vec3 tex_dy = dFdy(vec3(inUV, 0.0));
+    vec3 T = (tex_dy.t * pos_dx - tex_dx.t * pos_dy) / (tex_dx.s * tex_dy.t - tex_dy.s * tex_dx.t);
+    T = normalize(T - N * dot(N, T));
     vec3 B = normalize(cross(N, T));
     mat3 TBN = mat3(T, B, N);
-    return normalize(tangentNormal);
+
+    vec3 TN = texture(samplerNormalMap, inUV).xyz;
+    TN = normalize(TBN * (2.0 * TN - 1.0));
+
+    return TN;
 }
+
 
 void main()
 {
@@ -130,7 +138,7 @@ void main()
     float lightFactor = sceneData.sunlightDirection.w;
 
     vec3 V = normalize(inCameraPos - inFragPos);
-    vec3 N = normalize(inNormal);
+    vec3 N = calculateNormal(); // normalize(inNormal);
     vec3 C = sceneData.sunlightColor.rgb;
     vec3 R = reflect(-V, N);
 
@@ -153,12 +161,12 @@ void main()
     vec3 specular = reflection * (F * brdf.x + brdf.y);
 
     vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
-    vec3 ambient = (kD * diffuse + specular) * ao; // + emissive
+    vec3 ambient = (kD * diffuse + specular) * texture(samplerAOMap, inUV).rrr; // + emissive
 
     vec3 color = ambient + Lo;
 
-    // color = uncharted_to_tonemap(color);
-    color = color / (color + vec3(1.0)); // Reinhard operator
+    color = uncharted_to_tonemap(color);
+    color = color * (1.0f / uncharted_to_tonemap(vec3(11.2f)));// (color + vec3(1.0)); // Reinhard operator
 
     outFragColor = vec4(color, 1.0);
 }
