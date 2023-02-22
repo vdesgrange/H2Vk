@@ -27,6 +27,7 @@ public:
 
     const uint32_t PRE_FILTER_WIDTH = 512;
     const uint32_t PRE_FILTER_HEIGHT = 512;
+    const uint32_t PRE_FILTER_MIP_LEVEL = 4;
 
     const uint32_t BRDF_WIDTH = 512;
     const uint32_t BRDF_HEIGHT = 512;

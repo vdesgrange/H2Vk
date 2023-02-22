@@ -1,14 +1,18 @@
 #version 460
 
-layout (binding = 0) uniform samplerCube inputImage;
+layout (set = 0, binding = 0) uniform Data {
+    float roughness;
+} data;
+
+layout (set = 0, binding = 1) uniform samplerCube inputImage;
 
 layout (location = 0) in vec3 inPos;
 
 layout (location = 0) out vec4 outFragColor;
 
-layout (push_constant) uniform PushConsts {
-    layout(offset = 128) float roughness;
-} consts;
+//layout (push_constant) uniform PushConsts {
+//    layout(offset = 128) float roughness;
+//} consts;
 
 
 #define PI 3.1415926535897932384626433832795
@@ -56,7 +60,7 @@ void main()
     vec3 N = normalize(inPos);
     vec3 R = N;
     vec3 V = N;
-    float roughness = consts.roughness;
+    float roughness = data.roughness;
     uint numSamples = 1024u;
     float totalWeight = 0.0;
 

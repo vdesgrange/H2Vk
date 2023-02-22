@@ -657,6 +657,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
 
     VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
     imgInfo.arrayLayers = count;
+    imgInfo.mipLevels = PRE_FILTER_MIP_LEVEL;
     imgInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -669,6 +670,8 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
     VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_COLOR_BIT);
     imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
     imageViewInfo.subresourceRange.layerCount = count;
+    imageViewInfo.subresourceRange.baseMipLevel = 0;
+    imageViewInfo.subresourceRange.levelCount = PRE_FILTER_MIP_LEVEL;
     vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &outTexture._imageView);
 
     // Create sampler
@@ -679,7 +682,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
         VkImageSubresourceRange range;
         range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         range.baseMipLevel = 0;
-        range.levelCount = 1;
+        range.levelCount = PRE_FILTER_MIP_LEVEL;
         range.baseArrayLayer = 0;
         range.layerCount = 6;
 
@@ -714,72 +717,15 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     clearValues[1].depthStencil.depth = 1.0f;
-
-    std::array<VkFramebuffer, 6> framebuffers {};
-    std::array<VkImageView, 6> imagesViews {};
-
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = renderPass._renderPass;
-    framebufferInfo.width = PRE_FILTER_WIDTH;
-    framebufferInfo.height = PRE_FILTER_HEIGHT;
-    framebufferInfo.layers = 1;
-
-    for (int face = 0; face < count; face++) {
-        // Create image view
-        VkImageViewCreateInfo info = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-        info.subresourceRange.baseArrayLayer = face; // cube map face in the out texture.
-        info.subresourceRange.layerCount = 1;
-        info.subresourceRange.baseMipLevel = 0;
-        info.subresourceRange.levelCount = 1;
-        vkCreateImageView(device._logicalDevice, &info, nullptr, &imagesViews[face]);
-
-        std::array<VkImageView, 1> attachments = {imagesViews[face]};
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();  // framebuffer used for image modification
-        VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &framebuffers[face]));
-    }
-
-    std::vector<VkDescriptorPoolSize> poolSizes = {
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6}
-    };
-
-    VkDescriptorSet descriptor;
-    VkDescriptorSetLayout setLayout;
-    DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
-    DescriptorAllocator allocator = DescriptorAllocator(device);
-    DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
-            .bind_image(inTexture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .layout(setLayout)
-            .build(descriptor, setLayout, poolSizes);
-
-    // Build pipeline
-    PipelineBuilder pipelineBuilder = PipelineBuilder(device, renderPass); // renderPass useless
-    pipelineBuilder._type = PipelineBuilder::Type::graphic;
-    pipelineBuilder._viewport = vkinit::get_viewport((float) PRE_FILTER_WIDTH, (float) PRE_FILTER_HEIGHT);
-    pipelineBuilder._scissor = vkinit::get_scissor((float) PRE_FILTER_WIDTH, (float) PRE_FILTER_HEIGHT);
+    
+    std::array<VkFramebuffer, 24> framebuffers {}; // 6 * PRE_FILTER_MIP_LEVEL
+    std::array<VkImageView, 24> imagesViews {};
 
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules = {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/env_map/cube_map.vert.spv"},
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/env_map/prefilter.frag.spv"},
     };
 
-    VkPushConstantRange push_vert;
-    push_vert.offset = 0;
-    push_vert.size = 2 * sizeof(glm::mat4);
-    push_vert.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-    VkPushConstantRange push_frag;
-    push_frag.offset = 2 * sizeof(glm::mat4);
-    push_frag.size = sizeof(float);
-    push_frag.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {push_vert, push_frag}, modules);
-    std::shared_ptr<ShaderPass> irradiancePass = pipelineBuilder.build_pass(effect);
-    pipelineBuilder.create_material("prefilter", irradiancePass);
-
-    glm::mat4 projection = glm::perspective(glm::radians(90.0f), PRE_FILTER_WIDTH / static_cast<float>(PRE_FILTER_HEIGHT),  0.1f, 10.0f);
     std::array<glm::mat4, 6> views = {
             glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
             glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
@@ -792,69 +738,149 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
     std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
     meshManager.upload_mesh(*cube);
 
-    // Command pool + command buffer for compute operations
-    for (int face = 0; face < count; face++) {
-        CommandPool commandPool = CommandPool(device); // can use graphic queue for compute work
-        CommandBuffer commandBuffer =  CommandBuffer(device, commandPool);
+    for (int mipLevel = 0; mipLevel < PRE_FILTER_MIP_LEVEL; mipLevel++) {
+        uint32_t mipWidth = static_cast<uint32_t>(PRE_FILTER_WIDTH * std::pow(0.5f, mipLevel));
+        uint32_t mipHeight = static_cast<uint32_t>(PRE_FILTER_HEIGHT * std::pow(0.5f, mipLevel));
+        glm::mat4 projection = glm::perspective(glm::radians(90.0f), static_cast<float>(mipWidth) / static_cast<float>(mipHeight),  0.1f, 10.0f);
 
-        VkExtent2D extent;
-        extent.width = static_cast<uint32_t>(PRE_FILTER_WIDTH);
-        extent.height = static_cast<uint32_t>(PRE_FILTER_HEIGHT);
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.pNext = nullptr;
+        framebufferInfo.renderPass = renderPass._renderPass;
+        framebufferInfo.width = mipWidth;
+        framebufferInfo.height = mipHeight;
+        framebufferInfo.layers = 1;
 
-        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers[face]);
-        renderPassInfo.clearValueCount = clearValues.size();
-        renderPassInfo.pClearValues = clearValues.data();
+        for (int face = 0; face < count; face++) {
+            // Create image view
+            VkImageViewCreateInfo info = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_COLOR_BIT);
+            info.subresourceRange.baseArrayLayer = face; // cube map face in the out texture.
+            info.subresourceRange.layerCount = 1;
+            info.subresourceRange.baseMipLevel = mipLevel;
+            info.subresourceRange.levelCount = 1;
+            vkCreateImageView(device._logicalDevice, &info, nullptr, &imagesViews[mipLevel * 6 + face]);
 
-        VkCommandBufferBeginInfo cmdBeginInfo{};
-        cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        cmdBeginInfo.pNext = nullptr;
-        cmdBeginInfo.pInheritanceInfo = nullptr;
-        cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        glm::mat4 viewProj = projection * views[face];
-        float roughness = 1.0 / 4.0f;
-
-        VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
-        {
-            vkCmdBeginRenderPass(commandBuffer._commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            {
-                VkViewport viewport = vkinit::get_viewport((float) PRE_FILTER_WIDTH, (float) PRE_FILTER_HEIGHT);
-                vkCmdSetViewport(commandBuffer._commandBuffer, 0, 1, &viewport);
-
-                VkRect2D scissor = vkinit::get_scissor((float) inTexture._width, (float) inTexture._height);
-                vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
-
-                vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irradiancePass->pipeline);
-                vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
-                                   sizeof(glm::mat4), sizeof(glm::mat4), &viewProj);
-                vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
-                                   2 * sizeof(glm::mat4), sizeof(float), &roughness);
-                vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        irradiancePass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
-                cube->draw(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, 0, true);
-            }
-            vkCmdEndRenderPass(commandBuffer._commandBuffer);
+            std::array<VkImageView, 1> attachments = {imagesViews[mipLevel * 6 + face]};
+            framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+            framebufferInfo.pAttachments = attachments.data();  // framebuffer used for image modification
+            VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &framebuffers[mipLevel * 6 + face]));
         }
-        VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
 
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.pNext = nullptr;
-        submitInfo.pWaitDstStageMask = nullptr;
-        submitInfo.waitSemaphoreCount = 0; // Semaphore to wait before executing the command buffers
-        submitInfo.pWaitSemaphores = nullptr;
-        submitInfo.signalSemaphoreCount = 0; // Number of semaphores to be signaled once the commands
-        submitInfo.pSignalSemaphores = nullptr;
-        submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
-        submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
+        std::vector<VkDescriptorPoolSize> poolSizes = {
+                {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
+                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6}
+        };
 
-        VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
+        struct GPURoughnessData {
+            alignas(sizeof(float)) float roughness;
+        };
+
+        AllocatedBuffer roughnessBuffer = Buffer::create_buffer(device, sizeof(GPURoughnessData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        VkDescriptorBufferInfo roughnessInfo{};
+        roughnessInfo.buffer = roughnessBuffer._buffer;
+        roughnessInfo.offset = 0;
+        roughnessInfo.range = sizeof(GPURoughnessData);
+
+        VkDescriptorSet descriptor;
+        VkDescriptorSetLayout setLayout;
+        DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
+        DescriptorAllocator allocator = DescriptorAllocator(device);
+        DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
+                .bind_buffer(roughnessInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .bind_image(inTexture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .layout(setLayout)
+                .build(descriptor, setLayout, poolSizes);
+
+        // Build pipeline
+        PipelineBuilder pipelineBuilder = PipelineBuilder(device, renderPass); // renderPass useless
+        pipelineBuilder._type = PipelineBuilder::Type::graphic;
+        pipelineBuilder._viewport = vkinit::get_viewport((float) mipWidth, (float) mipHeight);
+        pipelineBuilder._scissor = vkinit::get_scissor((float) mipWidth, (float) mipHeight);
+
+        VkPushConstantRange push_vert;
+        push_vert.offset = 0;
+        push_vert.size = 2 * sizeof(glm::mat4);
+        push_vert.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+//        VkPushConstantRange push_frag;
+//        push_frag.offset = 2 * sizeof(glm::mat4);
+//        push_frag.size = sizeof(float);
+//        push_frag.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {push_vert}, modules); // ,push_frag
+        std::shared_ptr<ShaderPass> irradiancePass = pipelineBuilder.build_pass(effect);
+        pipelineBuilder.create_material("prefilter", irradiancePass);
+
+        // Command pool + command buffer for compute operations
+        float roughness = static_cast<float>(mipLevel) / float(PRE_FILTER_MIP_LEVEL);
+        void *data;
+        vmaMapMemory(device._allocator, roughnessBuffer._allocation, &data);
+        memcpy(data, &roughness, sizeof(float));
+        vmaUnmapMemory(device._allocator, roughnessBuffer._allocation);
+
+
+        for (int face = 0; face < count; face++) {
+            CommandPool commandPool = CommandPool(device); // can use graphic queue for compute work
+            CommandBuffer commandBuffer =  CommandBuffer(device, commandPool);
+
+            VkExtent2D extent;
+            extent.width = static_cast<uint32_t>(mipWidth);
+            extent.height = static_cast<uint32_t>(mipHeight);
+
+            VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers[mipLevel * 6 + face]);
+            renderPassInfo.clearValueCount = clearValues.size();
+            renderPassInfo.pClearValues = clearValues.data();
+
+            VkCommandBufferBeginInfo cmdBeginInfo{};
+            cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            cmdBeginInfo.pNext = nullptr;
+            cmdBeginInfo.pInheritanceInfo = nullptr;
+            cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+            glm::mat4 viewProj = projection * views[face];
+
+            VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
+            {
+                vkCmdBeginRenderPass(commandBuffer._commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+                {
+                    VkViewport viewport = vkinit::get_viewport((float) mipWidth, (float) mipHeight);
+                    vkCmdSetViewport(commandBuffer._commandBuffer, 0, 1, &viewport);
+
+                    VkRect2D scissor = vkinit::get_scissor((float) inTexture._width, (float) inTexture._height);
+                    vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
+
+                    vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irradiancePass->pipeline);
+                    vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4), sizeof(glm::mat4), &viewProj);
+//                    vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 2 * sizeof(glm::mat4), sizeof(float), &roughness);
+                    vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,irradiancePass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
+                    cube->draw(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, 0, true);
+                }
+                vkCmdEndRenderPass(commandBuffer._commandBuffer);
+            }
+            VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
+
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.pNext = nullptr;
+            submitInfo.pWaitDstStageMask = nullptr;
+            submitInfo.waitSemaphoreCount = 0; // Semaphore to wait before executing the command buffers
+            submitInfo.pWaitSemaphores = nullptr;
+            submitInfo.signalSemaphoreCount = 0; // Number of semaphores to be signaled once the commands
+            submitInfo.pSignalSemaphores = nullptr;
+            submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
+            submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
+
+            VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
+            VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
+        }
+
+        for (auto& shader : effect->shaderStages) {
+            vkDestroyShaderModule(device._logicalDevice, shader.shaderModule, nullptr);
+        }
     }
 
-    for (auto& shader : effect->shaderStages) {
-        vkDestroyShaderModule(device._logicalDevice, shader.shaderModule, nullptr);
-    }
+
+
 
     for (int face = 0; face < count; face++) {
         vkDestroyFramebuffer(device._logicalDevice, framebuffers[face], nullptr);
