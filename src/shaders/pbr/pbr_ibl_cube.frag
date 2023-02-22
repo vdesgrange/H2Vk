@@ -9,7 +9,8 @@ layout(std140, set = 0, binding = 1) uniform SceneData {
 } sceneData;
 
 layout(set = 0, binding = 2) uniform samplerCube irradianceMap; // aka. environment map
-layout(set = 0, binding = 3) uniform samplerCube irradianceMap; // aka. environment map
+layout(set = 0, binding = 3) uniform samplerCube prefilteredMap; // aka. prefiltered map
+layout(set = 0, binding = 4) uniform sampler2D brdfMap; // aka. prefilter map
 
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
@@ -49,6 +50,20 @@ vec3 F_Schlick(float cosTheta) {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+vec3 F_SchlickR(float cosTheta, float roughness) {
+    vec3 F0 = mix(vec3(0.02), material.albedo.rgb, material.metallic);
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+vec3 prefiltered_reflection(vec3 R, float roughness) {
+    const float MAX_REFLECTION_LOD = 9.0;
+    float lod = roughness * MAX_REFLECTION_LOD;
+    float lodf = floor(lod);
+    float lodc = ceil(lod);
+    vec3 a = textureLod(prefilteredMap, R, lodf).rgb;
+    vec3 b = textureLod(prefilteredMap, R, lodc).rgb;
+    return mix(a, b, lod - lodf);
+}
 
 vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C) {
     vec3 color = vec3(0.0);
@@ -85,28 +100,41 @@ vec2 sample_spherical_map(vec3 v) {
 void main()
 {
     int sources = 1;
+    float roughness = material.roughness;
     vec3 lightPos = sceneData.sunlightDirection.xyz;
     float lightFactor = sceneData.sunlightDirection.w;
 
     vec3 V = normalize(inCameraPos - inFragPos);
     vec3 N = normalize(inNormal);
     vec3 C = sceneData.sunlightColor.rgb;
-    vec2 uv = sample_spherical_map(N);
-    // vec3 A = texture(irradianceMap, uv).rgb;
-    vec3 A = texture(irradianceMap, N).rgb;  //  texture(irradianceMap, uv).rgb // if sampler2D
+    vec3 R = reflect(-V, N);
 
+    vec2 uv = sample_spherical_map(N);
+    vec3 A = texture(irradianceMap, N).rgb;  //  texture(irradianceMap, uv).rgb // if sampler2D
 
     vec3 Lo = vec3(0.0);
     for (int i = 0; i < sources; i++) {
         vec3 L = normalize(lightPos - inFragPos);
         Lo += BRDF(L, V, N, C);
 
-        vec3 ambient = A * material.albedo.xyz * material.ao * vec3(dot(N, L) / sources); // lightFactor
-        Lo += ambient;
+//        vec3 ambient = A * material.albedo.xyz * material.ao * vec3(dot(N, L) / sources); // lightFactor
+//        Lo += ambient;
     };
 
-    // vec3 ambient = 0.02 * material.albedo.xyz * material.ao;
-    vec3 color = Lo; // ambient + Lo;
+    vec2 brdf = texture(brdfMap, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 reflection = prefiltered_reflection(R, roughness).rgb;
+    vec3 irradiance = texture(irradianceMap, N).rgb;
+
+    vec3 diffuse = irradiance *  material.albedo.rgb;
+
+    vec3 F = F_SchlickR(max(dot(N, V), 0.0), roughness);
+
+    vec3 specular = reflection * (F * brdf.x + brdf.y);
+
+    vec3 kD = (vec3(1.0) - F) * (1.0 - material.metallic);
+    vec3 ambient = (kD * diffuse + specular);
+
+    vec3 color = ambient + Lo;
     color = color / (color + vec3(1.0)); // Reinhard operator
 
     // Convert from linear to sRGB ! Do not use for Vulkan !

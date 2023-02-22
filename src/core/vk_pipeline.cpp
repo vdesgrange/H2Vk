@@ -274,7 +274,7 @@ void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> se
 
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_tex.frag.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_tex_cube.frag.spv"},
     };
 
     std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {push_constant}, pbr_modules);
