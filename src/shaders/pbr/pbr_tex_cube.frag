@@ -160,7 +160,7 @@ void main()
     vec3 specular = reflection * (F * brdf.x + brdf.y);
 
     vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
-    vec3 ambient = (kD * diffuse + specular) * texture(samplerAOMap, inUV).rrr; // + emissive
+    vec3 ambient = (kD * diffuse + specular + emissive) * texture(samplerAOMap, inUV).rrr;
 
     vec3 color = ambient + Lo;
 
