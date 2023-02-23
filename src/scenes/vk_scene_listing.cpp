@@ -33,6 +33,8 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
             PBRProperties gold = {{1.0f,  0.765557f, 0.336057f, 1.0f}, ratio_y * 1.0f, ratio_x * 1.0f, 1.0f};
             std::string name = "sphere_" + std::to_string(x) + "_" + std::to_string(y);
             std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f}, gold);
+            // std::shared_ptr<Model> sphereModel = ModelPOLY::create_plane(engine->_device.get(), {-1.0f, 0.0f, -1.0f}, {1.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, gold);
+
             engine->_meshManager->upload_mesh(*sphereModel);
             engine->_meshManager->_models.emplace(name, sphereModel);
 

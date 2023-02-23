@@ -13,6 +13,7 @@ layout(std140, set = 0, binding = 0) uniform  CameraBuffer
 	mat4 view;
 	mat4 proj;
 	vec3 pos;
+	bool flip;
 } cameraData;
 
 void main()
@@ -21,5 +22,6 @@ void main()
 	transformMatrix[3] = vec4(0.0f, 0.0f, 0.0f, 1.0f); //  Cancel translation
 	gl_Position = transformMatrix * vec4(vPosition , 1.0f);
 
-	outFragPos = vPosition.xyz; // -1 * vPosition.xyz; If upside-down, -1 * might be necessary.
+	float coeff = (cameraData.flip == true) ? -1.0 : 1.0;
+	outFragPos = coeff *  vPosition.xyz; // -1 * vPosition.xyz; If upside-down, -1 * might be necessary.
 }

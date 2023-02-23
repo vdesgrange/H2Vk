@@ -83,7 +83,7 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
     float dotNH = clamp(dot(N, H), 0.0, 1.0);
     float dotHV = clamp(dot(H, V), 0.0, 1.0);
 
-    if (dotNL > 0.0) {
+    //if (dotNL > 0.0) {
         float D = D_GGX(dotNH, roughness);
         float G = G_Smith(dotNL, dotNV, roughness);
         vec3 F = F_Schlick(dotHV, albedo, metallic);
@@ -91,7 +91,7 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
         vec3 kd = (vec3(1.0) - F) * (1.0 - metallic);
 
         color += (kd * albedo / PI + spec) * dotNL;
-    }
+    //}
 
     return color;
 }
@@ -149,7 +149,7 @@ void main()
         Lo += BRDF(L, V, N, C, albedo, roughness, metallic);
     };
 
-    vec2 brdf = texture(brdfMap, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec2 brdf = texture(brdfMap, vec2(max(dot(N, V), 0.01), roughness)).rg;
     vec3 reflection = prefiltered_reflection(R, roughness).rgb;
     vec3 irradiance = texture(irradianceMap, N).rgb;
 
@@ -165,7 +165,8 @@ void main()
     vec3 color = ambient + Lo;
 
     color = uncharted_to_tonemap(color);
-    color = color * (1.0f / uncharted_to_tonemap(vec3(11.2f)));// (color + vec3(1.0)); // Reinhard operator
+    color = color / (color + vec3(1.0)); // Reinhard operator
+    // color = color * (1.0f / uncharted_to_tonemap(vec3(11.2f)));
 
     outFragColor = vec4(color, 1.0);
 }
