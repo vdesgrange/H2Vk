@@ -86,12 +86,11 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
     if (dotNL > 0.0) {
         float D = D_GGX(dotNH, roughness);
         float G = G_Smith(dotNL, dotNV, roughness);
-        vec3 F = F_Schlick(dotHV, albedo, metallic);// dotNV
+        vec3 F = F_Schlick(dotHV, albedo, metallic);
         vec3 spec = D * G * F / (4.0 * dotNL * dotNV + 0.001);
-        color += spec * dotNL;
-
         vec3 kd = (vec3(1.0) - F) * (1.0 - metallic);
-        color += kd * albedo / PI * dotNL;
+
+        color += (kd * albedo / PI + spec) * dotNL;
     }
 
     return color;

@@ -154,15 +154,6 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
         glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
     };
 
-//    std::vector<glm::mat4> matrices = {
-//            glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // +x
-//            glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // -x
-//            glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // +y
-//            glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // -y
-//            glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)), // +z
-//            glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)), // -z
-//    };
-
     std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
     meshManager.upload_mesh(*cube);
 
@@ -676,6 +667,10 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
 
     // Create sampler
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = static_cast<float>(PRE_FILTER_MIP_LEVEL);
+    samplerInfo.mipLodBias = 0.0f;
     vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &outTexture._sampler);
 
     CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
@@ -717,7 +712,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     clearValues[1].depthStencil.depth = 1.0f;
-    
+
     std::array<VkFramebuffer, 24> framebuffers {}; // 6 * PRE_FILTER_MIP_LEVEL
     std::array<VkImageView, 24> imagesViews {};
 
@@ -771,23 +766,23 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
                 {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6}
         };
 
-        struct GPURoughnessData {
-            alignas(sizeof(float)) float roughness;
-        };
-
-        AllocatedBuffer roughnessBuffer = Buffer::create_buffer(device, sizeof(GPURoughnessData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-        VkDescriptorBufferInfo roughnessInfo{};
-        roughnessInfo.buffer = roughnessBuffer._buffer;
-        roughnessInfo.offset = 0;
-        roughnessInfo.range = sizeof(GPURoughnessData);
+//        struct GPURoughnessData {
+//            alignas(sizeof(float)) float roughness;
+//        };
+//
+//        AllocatedBuffer roughnessBuffer = Buffer::create_buffer(device, sizeof(GPURoughnessData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+//        VkDescriptorBufferInfo roughnessInfo{};
+//        roughnessInfo.buffer = roughnessBuffer._buffer;
+//        roughnessInfo.offset = 0;
+//        roughnessInfo.range = sizeof(GPURoughnessData);
 
         VkDescriptorSet descriptor;
         VkDescriptorSetLayout setLayout;
         DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
         DescriptorAllocator allocator = DescriptorAllocator(device);
         DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
-                .bind_buffer(roughnessInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-                .bind_image(inTexture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                // .bind_buffer(roughnessInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .bind_image(inTexture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
                 .layout(setLayout)
                 .build(descriptor, setLayout, poolSizes);
 
@@ -802,22 +797,22 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
         push_vert.size = 2 * sizeof(glm::mat4);
         push_vert.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-//        VkPushConstantRange push_frag;
-//        push_frag.offset = 2 * sizeof(glm::mat4);
-//        push_frag.size = sizeof(float);
-//        push_frag.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        VkPushConstantRange push_frag;
+        push_frag.offset = 2 * sizeof(glm::mat4);
+        push_frag.size = sizeof(float);
+        push_frag.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {push_vert}, modules); // ,push_frag
+        std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {push_vert, push_frag}, modules);
         std::shared_ptr<ShaderPass> irradiancePass = pipelineBuilder.build_pass(effect);
         pipelineBuilder.create_material("prefilter", irradiancePass);
 
         // Command pool + command buffer for compute operations
         float roughness = static_cast<float>(mipLevel) / float(PRE_FILTER_MIP_LEVEL);
-        void *data;
-        vmaMapMemory(device._allocator, roughnessBuffer._allocation, &data);
-        memcpy(data, &roughness, sizeof(float));
-        vmaUnmapMemory(device._allocator, roughnessBuffer._allocation);
 
+//        void *data;
+//        vmaMapMemory(device._allocator, roughnessBuffer._allocation, &data);
+//        memcpy(data, &roughness, sizeof(float));
+//        vmaUnmapMemory(device._allocator, roughnessBuffer._allocation);
 
         for (int face = 0; face < count; face++) {
             CommandPool commandPool = CommandPool(device); // can use graphic queue for compute work
@@ -851,7 +846,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
 
                     vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irradiancePass->pipeline);
                     vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4), sizeof(glm::mat4), &viewProj);
-//                    vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 2 * sizeof(glm::mat4), sizeof(float), &roughness);
+                    vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 2 * sizeof(glm::mat4), sizeof(float), &roughness);
                     vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,irradiancePass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
                     cube->draw(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, 0, true);
                 }
@@ -879,12 +874,9 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
         }
     }
 
-
-
-
-    for (int face = 0; face < count; face++) {
-        vkDestroyFramebuffer(device._logicalDevice, framebuffers[face], nullptr);
-        vkDestroyImageView(device._logicalDevice, imagesViews[face], nullptr);
+    for (int i = 0; i < PRE_FILTER_MIP_LEVEL * 6; i++) {
+        vkDestroyFramebuffer(device._logicalDevice, framebuffers[i], nullptr);
+        vkDestroyImageView(device._logicalDevice, imagesViews[i], nullptr);
     }
 
     return outTexture;
@@ -988,7 +980,7 @@ Texture EnvMap::brdf_convolution(Device& device, UploadContext& uploadContext) {
         {
             vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, brdfPass->pipeline);
             vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, brdfPass->pipelineLayout, 0,1, &descriptor, 0, nullptr);
-            vkCmdDispatch(commandBuffer._commandBuffer, BRDF_WIDTH / 32, BRDF_HEIGHT / 32, 1);
+            vkCmdDispatch(commandBuffer._commandBuffer,   16, 16, 1);
         }
         VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
 
@@ -1032,8 +1024,6 @@ Texture EnvMap::brdf_convolution(Device& device, UploadContext& uploadContext) {
         vkDestroyShaderModule(device._logicalDevice, shader.shaderModule, nullptr);
     }
 
-    // vkDestroyFramebuffer(device._logicalDevice, framebuffer, nullptr);
-    // vkDestroyImageView(device._logicalDevice, imageView, nullptr);
 
     return outTexture;
 }

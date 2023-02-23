@@ -41,12 +41,13 @@ void Skybox::load() {
         Texture hdr {};
 
         load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", original, VK_FORMAT_R8G8B8A8_SRGB);
-        _background = envMap.cube_map_converter(_device, _uploadContext, _meshManager, original);
-
         load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_3k.hdr", hdr, VK_FORMAT_R8G8B8A8_SRGB);
-        Texture tmp = envMap.cube_map_converter(_device, _uploadContext, _meshManager, hdr);
-        _background = envMap.irradiance_cube_mapping(_device, _uploadContext, _meshManager, tmp);
 
+        // _background = envMap.cube_map_converter(_device, _uploadContext, _meshManager, original);
+
+        Texture tmp = envMap.cube_map_converter(_device, _uploadContext, _meshManager, hdr);
+
+        _background = envMap.irradiance_cube_mapping(_device, _uploadContext, _meshManager, tmp);
         _environment = envMap.irradiance_cube_mapping(_device, _uploadContext, _meshManager, tmp);
         _prefilter = envMap.prefilter_cube_mapping(_device, _uploadContext, _meshManager, tmp);
         _brdf = envMap.brdf_convolution(_device, _uploadContext);

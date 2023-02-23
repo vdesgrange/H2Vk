@@ -4,7 +4,7 @@
 
 layout(binding = 0, rgba16f) writeonly uniform image2D outputImage; // brdf
 
-layout(local_size_x = 16, local_size_y = 16) in;
+layout(local_size_x = 32, local_size_y = 32) in;
 
 vec2 hammersley(uint i, uint N) {
     uint bits = (i << 16u) | (i >> 16u);
@@ -44,9 +44,15 @@ float G_Smith_GGX(float dotNV, float dotNL, float roughness) {
     return ggx1 * ggx2;
 }
 
+float D_GGX(float dotNH, float roughness) {
+    float alpha = roughness * roughness;
+    float alpha2 = alpha * alpha;
+    float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
+    return (alpha2)/(PI * denom*denom);
+}
+
 vec2 BRDF(float dotNV, float roughness) {
     uint totalSamples = 1024u;
-
     vec3 V = vec3(sqrt(1.0 - dotNV * dotNV), 0.0, dotNV);
     vec3 N = vec3(0.0, 0.0, 1.0);
 
@@ -54,18 +60,17 @@ vec2 BRDF(float dotNV, float roughness) {
     float B = 0.0;
 
     for(uint i = 0u; i < totalSamples; i++) {
-        // generate sample vector towards the alignment of the specular lobe
         vec2 Xi = hammersley(i, totalSamples);
         vec3 H  = importance_sample_GGX(Xi, N, roughness);
         float dotHV = dot(H, V);
         vec3 L  = normalize(2.0 * dotHV * H - V);
 
-        float dotNL = max(L.z, 0.0); // (0, 0, 1) . (x, y, z) => z
+        float dotNL = max(L.z, 0.0);
 
         if(dotNL > 0.0) {
             dotHV = max(dotHV, 0.0);
             float dotNH = max(H.z, 0.0);
-            // Geometric Shadowing term
+
             float G = G_Smith_GGX(dotNV, dotNL, roughness);
             float G_Vis = (G * dotHV) / (dotNH * dotNV);
             float Fc = pow(1.0 - dotHV, 5.0);

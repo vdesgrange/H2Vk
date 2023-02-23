@@ -1,18 +1,19 @@
 #version 460
+#extension GL_EXT_debug_printf : disable
 
-layout (set = 0, binding = 0) uniform Data {
-    float roughness;
-} data;
+//layout (set = 0, binding = 0) uniform Data {
+//    float roughness;
+//} data;
 
-layout (set = 0, binding = 1) uniform samplerCube inputImage;
+layout (set = 0, binding = 0) uniform samplerCube inputImage;
 
 layout (location = 0) in vec3 inPos;
 
 layout (location = 0) out vec4 outFragColor;
 
-//layout (push_constant) uniform PushConsts {
-//    layout(offset = 128) float roughness;
-//} consts;
+layout (push_constant) uniform PushConsts {
+    layout(offset = 128) float roughness;
+} consts;
 
 
 #define PI 3.1415926535897932384626433832795
@@ -60,7 +61,8 @@ void main()
     vec3 N = normalize(inPos);
     vec3 R = N;
     vec3 V = N;
-    float roughness = data.roughness;
+    float resolution = float(textureSize(inputImage, 0)[0]);
+    float roughness = consts.roughness;
     uint numSamples = 1024u;
     float totalWeight = 0.0;
 
@@ -70,17 +72,25 @@ void main()
         vec3 H = importance_sample_GGX(Xi, N, roughness);
         vec3 L = 2.0 * dot(V, H) * H - V;
         float dotNL = clamp(dot(N, L), 0.0, 1.0);
+
         if(dotNL > 0.0) {
             float dotNH = clamp(dot(N, H), 0.0, 1.0);
             float dotVH = clamp(dot(V, H), 0.0, 1.0);
 
-            prefiltered += texture(inputImage, L).rgb * dotNL;
+            float D = D_GGX(dotNH, roughness);
+            float pdf = D * dotNH / (4.0 * dotVH) + 0.0001;
+            float P  = 4.0 * PI / (6.0 * resolution * resolution);
+            float S = 1.0 / (float(numSamples) * pdf); // + 0.0001
+
+            float mipLevel = roughness == 0.0 ? 0.0 : max(0.5 * log2(S / P), 0.0f); // + 1.0
+
+            prefiltered += textureLod(inputImage, L, mipLevel).rgb * dotNL;
 
             totalWeight += dotNL;
         }
     }
 
-    prefiltered /= totalWeight;
+    prefiltered /= max(totalWeight, 0.001f);
 
     outFragColor = vec4(prefiltered, 1.0);
 }

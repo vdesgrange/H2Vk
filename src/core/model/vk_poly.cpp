@@ -193,10 +193,10 @@ std::shared_ptr<Model> ModelPOLY::create_plane(Device* device, const glm::vec3& 
     node->parent = nullptr;
 
     std::vector<Vertex> vertices = {
-            {glm::vec3(p0.x, p0.y, p0.z), glm::vec3(0, 1, 0), glm::vec2(0), color},
-            {glm::vec3(p0.x, p0.y, p1.z), glm::vec3(0, 1, 0), glm::vec2(0), color},
-            {glm::vec3(p1.x, p1.y, p0.z), glm::vec3(0, 1, 0), glm::vec2(0), color},
-            {glm::vec3(p1.x, p1.y, p1.z), glm::vec3(0, 1, 0), glm::vec2(0), color},
+            {glm::vec3(p0.x, p0.y, p0.z), glm::vec3(0, 1, 0), glm::vec2(0, 0), color},
+            {glm::vec3(p0.x, p0.y, p1.z), glm::vec3(0, 1, 0), glm::vec2(0, 1), color},
+            {glm::vec3(p1.x, p1.y, p0.z), glm::vec3(0, 1, 0), glm::vec2(1, 0), color},
+            {glm::vec3(p1.x, p1.y, p1.z), glm::vec3(0, 1, 0), glm::vec2(1, 1), color},
     };
 
     std::vector<uint32_t> indices = {

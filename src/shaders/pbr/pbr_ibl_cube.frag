@@ -80,11 +80,9 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C) {
         float D = D_GGX(dotNH, roughness);
         float G = G_Smith(dotNL, dotNV, roughness);
         vec3 F = F_Schlick(dotHV); // dotNV
-        vec3 spec = D * G * F / (4.0 * dotNL * dotNV + 0.0001);
-        color += spec * C * dotNL;
-
+        vec3 spec = D * G * F / (4.0 * dotNL * dotNV + 0.001);
         vec3 kd = (vec3(1.0) - F) * (1.0 - material.metallic);
-        color += kd * material.albedo.rgb / PI * C * dotNL;
+        color += (kd * material.albedo.rgb / PI + spec) * dotNL;
     }
 
     return color;
@@ -140,5 +138,5 @@ void main()
     // Convert from linear to sRGB ! Do not use for Vulkan !
     // color = pow(color, vec3(0.4545)); // Gamma correction
 
-    outFragColor = vec4(color, material.albedo.w);
+    outFragColor = vec4(color, 1.0);
 }
