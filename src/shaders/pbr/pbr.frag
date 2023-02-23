@@ -8,6 +8,8 @@ layout(std140, set = 0, binding = 1) uniform SceneData {
     float specularFactor;
 } sceneData;
 
+layout(set = 0, binding = 2) uniform sampler2D irradianceMap; // aka. environment map
+
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
@@ -71,6 +73,14 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C) {
     return color;
 }
 
+vec2 sample_spherical_map(vec3 v) {
+    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+    uv *= vec2(0.1591f, 0.3183f);
+    uv += 0.5;
+    return uv;
+}
+
+
 void main()
 {
     int sources = 1;
@@ -78,6 +88,7 @@ void main()
     vec3 lightPos = sceneData.sunlightDirection.xyz;
     float lightFactor = sceneData.sunlightDirection.w;
 
+    vec3 A = texture(irradianceMap, inUV).rgb; // vec3(0.03)
     vec3 V = normalize(inCameraPos - inFragPos);
     vec3 N = normalize(inNormal);
     vec3 C = sceneData.sunlightColor.rgb;
@@ -91,7 +102,7 @@ void main()
 
         Lo += BRDF(L, V, N, C);
 
-        vec3 ambient = vec3(0.03) * material.albedo.xyz * material.ao * vec3(dot(N, L) / sources); // lightFactor
+        vec3 ambient = A * material.albedo.xyz * material.ao * vec3(dot(N, L) / sources); // lightFactor
         Lo += ambient;
     };
 

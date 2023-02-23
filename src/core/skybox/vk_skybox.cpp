@@ -1,4 +1,6 @@
 #include "vk_skybox.h"
+#include "core/vk_window.h"
+#include "core/vk_swapchain.h"
 #include "core/vk_device.h"
 #include "core/vk_buffer.h"
 #include "core/vk_mesh_manager.h"
@@ -6,6 +8,7 @@
 #include "core/utilities/vk_initializers.h"
 #include "core/vk_command_buffer.h"
 #include "core/model/vk_poly.h"
+#include "tools/vk_env_map.h"
 
 #include <stb_image.h>
 
@@ -21,23 +24,61 @@ Skybox::~Skybox() {
 void Skybox::destroy() {
     // must be done before device allocator destruction otherwise buffer memory not all freed
     this->_model.reset(); // smart pointer. Carefull, might break because destroyed automatically.
-    this->_texture.destroy(this->_device); // Must be called before vmaDestroyAllocator
+    this->_background.destroy(this->_device); // Must be called before vmaDestroyAllocator
+    this->_environment.destroy(this->_device);
+    this->_prefilter.destroy(this->_device);
+    this->_brdf.destroy(this->_device);
 }
 
 void Skybox::load() {
 
+    EnvMap envMap{};
+
+
     if (_type == Type::box) {
         _model = ModelPOLY::create_cube(&_device, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
-        load_cube_texture();
+        Texture original {};
+        Texture hdr {};
+
+        load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", original, VK_FORMAT_R8G8B8A8_SRGB);
+        load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_3k.hdr", hdr, VK_FORMAT_R8G8B8A8_SRGB);
+        _background = envMap.cube_map_converter(_device, _uploadContext, _meshManager, original);
+
+        Texture tmp = envMap.cube_map_converter(_device, _uploadContext, _meshManager, hdr);
+
+        // _background = envMap.irradiance_cube_mapping(_device, _uploadContext, _meshManager, tmp);
+        _environment = envMap.irradiance_cube_mapping(_device, _uploadContext, _meshManager, tmp);
+        _prefilter = envMap.prefilter_cube_mapping(_device, _uploadContext, _meshManager, tmp);
+        _brdf = envMap.brdf_convolution(_device, _uploadContext);
+
+        original.destroy(_device);
+        hdr.destroy(_device);
+        tmp.destroy(_device);
+        // load_cube_texture();
     } else {
+        Texture original {};
+        Texture hdr {};
+
         _model = ModelPOLY::create_uv_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
-        load_sphere_texture();
+
+        load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", _background);
+        load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_3k.hdr", hdr, VK_FORMAT_R8G8B8A8_SRGB);
+
+        Texture tmp = envMap.cube_map_converter(_device, _uploadContext, _meshManager, hdr);
+        _environment = envMap.irradiance_cube_mapping(_device, _uploadContext, _meshManager, tmp);
+        _prefilter = envMap.prefilter_cube_mapping(_device, _uploadContext, _meshManager, tmp);
+        _brdf = envMap.brdf_convolution(_device, _uploadContext);
+
+        hdr.destroy(_device);
+        original.destroy(_device);
+        tmp.destroy(_device);
     }
 
 //    _pipelineBuilder->skybox({_descriptorSetLayouts.skybox});
 //    _material = _pipelineBuilder.get_material("skyboxMaterial");
 
     _meshManager.upload_mesh(*_model);
+
     // _meshManager._models.emplace("skybox", _model);
 }
 
@@ -51,7 +92,7 @@ void Skybox::load_cube_texture() {
             "../assets/skybox/back.jpg",
     };
 
-    _texture = Texture();
+    _background = Texture();
     int count = files.size();
     int texWidth, texHeight, texChannels; // same for all images (otherwise use an array)
     VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
@@ -91,7 +132,7 @@ void Skybox::load_cube_texture() {
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(_device._allocator, &imgInfo, &imgAllocinfo, &_texture._image, &_texture._allocation, nullptr);
+    vmaCreateImage(_device._allocator, &imgInfo, &imgAllocinfo, &_background._image, &_background._allocation, nullptr);
 
     CommandBuffer::immediate_submit(_device, _uploadContext, [&](VkCommandBuffer cmd) {
         VkImageSubresourceRange range;
@@ -105,7 +146,7 @@ void Skybox::load_cube_texture() {
         imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toTransfer.image = this->_texture._image;
+        imageBarrier_toTransfer.image = this->_background._image;
         imageBarrier_toTransfer.subresourceRange = range;
         imageBarrier_toTransfer.srcAccessMask = 0;
         imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -130,7 +171,7 @@ void Skybox::load_cube_texture() {
         }
 
         //copy the buffer into the image
-        vkCmdCopyBufferToImage(cmd, buffer._buffer, this->_texture._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
+        vkCmdCopyBufferToImage(cmd, buffer._buffer, this->_background._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
 
         VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
         imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -141,36 +182,44 @@ void Skybox::load_cube_texture() {
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
 
         // Change texture image layout to shader read after all mip levels have been copied
-        _texture._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        _background._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &_texture._sampler);
+        vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &_background._sampler);
 
-        VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
+        VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _background._image, VK_IMAGE_ASPECT_COLOR_BIT);
         imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
         imageViewInfo.subresourceRange.layerCount = 6;
-        vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &_texture._imageView);
+        vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &_background._imageView);
 
-        _texture.updateDescriptor();
+        _background.updateDescriptor();
     });
 
     vmaDestroyBuffer(_device._allocator, buffer._buffer, buffer._allocation);
     std::cout << "Skybox texture loaded successfully" << std::endl;
 }
 
-void Skybox::load_sphere_texture() {
-    const char* file = "../assets/skybox/grand_canyon_yuma_point_8k.jpg"; // "../assets/skybox/tokyo_bigsight_8k.jpg"; // "../assets/debug/uv_checker_4k.png"; //
-
+void Skybox::load_sphere_texture(const char* file, Texture& texture, VkFormat format) {
     int texWidth, texHeight, texChannels;
-
     stbi_uc* pixels = stbi_load(file, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     if (!pixels) {
         std::cout << "Failed to load texture file " << file << std::endl;
     }
 
+    texture._width = texWidth;
+    texture._height = texHeight;
+
+    VkFormatProperties formatProperties;
+
+    // Get device properties for the requested texture format
+    vkGetPhysicalDeviceFormatProperties(_device._physicalDevice, format, &formatProperties);
+    // Check if requested image format supports image storage operations
+    // assert(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT);
+
+
     void* pixel_ptr = pixels;
     VkDeviceSize imageSize = texWidth * texHeight * 4;
-    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+    // VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // VK_FORMAT_R8G8B8A8_UNORM
     AllocatedBuffer buffer = Buffer::create_buffer(_device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
     void* data;
@@ -184,13 +233,19 @@ void Skybox::load_sphere_texture() {
     imageExtent.height = static_cast<uint32_t>(texHeight);
     imageExtent.depth = 1;
 
-    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
+    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent); //  | VK_IMAGE_USAGE_STORAGE_BIT
     imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(_device._allocator, &imgInfo, &imgAllocinfo, &_texture._image, &_texture._allocation, nullptr);
+    vmaCreateImage(_device._allocator, &imgInfo, &imgAllocinfo, &texture._image, &texture._allocation, nullptr);
+
+    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &texture._imageView);
+
+    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &texture._sampler);
 
     CommandBuffer::immediate_submit(_device, _uploadContext, [&](VkCommandBuffer cmd) {
         VkImageSubresourceRange range;
@@ -204,7 +259,7 @@ void Skybox::load_sphere_texture() {
         imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toTransfer.image = _texture._image;
+        imageBarrier_toTransfer.image = texture._image;
         imageBarrier_toTransfer.subresourceRange = range;
         imageBarrier_toTransfer.srcAccessMask = 0;
         imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -216,7 +271,6 @@ void Skybox::load_sphere_texture() {
         copyRegion.bufferOffset = 0;
         copyRegion.bufferRowLength = 0;
         copyRegion.bufferImageHeight = 0;
-
         copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         copyRegion.imageSubresource.mipLevel = 0;
         copyRegion.imageSubresource.baseArrayLayer = 0;
@@ -224,30 +278,63 @@ void Skybox::load_sphere_texture() {
         copyRegion.imageExtent = imageExtent;
 
         //copy the buffer into the image
-        vkCmdCopyBufferToImage(cmd, buffer._buffer, _texture._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+        vkCmdCopyBufferToImage(cmd, buffer._buffer, texture._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
         VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
         imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_GENERAL; // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
+        // VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
 
         // Change texture image layout to shader read after all mip levels have been copied
-        _texture._imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-        VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        vkCreateSampler(_device._logicalDevice, &samplerInfo, nullptr, &_texture._sampler);
-
-        VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-        vkCreateImageView(_device._logicalDevice, &imageViewInfo, nullptr, &_texture._imageView);
-
-        _texture.updateDescriptor();
+        texture._imageLayout = VK_IMAGE_LAYOUT_GENERAL; // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     });
+
+    texture.updateDescriptor();
 
     vmaDestroyBuffer(_device._allocator, buffer._buffer, buffer._allocation);
     std::cout << "Sphere map loaded successfully " << file << std::endl;
+}
+
+
+void Skybox::load_sphere_hdr() {
+    // todo use .ibl file
+    const char* back = "../assets/skybox/TropicalRuins_8k.jpg";
+    const char* refl = "../assets/skybox/TropicalRuins_3k.hdr";
+    const char* envi = "../assets/skybox/TropicalRuins_Env.hdr";
+
+    int bgWidth, bgHeight, bgChannels;
+    stbi_uc* bgData = stbi_load(back, &bgWidth, &bgHeight, &bgChannels, STBI_rgb_alpha);
+    if (!bgData) {
+        std::cout << "Failed to load background texture file " << back << std::endl;
+    }
+
+    void* bg_ptr = bgData;
+    VkDeviceSize imageSize = bgWidth * bgHeight * bgChannels;
+    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+    AllocatedBuffer buffer = Buffer::create_buffer(_device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+
+    void* bg_data;
+    vmaMapMemory(_device._allocator, buffer._allocation, &bg_data);
+    memcpy(bg_data, bg_ptr, static_cast<size_t>(imageSize));
+    vmaUnmapMemory(_device._allocator, buffer._allocation);
+    stbi_image_free(bgData);
+
+
+    int envWidth, envHeight, envChannels;
+    stbi_uc* envData = stbi_load(envi, &envWidth, &envHeight, &envChannels, STBI_rgb_alpha);
+    if (!envData) {
+        std::cout << "Failed to load environment texture file " << envi << std::endl;
+    }
+
+    int reflWidth, reflHeight, reflChannels;
+    stbi_uc* reflData = stbi_load(refl, &reflWidth, &reflHeight, &reflChannels, STBI_rgb_alpha);
+    if (!reflData) {
+        std::cout << "Failed to load reflection texture file " << refl << std::endl;
+    }
+
 }
 
 void  Skybox::setup_descriptor() {
@@ -255,22 +342,18 @@ void  Skybox::setup_descriptor() {
 }
 
 void Skybox::setup_pipeline(PipelineBuilder& pipelineBuilder, std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules = {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/skybox/skysphere.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/skybox/skysphere.frag.spv"},
+    std::unordered_map<Skybox::Type, std::string> shader = {
+            {Type::box, "../src/shaders/skybox/skybox"},
+            {Type::sphere, "../src/shaders/skybox/skysphere"},
     };
 
-//    if (_type == Type::box) {
-//         modules = {
-//                {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/skybox/skybox.vert.spv"},
-//                {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/skybox/skybox.frag.spv"},
-//        };
-//    } else {
-//        modules = {
-//                {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/skybox/skysphere.vert.spv"},
-//                {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/skybox/skysphere.frag.spv"},
-//        };
-//    }
+    std::string vert = shader.at(_type) + ".vert.spv";
+    std::string frag = shader.at(_type) + ".frag.spv";
+
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules = {
+            {VK_SHADER_STAGE_VERTEX_BIT, vert.c_str()},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, frag.c_str()},
+    };
 
     VkPushConstantRange push_constant;
     push_constant.offset = 0;

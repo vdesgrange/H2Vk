@@ -135,7 +135,9 @@ void ModelGLTF::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, N
             const float* positionBuffer = nullptr;
             const float* normalsBuffer = nullptr;
             const float* texCoordsBuffer = nullptr;
+            const float* colorsBuffer = nullptr;
             const float* tangentsBuffer = nullptr;
+            uint32_t numColorComponents;
             size_t vertexCount = 0;
 
             // Buffers, buffer views & accessors
@@ -158,6 +160,13 @@ void ModelGLTF::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, N
                 texCoordsBuffer = reinterpret_cast<const float*>(&(input.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset]));
             }
 
+            if (gltfPrimitive.attributes.find("COLOR_0") != gltfPrimitive.attributes.end()) {
+                const tinygltf::Accessor& colorAccessor = input.accessors[gltfPrimitive.attributes.find("COLOR_0")->second];
+                const tinygltf::BufferView& colorView = input.bufferViews[colorAccessor.bufferView];
+                numColorComponents = colorAccessor.type == TINYGLTF_PARAMETER_TYPE_FLOAT_VEC3 ? 3 : 4;
+                colorsBuffer = reinterpret_cast<const float*>(&(input.buffers[colorView.buffer].data[colorAccessor.byteOffset + colorView.byteOffset]));
+            }
+
             if (gltfPrimitive.attributes.find("TANGENT") != gltfPrimitive.attributes.end()) {
                 const tinygltf::Accessor& accessor = input.accessors[gltfPrimitive.attributes.find("TANGENT")->second];
                 const tinygltf::BufferView& view = input.bufferViews[accessor.bufferView];
@@ -170,6 +179,16 @@ void ModelGLTF::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, N
                 vert.normal = glm::normalize(glm::vec3(normalsBuffer ? glm::make_vec3(&normalsBuffer[v * 3]) : glm::vec3(0.0f)));
                 vert.uv = texCoordsBuffer ? glm::make_vec2(&texCoordsBuffer[v * 2]) : glm::vec2(0.0f); // glm::vec3(0.0f)
                 vert.color = glm::vec3(0.f);
+                if (colorsBuffer) {
+                    switch (numColorComponents) {
+                        case 3:
+                            vert.color = glm::vec4(glm::make_vec3(&colorsBuffer[v * 3]), 1.0f);
+                        case 4:
+                            vert.color = glm::make_vec4(&colorsBuffer[v * 4]);
+                        default:
+                            vert.color = glm::vec4(0.f);
+                    }
+                }
                 vert.tangent = tangentsBuffer ? glm::make_vec4(&tangentsBuffer[v * 4]) : glm::vec4(0.0f);
                 vertexBuffer.push_back(vert);
             }

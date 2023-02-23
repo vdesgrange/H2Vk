@@ -99,7 +99,15 @@ void VulkanEngine::init_commands() {
 }
 
 void VulkanEngine::init_default_renderpass() {
-    _renderPass = std::make_unique<RenderPass>(*_device, *_swapchain);
+    _renderPass = std::make_unique<RenderPass>(*_device); // , *_swapchain
+
+    RenderPass::Attachment color = _renderPass->color(_swapchain->_swapChainImageFormat);
+    RenderPass::Attachment depth = _renderPass->depth(_swapchain->_depthFormat);
+    VkSubpassDescription subpass = _renderPass->subpass_description(&color.ref, &depth.ref);
+    std::vector<VkAttachmentDescription> attachments = {color.description, depth.description};
+    std::vector<VkSubpassDependency> dependencies = {color.dependency, depth.dependency};
+
+    _renderPass->init(attachments, dependencies, subpass);
 }
 
 void VulkanEngine::init_framebuffers() {
@@ -128,8 +136,8 @@ void VulkanEngine::init_sync_structures() {
 
 void VulkanEngine::init_descriptors() {
     std::vector<VkDescriptorPoolSize> skyboxPoolSizes = {
-           {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2}
+           {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}
     };
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
@@ -164,13 +172,16 @@ void VulkanEngine::init_descriptors() {
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
                 .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
                 .bind_buffer(sceneBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
                 .layout(_descriptorSetLayouts.environment) // use reference instead?
                 .build(_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 
         // === Skybox === (Build by default to handle if skybox enabled later)
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
             .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-            .bind_image(_skybox->_texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .bind_image(_skybox->_background._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
             .layout(_descriptorSetLayouts.skybox)
             .build(_frames[i].skyboxDescriptor, _descriptorSetLayouts.skybox, skyboxPoolSizes);
 
@@ -250,7 +261,7 @@ void VulkanEngine::setup_descriptors(){
 }
 
 void VulkanEngine::init_pipelines() {
-    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_window, *_device, *_renderPass);
+    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_device, *_renderPass);
 
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
     _pipelineBuilder->scene_light(setLayouts);
@@ -274,7 +285,7 @@ void VulkanEngine::init_managers() {
 
 void VulkanEngine::init_scene() {
     _skybox = std::make_unique<Skybox>(*_device, *_pipelineBuilder, *_textureManager, *_meshManager, _uploadContext);
-    _skybox->_type = Skybox::sphere;
+    _skybox->_type = Skybox::Type::box;
     _skybox->load();
 
     _sceneListing = std::make_unique<SceneListing>();

@@ -63,44 +63,6 @@ std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, const glm::vec3& p
         }
     }
 
-    {
-//        glm::mat4 translation = glm::translate(glm::mat4{1.0}, p0);
-//        glm::mat4 scale = glm::scale(glm::mat4{1.0}, p1 - p0);
-//        glm::mat4 transform = translation * scale;
-//
-//        const std::array<std::array<int, 7>, 6> faces = {{
-//                                                                 {0, 4, 2, 6, -1, 0, 0}, // -x
-//                                                                 {1, 3, 5, 7, +1, 0, 0}, // +x
-//                                                                 {0, 1, 4, 5, 0, -1, 0}, // -y
-//                                                                 {2, 6, 3, 7, 0, +1, 0}, // +y
-//                                                                 {0, 2, 1, 3, 0, 0, -1}, // -z
-//                                                                 {4, 5, 6, 7, 0, 0, +1} // +z
-//                                                         }};
-//
-//        for (int i = 0; i < faces.size(); i++) {
-//            std::array<int, 7> face = faces[i];
-//            uint32_t idx = i * 4;
-//
-//            for (int j = 0; j < 4; j++) {
-//                int d = face[j];
-//                Vertex vertex{};
-//                vertex.position = glm::vec3(glm::vec4({(d & 1) * 2 - 1, (d & 2) - 1, (d & 4) / 2 - 1, 0}));
-//                vertex.normal = {face[4], face[5], face[6]};
-//                vertex.uv = {j & 1, (j & 2) / 2};
-//                vertex.color = glm::vec3({(i + 1) * 40, (i + 1) * 0, (i + 1) * 0});
-//                model->_verticesBuffer.push_back(vertex);
-//            }
-//
-//            model->_indexesBuffer.push_back(idx);
-//            model->_indexesBuffer.push_back(idx + 1);
-//            model->_indexesBuffer.push_back(idx + 2);
-//
-//            model->_indexesBuffer.push_back(idx + 2);
-//            model->_indexesBuffer.push_back(idx + 1);
-//            model->_indexesBuffer.push_back(idx + 3);
-//        }
-    }
-
     Primitive primitive{};
     primitive.firstIndex = 0;
     primitive.indexCount = model->_indexesBuffer.size();
@@ -231,10 +193,10 @@ std::shared_ptr<Model> ModelPOLY::create_plane(Device* device, const glm::vec3& 
     node->parent = nullptr;
 
     std::vector<Vertex> vertices = {
-            {glm::vec3(p0.x, p0.y, p0.z), glm::vec3(0, 1, 0), glm::vec2(0), color},
-            {glm::vec3(p0.x, p0.y, p1.z), glm::vec3(0, 1, 0), glm::vec2(0), color},
-            {glm::vec3(p1.x, p1.y, p0.z), glm::vec3(0, 1, 0), glm::vec2(0), color},
-            {glm::vec3(p1.x, p1.y, p1.z), glm::vec3(0, 1, 0), glm::vec2(0), color},
+            {glm::vec3(p0.x, p0.y, p0.z), glm::vec3(0, 1, 0), glm::vec2(0, 0), color},
+            {glm::vec3(p0.x, p0.y, p1.z), glm::vec3(0, 1, 0), glm::vec2(0, 1), color},
+            {glm::vec3(p1.x, p1.y, p0.z), glm::vec3(0, 1, 0), glm::vec2(1, 0), color},
+            {glm::vec3(p1.x, p1.y, p1.z), glm::vec3(0, 1, 0), glm::vec2(1, 1), color},
     };
 
     std::vector<uint32_t> indices = {

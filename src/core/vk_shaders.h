@@ -18,19 +18,16 @@ struct ShaderEffect {
     std::vector<VkPushConstantRange> pushConstants;
     std::vector<ShaderStage> shaderStages;
 
-    ~ShaderEffect() {
-        std::cout << "ShaderEffect destroyed" << std::endl;
-    }
+//    ~ShaderEffect() {
+//        std::cout << "ShaderEffect destroyed" << std::endl;
+//    }
 };
 
 struct ShaderPass {
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
     std::shared_ptr<ShaderEffect> effect;
-
-    ~ShaderPass() {
-        std::cout << "Material/ShaderPass destroyed" << std::endl;  // todo: move _materials destruction of pipeline here?
-    }
+    // todo: move _materials destruction of pipeline here?
 };
 
 typedef ShaderPass Material;

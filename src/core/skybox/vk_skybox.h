@@ -18,7 +18,11 @@ public:
     enum Type { box, sphere };
     std::shared_ptr<Model> _model;
     std::shared_ptr<Material> _material;
-    Texture _texture;
+    Texture _background; // aka. background
+    Texture _environment; // aka. radiance map
+    Texture _prefilter; // aka. reflection map
+    Texture _brdf; // BRDF
+
     Type _type = Type::box;
 
     Skybox(Device& device, PipelineBuilder& pipelineBuilder, TextureManager& textureManager, MeshManager& meshManager, UploadContext& uploadContext);
@@ -26,7 +30,8 @@ public:
 
     void load();
     void load_cube_texture();
-    void load_sphere_texture();
+    void load_sphere_texture(const char* file, Texture& texture, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB);
+    void load_sphere_hdr();
     void setup_descriptor();
     void setup_pipeline(PipelineBuilder& pipelineBuilder, std::vector<VkDescriptorSetLayout> setLayouts);
     void draw(VkCommandBuffer& commandBuffer);
@@ -38,4 +43,6 @@ private:
     class PipelineBuilder& _pipelineBuilder;
     class TextureManager& _textureManager;
     class MeshManager& _meshManager;
+
+    void submit_texture();
 };

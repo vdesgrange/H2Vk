@@ -18,32 +18,18 @@
  * pixels in the render targets.
  * vertex/index buffer -> input assembler -> vertex shader -> tesselation -> geometry shader ->
  * rasterization -> fragment shader -> color blending -> framebuffer
- * @param window
  * @param device
  * @param renderPass
  */
-PipelineBuilder::PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass) :
+PipelineBuilder::PipelineBuilder(const Device& device, RenderPass& renderPass) :
     _device(device), _renderPass(renderPass)
 {
-    this->_viewport = vkinit::get_viewport((float) window._windowExtent.width, (float) window._windowExtent.height);
-    this->_scissor = vkinit::get_scissor((float) window._windowExtent.width, (float) window._windowExtent.height);
-//    VkViewport viewport{};
-//    viewport.x = 0.0f;
-//    viewport.y = 0.0f;
-//    viewport.width = (float) window._windowExtent.width;
-//    viewport.height = (float) window._windowExtent.height;
-//    viewport.minDepth = 0.0f;
-//    viewport.maxDepth = 1.0f;
-//    this->_viewport = viewport;
-
-//    VkRect2D scissor{};
-//    scissor.offset = {0, 0};
-//    scissor.extent = window._windowExtent;
-//    this->_scissor = scissor;
+    this->_viewport = vkinit::get_viewport((float) Window::CWIDTH, (float) Window::CHEIGHT); // default
+    this->_scissor = vkinit::get_scissor((float) Window::CWIDTH, (float) Window::CHEIGHT); // default
 
     // Configure graphics pipeline - build the stage-create-info for both vertex and fragment stages
     this->_inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    this->_depthStencil = vkinit::pipeline_depth_stencil_state_create_info(true, true, VK_COMPARE_OP_LESS);
+    this->_depthStencil = vkinit::pipeline_depth_stencil_state_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL); // VK_COMPARE_OP_LESS
     this->_rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
     this->_multisampling = vkinit::multisampling_state_create_info();
     this->_colorBlendAttachment = vkinit::color_blend_attachment_state();
@@ -67,7 +53,7 @@ std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescri
         if (!Shader::load_shader_module(_device, module.second, &shader)) {
             std::cout << "Error when building the shader module" << std::string(module.second) << std::endl;
         } else {
-            std::cout << "Shader " << std::string(module.second) << " successfully loaded" << std::endl;
+            // std::cout << "Shader " << std::string(module.second) << " successfully loaded" << std::endl;
         }
 
         effect->shaderStages.push_back(ShaderEffect::ShaderStage{module.first, shader});
@@ -106,63 +92,79 @@ VkPipelineLayout PipelineBuilder::build_layout(std::vector<VkDescriptorSetLayout
 
 VkPipeline PipelineBuilder::build_pipeline(const Device& device, const RenderPass& renderPass, VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) {
 
-    // Warning: keep until pipeline is created because destroyed when out of scope.
-    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo = vkinit::vertex_input_state_create_info();
-    vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
-    vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
-    vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+    VkPipeline pipeline;
 
-    VkPipelineViewportStateCreateInfo viewportState{};
-    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewportState.pNext = nullptr;
-    viewportState.viewportCount = 1;
-    viewportState.pViewports = NULL; //&_viewport;
-    viewportState.scissorCount = 1;
-    viewportState.pScissors = NULL;//&_scissor;
+    if (_type == Type::graphic) {
+        // Warning: keep until pipeline is created because destroyed when out of scope.
+        VertexInputDescription vertexDescription = Vertex::get_vertex_description();
+        VkPipelineVertexInputStateCreateInfo vertexInputInfo = vkinit::vertex_input_state_create_info();
+        vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
+        vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+        vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
+        vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
-    VkPipelineColorBlendStateCreateInfo colorBlending{}; // Dummy color blending (no transparency)
-    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlending.pNext = nullptr;
-    colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.logicOp = VK_LOGIC_OP_COPY;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &_colorBlendAttachment;
+        VkPipelineViewportStateCreateInfo viewportState{};
+        viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        viewportState.pNext = nullptr;
+        viewportState.viewportCount = 1;
+        viewportState.pViewports = NULL; //&_viewport;
+        viewportState.scissorCount = 1;
+        viewportState.pScissors = NULL;//&_scissor;
 
-    std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    VkPipelineDynamicStateCreateInfo dynamicState{};
-    dynamicState.pNext = nullptr;
-    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = dynamicStateEnables.size();
-    dynamicState.pDynamicStates = dynamicStateEnables.data();
-    dynamicState.flags = 0;
+        VkPipelineColorBlendStateCreateInfo colorBlending{}; // Dummy color blending (no transparency)
+        colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        colorBlending.pNext = nullptr;
+        colorBlending.logicOpEnable = VK_FALSE;
+        colorBlending.logicOp = VK_LOGIC_OP_COPY;
+        colorBlending.attachmentCount = 1;
+        colorBlending.pAttachments = &_colorBlendAttachment;
 
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.pNext = nullptr;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.pInputAssemblyState = &_inputAssembly;
-    pipelineInfo.pRasterizationState = &_rasterizer;
-    pipelineInfo.pMultisampleState = &_multisampling;
-    pipelineInfo.pDepthStencilState = &_depthStencil;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
-    pipelineInfo.pStages = shaderStages.data();
-    pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = renderPass._renderPass;
-    pipelineInfo.subpass = 0;
+        std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        VkPipelineDynamicStateCreateInfo dynamicState{};
+        dynamicState.pNext = nullptr;
+        dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicState.dynamicStateCount = dynamicStateEnables.size();
+        dynamicState.pDynamicStates = dynamicStateEnables.data();
+        dynamicState.flags = 0;
 
-    VkPipeline graphicsPipeline;
-    if (vkCreateGraphicsPipelines(device._logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
-        std::cout << "Failed to create graphics pipeline\n";
-        return VK_NULL_HANDLE;
+        VkGraphicsPipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipelineInfo.pNext = nullptr;
+        pipelineInfo.pColorBlendState = &colorBlending;
+        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.pViewportState = &viewportState;
+        pipelineInfo.pDynamicState = &dynamicState;
+        pipelineInfo.pInputAssemblyState = &_inputAssembly;
+        pipelineInfo.pRasterizationState = &_rasterizer;
+        pipelineInfo.pMultisampleState = &_multisampling;
+        pipelineInfo.pDepthStencilState = &_depthStencil;
+        pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+        pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
+        pipelineInfo.pStages = shaderStages.data();
+        pipelineInfo.layout = pipelineLayout;
+        pipelineInfo.renderPass = renderPass._renderPass;
+        pipelineInfo.subpass = 0;
+
+        if (vkCreateGraphicsPipelines(device._logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
+            std::cout << "Failed to create graphics pipeline\n";
+            return VK_NULL_HANDLE;
+        }
+
     } else {
-        return graphicsPipeline;
+        VkComputePipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        pipelineInfo.pNext = nullptr;
+        pipelineInfo.layout = pipelineLayout;
+        pipelineInfo.flags = 0;
+        pipelineInfo.stage = shaderStages.front();
+
+        if (vkCreateComputePipelines(device._logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
+            std::cout << "Failed to create compute pipeline\n";
+            return VK_NULL_HANDLE;
+        }
     }
+
+    return pipeline;
 }
 
 void PipelineBuilder::create_material(const std::string &name, std::shared_ptr<Material> pass) {
@@ -214,8 +216,8 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
     create_material("monkeyMaterial", pass_mesh);
 
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr.frag.spv"},
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr_ibp.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_ibl_cube.frag.spv"},
     };
 
     std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {push_model, push_properties}, pbr_modules);
@@ -272,7 +274,7 @@ void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> se
 
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_tex.frag.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_tex_cube.frag.spv"},
     };
 
     std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {push_constant}, pbr_modules);

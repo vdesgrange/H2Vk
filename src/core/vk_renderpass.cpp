@@ -11,11 +11,31 @@
  * @param device
  * @param swapchain
  */
-RenderPass::RenderPass(const Device& device, SwapChain& swapchain) : _device(device) {
+RenderPass::RenderPass(const Device& device) : _device(device) { }
 
-    // === Color ===
+RenderPass::~RenderPass() {
+    vkDestroyRenderPass(_device._logicalDevice, _renderPass, nullptr);
+    //    swapchain._swapChainDeletionQueue.push_function([=]() {
+//        vkDestroyRenderPass(device._logicalDevice, _renderPass, nullptr);
+//    });
+}
+
+void RenderPass::init(std::vector<VkAttachmentDescription> attachments, std::vector<VkSubpassDependency> dependencies, VkSubpassDescription subpass) {
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+    renderPassInfo.pDependencies = dependencies.data();
+
+    VK_CHECK(vkCreateRenderPass(_device._logicalDevice, &renderPassInfo, nullptr, &_renderPass));
+}
+
+RenderPass::Attachment RenderPass::color(VkFormat format) {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = swapchain._swapChainImageFormat;
+    colorAttachment.format = format;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -28,10 +48,20 @@ RenderPass::RenderPass(const Device& device, SwapChain& swapchain) : _device(dev
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    // === Depth ===
-    // Must be hook to subpass
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcAccessMask = 0;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    return RenderPass::Attachment {colorAttachment, colorAttachmentRef, dependency};
+}
+
+RenderPass::Attachment RenderPass::depth(VkFormat format) {
     VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = swapchain._depthFormat;
+    depthAttachment.format = format;
     depthAttachment.flags = 0;
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -45,20 +75,6 @@ RenderPass::RenderPass(const Device& device, SwapChain& swapchain) : _device(dev
     depthAttachmentRef.attachment = 1;
     depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcAccessMask = 0;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
     VkSubpassDependency depthDependency{};
     depthDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     depthDependency.dstSubpass = 0;
@@ -67,24 +83,16 @@ RenderPass::RenderPass(const Device& device, SwapChain& swapchain) : _device(dev
     depthDependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
     depthDependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-    std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
-    std::array<VkSubpassDependency, 2> dependencies = {dependency, depthDependency};
-
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    renderPassInfo.pAttachments = attachments.data();
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
-    renderPassInfo.pDependencies = dependencies.data();
-
-    VK_CHECK(vkCreateRenderPass(device._logicalDevice, &renderPassInfo, nullptr, &_renderPass));
+    return RenderPass::Attachment {depthAttachment, depthAttachmentRef,depthDependency};
 }
 
-RenderPass::~RenderPass() {
-    vkDestroyRenderPass(_device._logicalDevice, _renderPass, nullptr);
-    //    swapchain._swapChainDeletionQueue.push_function([=]() {
-//        vkDestroyRenderPass(device._logicalDevice, _renderPass, nullptr);
-//    });
+VkSubpassDescription RenderPass::subpass_description(VkAttachmentReference* colorAttachmentRef, VkAttachmentReference* depthAttachmentRef) {
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = colorAttachmentRef;
+    subpass.pDepthStencilAttachment = depthAttachmentRef;
+
+    return subpass;
+
 }

@@ -14,6 +14,8 @@ Device::Device(Window& window) {
             .request_validation_layers(true)
             .require_api_version(1, 1, 0)
             .use_default_debug_messenger()
+            // .add_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) // for shader debugging
+            .add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
             .build();
 
     vkb::Instance vkb_inst = inst_ret.value();
@@ -43,11 +45,13 @@ Device::Device(Window& window) {
     //create the final Vulkan device
     vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 
+//    VkDebugUtilsMessengerCreateInfoEXT DebugInfo = {};
 //    VkValidationFeatureEnableEXT enables[] = {VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT};
 //    VkValidationFeaturesEXT validation_features = {};
 //    validation_features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
 //    validation_features.enabledValidationFeatureCount = 1;
 //    validation_features.pEnabledValidationFeatures = enables;
+//    validation_features.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&DebugInfo;
 
     VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features = {};
     shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
@@ -56,7 +60,6 @@ Device::Device(Window& window) {
 
     vkb::Device vkbDevice = deviceBuilder
             .add_pNext(&shader_draw_parameters_features)
-            // .add_pNext(&validation_features)
             .build()
             .value();
 

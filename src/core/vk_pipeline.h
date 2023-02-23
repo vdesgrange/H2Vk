@@ -14,6 +14,9 @@ class RenderPass;
 
 class PipelineBuilder {
 public:
+    enum Type { graphic, compute };
+
+    Type _type = Type::graphic;
     VkViewport _viewport;
     VkRect2D _scissor;
     VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
@@ -23,11 +26,10 @@ public:
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
     std::unordered_map<std::string, std::shared_ptr<Material>> _materials;
 
-    PipelineBuilder(const Window& window, const Device& device, RenderPass& renderPass);
+    PipelineBuilder(const Device& device, RenderPass& renderPass);
     ~PipelineBuilder();
 
     std::shared_ptr<ShaderPass> get_material(const std::string &name);
-    // void skybox(std::vector<VkDescriptorSetLayout> setLayouts);
     void scene_light(std::vector<VkDescriptorSetLayout> setLayouts);
     void scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts);
     void scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setLayouts);
