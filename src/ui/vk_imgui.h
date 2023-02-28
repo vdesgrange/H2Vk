@@ -11,6 +11,9 @@ typedef enum UIConstants {
     TEXTURE_VIEWER = 1,
     STATS_VIEWER = 2,
     SKYBOX_EDITOR = 3,
+    VIEW_EDITOR = 4,
+    LIGHT_EDITOR = 5,
+    LOG_CONSOLE = 6,
 } UIConstants;
 
 struct Statistics final {
@@ -24,11 +27,11 @@ struct Settings final {
     int scene_index;
 
     // Camera
+    int type {2};
+    float zNearFar[2] {0.010f, 200.0f};
+    float target[3] {0.0f, 0.0f, 0.0f};
     float speed {10.0f};
-    float fov{70.f}; // 0 - 360
-    // float aspect {1700.f / 1200.f}; // 0 - 1
-    float z_near {0.1f}; // 0 - 1000
-    float z_far {200.0f}; // 0 - 1000
+    float angle{70.f};
 
     // Light
     float coordinates[3] {1.0f, 0.0f, 0.0f};
@@ -63,7 +66,10 @@ private:
 
     bool interface(Statistics statistics);
     bool scene_editor();
+    bool view_editor();
     bool texture_viewer();
     bool stats_viewer(const Statistics& statistics);
     bool skybox_editor();
+    bool light_editor();
+    bool log_console();
 };

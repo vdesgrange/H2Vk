@@ -69,8 +69,32 @@ glm::mat4 Camera::get_rotation_matrix() {
     return rot;
 }
 
+glm::vec3 Camera::get_target() {
+    return this->target;
+}
+
 bool Camera::get_flip() {
     return this->flip_y;
+}
+
+float Camera::get_aspect() {
+    return this->aspect;
+}
+
+float Camera::get_speed() {
+    return this->speed;
+}
+
+float Camera::get_angle() {
+    return this->fov;
+}
+
+float Camera::get_z_near() {
+    return this->z_near;
+}
+
+float Camera::get_z_far() {
+    return this->z_far;
 }
 
 void Camera::inverse(bool flip) {
@@ -78,9 +102,31 @@ void Camera::inverse(bool flip) {
     update_view();
 }
 
+void Camera::set_type(Camera::Type type) {
+    this->type = type;
+    update_view();
+}
+
+void Camera::set_target(glm::vec3 target) {
+    this->target = target;
+    update_view();
+}
+
+void Camera::set_speed(float speed) {
+    this->speed = speed;
+}
+
+void Camera::set_aspect(float aspect) {
+    this->aspect = aspect;
+}
+
 void Camera::set_position(glm::vec3 position) {
     this->position = position;
     update_view();
+}
+
+void Camera::set_angle(float a) {
+    this->fov = a;
 }
 
 void Camera::set_perspective(float fov, float aspect, float zNear, float zFar) {
@@ -164,9 +210,8 @@ void Camera::update_view() {
     if (this->type == Type::look_at) {
         this->view = glm::lookAt(this->position, this->target, glm::vec3(0.0, 1.0, 0.0));
     } else {
-        glm::mat4 translation = glm::translate(glm::mat4(1.f), position);
+        glm::mat4 translation = glm::translate(glm::mat4(1.f), this->position);
         glm::mat4 rotation = this->get_rotation_matrix();
         this->view = rotation * translation;  // Rotation around camera's origin. Swap for world origin.
     }
-    // this->view = this->flip_y ? glm::inverse(this->view) : this->view;
 }

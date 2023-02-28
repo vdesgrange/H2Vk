@@ -1,8 +1,10 @@
 #include "vk_imgui.h"
+#include "vk_imgui_wrapper.h"
+#include "vk_imgui_controller.h"
 #include "vk_engine.h"
 #include "core/vk_window.h"
+#include "core/vk_camera.h"
 #include "core/utilities/vk_helpers.h"
-#include "core/utilities/vk_types.h"
 #include "scenes/vk_scene_listing.h"
 #include "core/vk_command_buffer.h"
 
@@ -14,6 +16,9 @@ UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine
     this->p_open.emplace(SCENE_EDITOR, false);
     this->p_open.emplace(TEXTURE_VIEWER, false);
     this->p_open.emplace(STATS_VIEWER, false);
+    this->p_open.emplace(VIEW_EDITOR, false);
+    this->p_open.emplace(LIGHT_EDITOR, false);
+    this->p_open.emplace(LOG_CONSOLE, false);
     this->p_open.emplace(SKYBOX_EDITOR, true);
 };
 
@@ -73,6 +78,8 @@ bool UInterface::render(VkCommandBuffer cmd, Statistics statistics) {
     this->new_frame();
     bool updated = this->interface(statistics);
 
+    ImGui::ShowDemoWindow();
+
     ImGui::Render();     // It might be interesting to use a dedicated commandBuffer (not mainCommandBuffer).
     ImDrawData* draw_data = ImGui::GetDrawData();
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
@@ -108,6 +115,7 @@ bool UInterface::interface(Statistics statistics) {
     // ImGui::ShowDemoWindow()
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Tools")) {
+            updated |= ImGui::MenuItem("View tools", nullptr, &this->p_open[VIEW_EDITOR]);
             updated |= ImGui::MenuItem("Scene editor", nullptr, &this->p_open[SCENE_EDITOR]);
             updated |= ImGui::MenuItem("Texture viewer", nullptr, &this->p_open[TEXTURE_VIEWER]);
             updated |= ImGui::MenuItem("Statistics viewer", nullptr, &this->p_open[STATS_VIEWER]);
@@ -124,6 +132,8 @@ bool UInterface::interface(Statistics statistics) {
         //ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
         // ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight()));
         // ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2));
+        updated |= this->view_editor();
+
         updated |= this->scene_editor();
 
         // ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
@@ -139,6 +149,19 @@ bool UInterface::interface(Statistics statistics) {
     return updated;
 }
 
+static void HelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
 bool UInterface::scene_editor() {
     bool updated = false;
 
@@ -146,8 +169,10 @@ bool UInterface::scene_editor() {
         return false;
     }
 
+    ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
+
     const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
-    if (ImGui::Begin("Scene editor", &this->p_open[SCENE_EDITOR], window_flags)) {
+    if (ImGui::Begin("Scene Editor", &this->p_open[SCENE_EDITOR], window_flags)) {
         std::vector<const char*> scenes;
         for (const auto& scene : SceneListing::scenes) {
             scenes.push_back(scene.first.c_str());
@@ -160,15 +185,6 @@ bool UInterface::scene_editor() {
         ImGui::PopItemWidth();
         ImGui::NewLine();
 
-        ImGui::Text("Camera");
-        ImGui::Separator();
-        updated |= ImGui::SliderFloat("Speed", &get_settings().speed, 0.01f, 100.0f);
-        ImGui::SliderFloat("FOV", &get_settings().fov, 0.0f, 360.0f);
-        // ImGui::SliderFloat("Aspect", &get_settings().aspect, 0.0f, 1.0f);
-        updated |= ImGui::SliderFloat("Z-Near", &get_settings().z_near, 0.0f, 10.0f);
-        updated |= ImGui::SliderFloat("Z-Far", &get_settings().z_far, 0.0f, 500.0f);
-        ImGui::NewLine();
-
         ImGui::Text("Light");
         ImGui::Separator();
         updated |= ImGui::InputFloat3("Position", get_settings().coordinates, "%.2f");
@@ -177,6 +193,68 @@ bool UInterface::scene_editor() {
         updated |= ImGui::InputFloat3("Color (RGB)", get_settings().colors, "%.2f");
     }
 
+    ImGui::End();
+
+    return updated;
+}
+
+bool UInterface::view_editor() {
+    bool updated = false;
+
+    if (!this->p_open[VIEW_EDITOR]) {
+        return false;
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
+
+    const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
+    if (ImGui::Begin("View Tools", &this->p_open[VIEW_EDITOR], window_flags)) {
+        std::vector<const char*> types(Camera::AllType.size());
+        for (const auto& type : Camera::AllType) {
+            types[type.first] = type.second;
+        }
+
+        ImGui::Text("Camera parameters");
+        ImGui::Separator();
+        bool newMode = ImGui::Combo("Mode", &get_settings().type, types.data(), static_cast<int>(types.size()));
+        ImGui::SameLine();
+        HelpMarker("'Look at' recommended");
+
+        if (newMode) {
+            get_settings().target[0] = 0.0f;
+            get_settings().target[1] = 0.0f;
+            get_settings().target[2] = 0.0f;
+        }
+        updated |= newMode;
+
+        if (get_settings().type == Camera::Type::look_at) {
+                updated |= ImGui::InputFloat3("Target view", UIController::get_target(*_engine._camera), UIController::set_target(*_engine._camera), "%.2f");
+            ImGui::SameLine();
+            HelpMarker("Fixed at {0, 0, 0} for other modes");
+        }
+        ImGui::NewLine();
+
+        updated |= ImGui::InputFloat2("Z-Near/Z-Far", UIController::get_z(*_engine._camera), UIController::set_z(*_engine._camera), "%.2f");
+        updated |= ImGui::SliderFloat("Angle", UIController::get_fov(*_engine._camera), UIController::set_fov(*_engine._camera), 0.01f, 360.0f);
+        updated |= ImGui::SliderFloat("Speed", UIController::get_speed(*_engine._camera), UIController::set_speed(*_engine._camera), 0.01f, 50.0f);
+        ImGui::NewLine();
+
+//        const char* preview_value = types[get_settings().type];
+//        if (ImGui::BeginCombo("Mode", preview_value)) {
+//            for (const auto& type : Camera::AllType) {
+//                const bool is_selected = (get_settings().type == type.first);
+//                if (ImGui::Selectable(type.second, is_selected))
+//                    get_settings().type = type.first;
+//
+//                if (is_selected)
+//                    ImGui::SetItemDefaultFocus();
+//
+//            }
+//            ImGui::EndCombo();
+//        }
+//        ImGui::NewLine();
+
+    }
     ImGui::End();
 
     return updated;
@@ -221,7 +299,7 @@ bool UInterface::stats_viewer(const Statistics& statistics) {
             ImGuiWindowFlags_NoTitleBar |
             ImGuiWindowFlags_NoSavedSettings;
 
-    if (ImGui::Begin("Statistics viewer", &this->p_open[STATS_VIEWER], flags))
+    if (ImGui::Begin("Performances", &this->p_open[STATS_VIEWER], flags))
     {
         ImGui::Text("Statistics (%.0f x %.0f):", io.DisplayFramebufferScale.x * io.DisplaySize.x,  io.DisplayFramebufferScale.y * io.DisplaySize.y);
         ImGui::Separator();
@@ -247,3 +325,27 @@ bool UInterface::skybox_editor() {
     return updated;
 }
 
+bool UInterface::light_editor() {
+    bool updated = false;
+
+    if (!this->p_open[LIGHT_EDITOR]) {
+        return false;
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
+
+    const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
+    if (ImGui::Begin("Light Editor", &this->p_open[VIEW_EDITOR], window_flags)) {
+
+
+
+        ImGui::Text("Environment");
+        ImGui::Separator();
+
+        // todo display skybox texture
+
+    }
+    ImGui::End();
+
+    return updated;
+}

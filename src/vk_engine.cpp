@@ -318,7 +318,7 @@ void VulkanEngine::recreate_swap_chain() {
 
     if (_window->_windowExtent.width > 0.0f && _window->_windowExtent.height > 0.0f) {
         // _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
-        _camera->aspect = (float)_window->_windowExtent.width / (float)_window->_windowExtent.height;
+        _camera->set_aspect((float)_window->_windowExtent.width / (float)_window->_windowExtent.height);
         update_uniform_buffers();
     }
 
@@ -345,9 +345,10 @@ void VulkanEngine::ui_overlay() {
     bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
     if (updated) {
         // Camera
-        _camera->speed = _ui->get_settings().speed;
+        _camera->set_type(static_cast<Camera::Type>(_ui->get_settings().type));
         // _camera->set_speed(_ui->get_settings().speed);
-        _camera->set_perspective(_ui->get_settings().fov, _camera->aspect, _ui->get_settings().z_near,_ui->get_settings().z_far); // _ui->get_settings().aspect
+        // _camera->set_perspective(_ui->get_settings().angle, _camera->get_aspect(), _ui->get_settings().zNearFar[0],_ui->get_settings().zNearFar[1]);
+        // _camera->set_target({_ui->get_settings().target[0], _ui->get_settings().target[1], _ui->get_settings().target[2]});
 
         // Scene
         _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
