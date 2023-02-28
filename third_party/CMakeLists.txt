@@ -21,6 +21,13 @@ target_sources(imgui PRIVATE
 target_include_directories(imgui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/imgui)
 target_link_libraries(imgui PUBLIC Vulkan::Vulkan)
 
+add_library(fonts INTERFACE)
+target_sources(fonts INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/fonts/icons_font.h)
+target_include_directories(fonts INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/fonts)
+target_link_libraries(fonts INTERFACE Vulkan::Vulkan)
+
+# target_sources(fonts PRIVATE ./fonts/icons_font.h)
+
 # stb_image header only lib so we only need the include path
 add_library(stb_image INTERFACE)
 

@@ -53,10 +53,12 @@ struct Primitive {
 };
 
 struct Mesh {
+    std::string name = "Unknown";
     std::vector<Primitive> primitives;
 };
 
 struct Node {
+    std::string name = "Unknown";
     Node* parent;  // Node*
     std::vector<Node*> children;  // Node*
     Mesh mesh;
@@ -89,7 +91,6 @@ struct Materials {
 };
 typedef Materials::Properties PBRProperties;
 
-
 struct Image {
     Texture _texture;
     VkDescriptorSet _descriptorSet; // access texture from the fragment shader
@@ -101,6 +102,7 @@ struct Textures {
 
 class Model {
 public:
+    std::string name = "Unknown";
     std::vector<Image> _images {};
     std::vector<Textures> _textures {};
     std::vector<Materials> _materials {};

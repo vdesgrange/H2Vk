@@ -9,6 +9,8 @@ class Device;
 class VulkanEngine;
 
 struct Texture {
+    std::string _name;
+    std::string _uri;
     VkImage _image;
     VkImageLayout _imageLayout; // duplicate with _descriptor
     VmaAllocation _allocation;

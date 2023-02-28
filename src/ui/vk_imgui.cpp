@@ -9,6 +9,7 @@
 #include "core/vk_command_buffer.h"
 
 #include "imgui_internal.h"
+#include "icons_font.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
 
@@ -53,6 +54,15 @@ void UInterface::init_imgui() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.Fonts->AddFontDefault();
+
+    ImFontConfig config;
+    config.MergeMode = true;
+    config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
+    static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+    io.Fonts->AddFontFromFileTTF("../third_party/fonts/fa-regular-400.ttf", 13.0f, &config, icon_ranges);
+    io.Fonts->AddFontFromFileTTF("../third_party/fonts/fa-solid-900.ttf", 13.0f, &config, icon_ranges);
+
     ImGui_ImplGlfw_InitForVulkan(_engine._window->_window, true);
 
     ImGui_ImplVulkan_InitInfo init_info{};
@@ -112,7 +122,7 @@ bool UInterface::interface(Statistics statistics) {
     const auto& io = ImGui::GetIO();
     bool updated = false;
 
-    // ImGui::ShowDemoWindow()
+    // ImGui::ShowDemoWindow();
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Tools")) {
             updated |= ImGui::MenuItem("View tools", nullptr, &this->p_open[VIEW_EDITOR]);
@@ -169,28 +179,65 @@ bool UInterface::scene_editor() {
         return false;
     }
 
-    ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
 
     const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
-    if (ImGui::Begin("Scene Editor", &this->p_open[SCENE_EDITOR], window_flags)) {
+    if (ImGui::Begin("Inspector", &this->p_open[SCENE_EDITOR], window_flags)) {
         std::vector<const char*> scenes;
         for (const auto& scene : SceneListing::scenes) {
             scenes.push_back(scene.first.c_str());
         }
 
-        ImGui::Text("Scene");
         ImGui::Separator();
-        ImGui::PushItemWidth(-1);
-        updated |= ImGui::Combo("##SceneList", &get_settings().scene_index, scenes.data(), static_cast<int>(scenes.size()));
-        ImGui::PopItemWidth();
+        updated |= ImGui::Combo("Instances", &get_settings().scene_index, scenes.data(), static_cast<int>(scenes.size()));
         ImGui::NewLine();
-
-        ImGui::Text("Light");
         ImGui::Separator();
-        updated |= ImGui::InputFloat3("Position", get_settings().coordinates, "%.2f");
-        updated |= ImGui::SliderFloat("Ambient", &get_settings().ambient, 0.0f, 0.005f, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-        updated |= ImGui::SliderFloat("Specular", &get_settings().specular, 0.0f, 1.0f);
-        updated |= ImGui::InputFloat3("Color (RGB)", get_settings().colors, "%.2f");
+
+        ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
+
+        if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_None)) {
+            static int selected = -1;
+            static int selection_mask = (1 << 2);
+            int node_clicked = -1;
+
+            ImGui::PushID("##VerticalScrolling");
+            ImGui::BeginGroup();
+
+            const ImGuiID child_id = ImGui::GetID((void*)(intptr_t)0);
+            const bool child_is_visible = ImGui::BeginChild(child_id, ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true, 0);
+
+            if (child_is_visible) {
+                for (uint32_t i = 0; i < _engine._scene->_renderables.size(); i++) {
+                    const auto &object = _engine._scene->_renderables[i];
+
+                    ImGuiTreeNodeFlags node_flags = base_flags;
+                    const bool is_selected = (selection_mask & (1 << i)) != 0;
+                    if (is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
+                    bool node_open = ImGui::TreeNodeEx((void *) (intptr_t) i, node_flags, "%s %s", ICON_FA_CUBE, object.model->name.c_str());
+                    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) node_clicked = i;
+                    if (node_open) {
+                        ImGui::BulletText("Blah blah\nBlah Blah");
+                        ImGui::TreePop();
+                    }
+                }
+                if (node_clicked != -1) {
+                    if (ImGui::GetIO().KeyCtrl)
+                        selection_mask ^= (1 << node_clicked);
+                    else
+                        selection_mask = (1 << node_clicked);
+                }
+            }
+            ImGui::EndChild();
+            ImGui::EndGroup();
+            ImGui::PopID();
+        }
+
+//        ImGui::Text("Light");
+//        ImGui::Separator();
+//        updated |= ImGui::InputFloat3("Position", get_settings().coordinates, "%.2f");
+//        updated |= ImGui::SliderFloat("Ambient", &get_settings().ambient, 0.0f, 0.005f, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+//        updated |= ImGui::SliderFloat("Specular", &get_settings().specular, 0.0f, 1.0f);
+//        updated |= ImGui::InputFloat3("Color (RGB)", get_settings().colors, "%.2f");
     }
 
     ImGui::End();
@@ -222,9 +269,6 @@ bool UInterface::view_editor() {
 
         if (newMode) {
             UIController::set_target(*_engine._camera)({0.0f,  0.0f,  0.0f});
-//            get_settings().target[0] = 0.0f;
-//            get_settings().target[1] = 0.0f;
-//            get_settings().target[2] = 0.0f;
         }
         updated |= newMode;
 
