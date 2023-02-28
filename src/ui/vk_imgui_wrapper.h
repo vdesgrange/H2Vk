@@ -6,7 +6,6 @@
 #include "imgui_internal.h"
 
 namespace ImGui {
-
     bool InputFloat3(const char* label, const std::function<std::array<float, 3> ()>& getter, const std::function<void (std::array<float, 3>)>& setter, const char* format = "%.3f", ImGuiInputTextFlags flags = 0) {
         std::array<float, 3> value = getter();
         bool updated = ImGui::InputFloat3(label, value.data(), format, flags);
@@ -28,4 +27,10 @@ namespace ImGui {
         return updated;
     }
 
+    bool Combo(const char* label, const std::function<int ()>& getter, const std::function<void (int)>& setter, const char* const items[], int items_count, int height_in_items = -1) {
+        int current_item = getter();
+        bool updated = ImGui::Combo(label, &current_item, items, items_count, height_in_items);
+        if (updated) setter(current_item);
+        return updated;
+    }
 }

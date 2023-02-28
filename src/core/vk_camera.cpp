@@ -97,6 +97,10 @@ float Camera::get_z_far() {
     return this->z_far;
 }
 
+Camera::Type Camera::get_type() {
+    return this->type;
+}
+
 void Camera::inverse(bool flip) {
     this->flip_y = flip;
     update_view();

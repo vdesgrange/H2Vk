@@ -27,11 +27,11 @@ struct Settings final {
     int scene_index;
 
     // Camera
-    int type {2};
-    float zNearFar[2] {0.010f, 200.0f};
-    float target[3] {0.0f, 0.0f, 0.0f};
-    float speed {10.0f};
-    float angle{70.f};
+    // int type {2};
+    // float zNearFar[2] {0.010f, 200.0f};
+    // float target[3] {0.0f, 0.0f, 0.0f};
+    // float speed {10.0f};
+    // float angle{70.f};
 
     // Light
     float coordinates[3] {1.0f, 0.0f, 0.0f};

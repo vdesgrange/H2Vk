@@ -1,6 +1,14 @@
 #include "vk_imgui_controller.h"
 #include "core/vk_camera.h"
 
+std::function<int ()> UIController::get_type(Camera& camera) {
+    return [&]() { return static_cast<int>(camera.get_type()); };
+}
+
+std::function<void (int)> UIController::set_type(Camera& camera) {
+    return [&](int type) { camera.set_type(static_cast<Camera::Type>(type)); };
+}
+
 std::function<float ()> UIController::get_speed(Camera& camera) {
     return [&]() { return camera.get_speed(); };
 }

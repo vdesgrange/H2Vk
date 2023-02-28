@@ -216,18 +216,19 @@ bool UInterface::view_editor() {
 
         ImGui::Text("Camera parameters");
         ImGui::Separator();
-        bool newMode = ImGui::Combo("Mode", &get_settings().type, types.data(), static_cast<int>(types.size()));
+        bool newMode = ImGui::Combo("Mode", UIController::get_type(*_engine._camera), UIController::set_type(*_engine._camera), types.data(), static_cast<int>(types.size()));
         ImGui::SameLine();
         HelpMarker("'Look at' recommended");
 
         if (newMode) {
-            get_settings().target[0] = 0.0f;
-            get_settings().target[1] = 0.0f;
-            get_settings().target[2] = 0.0f;
+            UIController::set_target(*_engine._camera)({0.0f,  0.0f,  0.0f});
+//            get_settings().target[0] = 0.0f;
+//            get_settings().target[1] = 0.0f;
+//            get_settings().target[2] = 0.0f;
         }
         updated |= newMode;
 
-        if (get_settings().type == Camera::Type::look_at) {
+        if (_engine._camera->get_type() == Camera::Type::look_at) {
                 updated |= ImGui::InputFloat3("Target view", UIController::get_target(*_engine._camera), UIController::set_target(*_engine._camera), "%.2f");
             ImGui::SameLine();
             HelpMarker("Fixed at {0, 0, 0} for other modes");

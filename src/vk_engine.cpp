@@ -345,7 +345,7 @@ void VulkanEngine::ui_overlay() {
     bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
     if (updated) {
         // Camera
-        _camera->set_type(static_cast<Camera::Type>(_ui->get_settings().type));
+        // _camera->set_type(static_cast<Camera::Type>(_ui->get_settings().type));
         // _camera->set_speed(_ui->get_settings().speed);
         // _camera->set_perspective(_ui->get_settings().angle, _camera->get_aspect(), _ui->get_settings().zNearFar[0],_ui->get_settings().zNearFar[1]);
         // _camera->set_target({_ui->get_settings().target[0], _ui->get_settings().target[1], _ui->get_settings().target[2]});

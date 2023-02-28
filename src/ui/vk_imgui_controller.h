@@ -16,4 +16,6 @@ public:
     static std::function<void (std::array<float, 2>)> set_z(Camera& camera);
     static std::function<std::array<float, 3> ()> get_target(Camera& camera);
     static std::function<void (std::array<float, 3>)> set_target(Camera& camera);
+    static std::function<int ()> get_type(Camera& camera);
+    static std::function<void (int)> set_type(Camera& camera);
 };

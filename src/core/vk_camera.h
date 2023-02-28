@@ -35,12 +35,14 @@ public:
     glm::vec3 get_position_vector();
     glm::mat4 get_rotation_matrix();
     glm::vec3 get_target();
+
     float get_aspect();
     float get_speed();
     float get_angle();
     float get_z_near();
     float get_z_far();
     bool get_flip();
+    Type get_type();
 
     void inverse(bool flip);
     void set_type(Type type);
