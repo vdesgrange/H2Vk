@@ -8,11 +8,14 @@
 #include "glm/gtx/hash.hpp"
 #include <vector>
 #include <iostream>
+#include <atomic>
 
+#include "vk_engine.h"
 #include "core/vk_texture.h"
 #include "core/vk_buffer.h"
 #include "core/utilities/vk_types.h"
 #include "core/vk_mesh_manager.h"
+#include "core/vk_descriptor_builder.h"
 
 class Device;
 class VulkanEngine;
@@ -80,6 +83,8 @@ struct Materials {
     uint32_t aoTextureIndex;
     uint32_t emissiveTextureIndex;
 
+    VkDescriptorSet _descriptorSet; // access texture from the fragment shader
+
     bool pbr = false;
 
     struct Properties {
@@ -101,8 +106,12 @@ struct Textures {
 };
 
 class Model {
+protected:
+    static std::atomic<uint32_t> nextID;
+
 public:
-    std::string name = "Unknown";
+    uint32_t _uid {0};
+    std::string _name = "Unknown";
     std::vector<Image> _images {};
     std::vector<Textures> _textures {};
     std::vector<Materials> _materials {};

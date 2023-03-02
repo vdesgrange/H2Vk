@@ -52,6 +52,11 @@ void ModelGLTF::load_images(VulkanEngine& engine, tinygltf::Model &input) {
         _images[i]._texture._name = gltfImage.name.empty() ? "Unknown" : gltfImage.name;
         _images[i]._texture._uri = gltfImage.uri.empty() ? "Unknown" : gltfImage.uri;
 
+//        DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
+//                .bind_image(_images[i]._texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,0)
+//                .layout(engine._descriptorSetLayouts.textures)
+//                .build( _images[i]._descriptorSet, engine._descriptorSetLayouts.textures, {{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }});
+
         if (deleteBuffer) {
             delete[] buffer;
         }
@@ -252,7 +257,7 @@ void ModelGLTF::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, N
 
 void ModelGLTF::load_scene(tinygltf::Model &input, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer) {
     const tinygltf::Scene& scene = input.scenes[0];
-    this->name = scene.name.empty() ? "Unknown" : scene.name;
+    this->_name = scene.name.empty() ? "Unknown" : scene.name;
 
     for (uint32_t i = 0; i < scene.nodes.size(); i++) {
         const tinygltf::Node node = input.nodes[scene.nodes[i]];

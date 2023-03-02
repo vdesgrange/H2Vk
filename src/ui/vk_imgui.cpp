@@ -15,12 +15,14 @@
 
 UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine), _settings(settings) {
     this->p_open.emplace(SCENE_EDITOR, false);
-    this->p_open.emplace(TEXTURE_VIEWER, false);
     this->p_open.emplace(STATS_VIEWER, false);
     this->p_open.emplace(VIEW_EDITOR, false);
     this->p_open.emplace(LIGHT_EDITOR, false);
     this->p_open.emplace(LOG_CONSOLE, false);
     this->p_open.emplace(SKYBOX_EDITOR, true);
+
+    _layoutCache = new DescriptorLayoutCache(*engine._device);
+    _allocator = new DescriptorAllocator(*engine._device);
 };
 
 UInterface::~UInterface() {
@@ -88,8 +90,6 @@ bool UInterface::render(VkCommandBuffer cmd, Statistics statistics) {
     this->new_frame();
     bool updated = this->interface(statistics);
 
-    ImGui::ShowDemoWindow();
-
     ImGui::Render();     // It might be interesting to use a dedicated commandBuffer (not mainCommandBuffer).
     ImDrawData* draw_data = ImGui::GetDrawData();
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
@@ -103,6 +103,7 @@ bool UInterface::want_capture_mouse()
 }
 
 void UInterface::clean_up() {
+
     vkDestroyDescriptorPool(_engine._device->_logicalDevice, _pool, nullptr);
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -122,12 +123,11 @@ bool UInterface::interface(Statistics statistics) {
     const auto& io = ImGui::GetIO();
     bool updated = false;
 
-    // ImGui::ShowDemoWindow();
+    ImGui::ShowDemoWindow();
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Tools")) {
             updated |= ImGui::MenuItem("View tools", nullptr, &this->p_open[VIEW_EDITOR]);
             updated |= ImGui::MenuItem("Scene editor", nullptr, &this->p_open[SCENE_EDITOR]);
-            updated |= ImGui::MenuItem("Texture viewer", nullptr, &this->p_open[TEXTURE_VIEWER]);
             updated |= ImGui::MenuItem("Statistics viewer", nullptr, &this->p_open[STATS_VIEWER]);
             updated |= ImGui::MenuItem("Enable skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
             ImGui::EndMenu();
@@ -149,7 +149,6 @@ bool UInterface::interface(Statistics statistics) {
         // ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
         // ImGui::SetNextWindowPos(ImVec2(0, viewport->Size.y / 2 + ImGui::GetFrameHeight()));
         // ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2 - ImGui::GetFrameHeight()));
-        updated |= this->texture_viewer();
 
         updated |= this->stats_viewer(statistics);
 
@@ -179,10 +178,11 @@ bool UInterface::scene_editor() {
         return false;
     }
 
-    ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(500, 600), ImGuiCond_FirstUseEver);
 
     const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
     if (ImGui::Begin("Inspector", &this->p_open[SCENE_EDITOR], window_flags)) {
+
         std::vector<const char*> scenes;
         for (const auto& scene : SceneListing::scenes) {
             scenes.push_back(scene.first.c_str());
@@ -196,27 +196,48 @@ bool UInterface::scene_editor() {
         ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 
         if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_None)) {
-            static int selected = -1;
             static int selection_mask = (1 << 2);
+            static int selected_object = -1;
+            static int selected_tex = -1;
             int node_clicked = -1;
 
-            ImGui::PushID("##VerticalScrolling");
+            ImGui::PushID("##scene_content");
             ImGui::BeginGroup();
 
             const ImGuiID child_id = ImGui::GetID((void*)(intptr_t)0);
-            const bool child_is_visible = ImGui::BeginChild(child_id, ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true, 0);
+            float x = ImGui::GetContentRegionAvail().x;
+            float y = (selected_object == -1 && selected_tex == -1) ? ImGui::GetContentRegionAvail().y : ImGui::GetContentRegionAvail().y / 3;
+            const bool child_is_visible = ImGui::BeginChild(child_id, ImVec2(x, y), true, 0);
 
             if (child_is_visible) {
                 for (uint32_t i = 0; i < _engine._scene->_renderables.size(); i++) {
                     const auto &object = _engine._scene->_renderables[i];
 
                     ImGuiTreeNodeFlags node_flags = base_flags;
-                    const bool is_selected = (selection_mask & (1 << i)) != 0;
-                    if (is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
-                    bool node_open = ImGui::TreeNodeEx((void *) (intptr_t) i, node_flags, "%s %s", ICON_FA_CUBE, object.model->name.c_str());
-                    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) node_clicked = i;
+                    bool node_open = ImGui::TreeNodeEx((void *) (intptr_t) i, node_flags, "%s %s", ICON_FA_CUBES, object.model->_name.c_str());
+                    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+                        node_clicked = i;
+                    }
+
                     if (node_open) {
-                        ImGui::BulletText("Blah blah\nBlah Blah");
+                        selected_object = i;
+
+                        for (uint32_t j = 0; j < object.model->_nodes.size(); j++) {
+                            const auto &node =  object.model->_nodes[j];
+                            ImGui::Text("%s %s", ICON_FA_CUBE, node->name.c_str());
+                        }
+
+                        for (uint32_t j = 0; j < object.model->_images.size(); j++) {
+                            const auto &image =  object.model->_images[j];
+                            std::string label = std::string(ICON_FA_IMAGE) + image._texture._uri;
+                            std::string tex_id = "##texture_object_" + std::to_string(i) + std::to_string(j);
+
+                            ImGui::PushID(tex_id.c_str());
+                            if (ImGui::Selectable(label.c_str(), selected_tex == j))
+                                selected_tex = j;
+                            ImGui::PopID();
+                        }
+
                         ImGui::TreePop();
                     }
                 }
@@ -230,14 +251,51 @@ bool UInterface::scene_editor() {
             ImGui::EndChild();
             ImGui::EndGroup();
             ImGui::PopID();
-        }
 
-//        ImGui::Text("Light");
-//        ImGui::Separator();
-//        updated |= ImGui::InputFloat3("Position", get_settings().coordinates, "%.2f");
-//        updated |= ImGui::SliderFloat("Ambient", &get_settings().ambient, 0.0f, 0.005f, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-//        updated |= ImGui::SliderFloat("Specular", &get_settings().specular, 0.0f, 1.0f);
-//        updated |= ImGui::InputFloat3("Color (RGB)", get_settings().colors, "%.2f");
+            ImGui::Separator();
+
+            ImGui::BeginGroup();
+            if (selected_object != -1 && selected_object < _engine._scene->_renderables.size()) {
+                if (ImGui::BeginTabBar("##scene_information", ImGuiTabBarFlags_None)) {
+                    const auto &model = _engine._scene->_renderables[selected_object].model;
+
+                    if (ImGui::BeginTabItem("Properties")) {
+                        ImGui::Text("Name"); ImGui::SameLine(100); ImGui::Text("%s", model->_name.c_str());
+                        ImGui::Text("Unique ID"); ImGui::SameLine(100); ImGui::Text("%i", model->_uid);
+                        ImGui::Text("Vertices"); ImGui::SameLine(100); ImGui::Text("%lu", model->_verticesBuffer.size());
+                        ImGui::Text("Indexes"); ImGui::SameLine(100); ImGui::Text("%lu", model->_indexesBuffer.size());
+                        ImGui::EndTabItem();
+                    }
+
+                    if (selected_tex != -1 && selected_tex < model->_images.size()) {
+                        auto &image = model->_images[selected_tex]; // .at slower, better checking
+
+                        if (get_settings().texture_index != selected_tex) {
+                            get_settings().texture_index = selected_tex;
+                            DescriptorBuilder::begin(*_layoutCache, *_allocator)
+                                    .bind_image(image._texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                                                VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                                    .layout(_engine._descriptorSetLayouts.gui)
+                                    .build(get_settings()._textureDescriptorSet, _engine._descriptorSetLayouts.gui,
+                                           {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}});
+                        }
+
+                        if (ImGui::BeginTabItem("Texture")) {
+                            ImGui::Text("URI"); ImGui::SameLine(100); ImGui::Text("%s", image._texture._uri.c_str());
+
+                            float tex_width = fmin(ImGui::GetContentRegionAvail().x, image._texture._width);
+                            float tex_height = fmin(ImGui::GetContentRegionAvail().y, image._texture._height);
+                            ImGui::Image(get_settings()._textureDescriptorSet, ImVec2(tex_width, tex_height));
+                            ImGui::EndTabItem();
+                        }
+                    }
+
+                    ImGui::EndTabBar();
+                }
+            }
+
+            ImGui::EndGroup();
+        }
     }
 
     ImGui::End();
@@ -299,22 +357,6 @@ bool UInterface::view_editor() {
 //        }
 //        ImGui::NewLine();
 
-    }
-    ImGui::End();
-
-    return updated;
-}
-
-bool UInterface::texture_viewer() {
-    bool updated = false;
-
-    if (!this->p_open[TEXTURE_VIEWER]) {
-        return false;
-    }
-
-    const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
-    if (ImGui::Begin("Texture viewer", &this->p_open[TEXTURE_VIEWER], window_flags)) {
-        ImGui::Text("TO DO");
     }
     ImGui::End();
 
@@ -391,6 +433,13 @@ bool UInterface::light_editor() {
 
     }
     ImGui::End();
+
+//        ImGui::Text("Light");
+//        ImGui::Separator();
+//        updated |= ImGui::InputFloat3("Position", get_settings().coordinates, "%.2f");
+//        updated |= ImGui::SliderFloat("Ambient", &get_settings().ambient, 0.0f, 0.005f, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+//        updated |= ImGui::SliderFloat("Specular", &get_settings().specular, 0.0f, 1.0f);
+//        updated |= ImGui::InputFloat3("Color (RGB)", get_settings().colors, "%.2f");
 
     return updated;
 }
