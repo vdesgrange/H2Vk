@@ -3,7 +3,7 @@
 #include "vk_imgui_controller.h"
 #include "vk_engine.h"
 #include "core/vk_window.h"
-#include "core/vk_camera.h"
+#include "core/camera/vk_camera.h"
 #include "core/utilities/vk_helpers.h"
 #include "scenes/vk_scene_listing.h"
 #include "core/vk_command_buffer.h"
@@ -27,6 +27,19 @@ UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine
 
 UInterface::~UInterface() {
     this->clean_up();
+}
+
+static void HelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
 }
 
 void UInterface::init_imgui() {
@@ -103,7 +116,6 @@ bool UInterface::want_capture_mouse()
 }
 
 void UInterface::clean_up() {
-
     vkDestroyDescriptorPool(_engine._device->_logicalDevice, _pool, nullptr);
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -128,7 +140,7 @@ bool UInterface::interface(Statistics statistics) {
         if (ImGui::BeginMenu("Tools")) {
             updated |= ImGui::MenuItem("View tools", nullptr, &this->p_open[VIEW_EDITOR]);
             updated |= ImGui::MenuItem("Scene editor", nullptr, &this->p_open[SCENE_EDITOR]);
-            updated |= ImGui::MenuItem("Statistics viewer", nullptr, &this->p_open[STATS_VIEWER]);
+            updated |= ImGui::MenuItem("Performances", nullptr, &this->p_open[STATS_VIEWER]);
             updated |= ImGui::MenuItem("Enable skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
             ImGui::EndMenu();
         }
@@ -136,19 +148,16 @@ bool UInterface::interface(Statistics statistics) {
     }
 
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-        const ImGuiViewport* viewport = ImGui::GetMainViewport();
-        // ImGuiID dockspace_id = ImGui::DockSpaceOverViewport(viewport, ImGuiDockNodeFlags_NoDockingInCentralNode);
+//        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+//        ImGuiID dockspace_id = ImGui::DockSpaceOverViewport(viewport, ImGuiDockNodeFlags_NoDockingInCentralNode);
 
-        //ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
-        // ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight()));
+//        ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
+//        ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetFrameHeight()));
         // ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2));
         updated |= this->view_editor();
 
+//        ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
         updated |= this->scene_editor();
-
-        // ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
-        // ImGui::SetNextWindowPos(ImVec2(0, viewport->Size.y / 2 + ImGui::GetFrameHeight()));
-        // ImGui::SetNextWindowSize(ImVec2(viewport->Size.x / 3, viewport->Size.y / 2 - ImGui::GetFrameHeight()));
 
         updated |= this->stats_viewer(statistics);
 
@@ -156,19 +165,6 @@ bool UInterface::interface(Statistics statistics) {
     }
 
     return updated;
-}
-
-static void HelpMarker(const char* desc)
-{
-    ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-    {
-        ImGui::BeginTooltip();
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(desc);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
 }
 
 bool UInterface::scene_editor() {
@@ -184,6 +180,7 @@ bool UInterface::scene_editor() {
     if (ImGui::Begin("Inspector", &this->p_open[SCENE_EDITOR], window_flags)) {
 
         std::vector<const char*> scenes;
+        scenes.reserve(SceneListing::scenes.size());
         for (const auto& scene : SceneListing::scenes) {
             scenes.push_back(scene.first.c_str());
         }
@@ -195,11 +192,9 @@ bool UInterface::scene_editor() {
 
         ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-        if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_None)) {
-            static int selection_mask = (1 << 2);
+        if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen)) {
             static int selected_object = -1;
             static int selected_tex = -1;
-            int node_clicked = -1;
 
             ImGui::PushID("##scene_content");
             ImGui::BeginGroup();
@@ -214,20 +209,19 @@ bool UInterface::scene_editor() {
                     const auto &object = _engine._scene->_renderables[i];
 
                     ImGuiTreeNodeFlags node_flags = base_flags;
+                    node_flags = (selected_object == i) ? node_flags | ImGuiTreeNodeFlags_Selected : node_flags;
+
                     bool node_open = ImGui::TreeNodeEx((void *) (intptr_t) i, node_flags, "%s %s", ICON_FA_CUBES, object.model->_name.c_str());
-                    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-                        node_clicked = i;
+                    if (ImGui::IsItemClicked()) { //  && !ImGui::IsItemToggledOpen()
+                        selected_object = i;
                     }
 
                     if (node_open) {
-                        selected_object = i;
-
-                        for (uint32_t j = 0; j < object.model->_nodes.size(); j++) {
-                            const auto &node =  object.model->_nodes[j];
+                        for (const auto& node: object.model->_nodes) {
                             ImGui::Text("%s %s", ICON_FA_CUBE, node->name.c_str());
                         }
 
-                        for (uint32_t j = 0; j < object.model->_images.size(); j++) {
+                        for (int j = 0; j < object.model->_images.size(); j++) {
                             const auto &image =  object.model->_images[j];
                             std::string label = std::string(ICON_FA_IMAGE) + image._texture._uri;
                             std::string tex_id = "##texture_object_" + std::to_string(i) + std::to_string(j);
@@ -241,12 +235,6 @@ bool UInterface::scene_editor() {
                         ImGui::TreePop();
                     }
                 }
-                if (node_clicked != -1) {
-                    if (ImGui::GetIO().KeyCtrl)
-                        selection_mask ^= (1 << node_clicked);
-                    else
-                        selection_mask = (1 << node_clicked);
-                }
             }
             ImGui::EndChild();
             ImGui::EndGroup();
@@ -256,14 +244,19 @@ bool UInterface::scene_editor() {
 
             ImGui::BeginGroup();
             if (selected_object != -1 && selected_object < _engine._scene->_renderables.size()) {
+
                 if (ImGui::BeginTabBar("##scene_information", ImGuiTabBarFlags_None)) {
                     const auto &model = _engine._scene->_renderables[selected_object].model;
 
                     if (ImGui::BeginTabItem("Properties")) {
                         ImGui::Text("Name"); ImGui::SameLine(100); ImGui::Text("%s", model->_name.c_str());
                         ImGui::Text("Unique ID"); ImGui::SameLine(100); ImGui::Text("%i", model->_uid);
+
                         ImGui::Text("Vertices"); ImGui::SameLine(100); ImGui::Text("%lu", model->_verticesBuffer.size());
                         ImGui::Text("Indexes"); ImGui::SameLine(100); ImGui::Text("%lu", model->_indexesBuffer.size());
+
+                        ImGui::Text("Transform"); ImGui::SameLine(100); ImGui::Text("%i", model->_uid);
+
                         ImGui::EndTabItem();
                     }
 
@@ -312,7 +305,7 @@ bool UInterface::view_editor() {
 
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
 
-    const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse ;
+    const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse;
     if (ImGui::Begin("View Tools", &this->p_open[VIEW_EDITOR], window_flags)) {
         std::vector<const char*> types(Camera::AllType.size());
         for (const auto& type : Camera::AllType) {

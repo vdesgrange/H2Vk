@@ -44,7 +44,7 @@ struct Settings final {
 class UInterface final {
 public:
     std::unordered_map<UIConstants, bool> p_open;
-    VkDescriptorPool _pool;
+    VkDescriptorPool _pool {};
 
     UInterface(VulkanEngine& engine, Settings settings);
     ~UInterface();

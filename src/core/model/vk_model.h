@@ -56,12 +56,12 @@ struct Primitive {
 };
 
 struct Mesh {
-    std::string name = "Unknown";
+    std::string name = "Mesh";
     std::vector<Primitive> primitives;
 };
 
 struct Node {
-    std::string name = "Unknown";
+    std::string name = "Node";
     Node* parent;  // Node*
     std::vector<Node*> children;  // Node*
     Mesh mesh;
@@ -111,7 +111,7 @@ protected:
 
 public:
     uint32_t _uid {0};
-    std::string _name = "Unknown";
+    std::string _name = "Unnamed";
     std::vector<Image> _images {};
     std::vector<Textures> _textures {};
     std::vector<Materials> _materials {};

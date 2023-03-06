@@ -1,12 +1,21 @@
 #version 460
 // #extension GL_ARB_shading_language_include : require
-layout(std140, set = 0, binding = 1) uniform SceneData {
-    vec4 fogColor; // w is for exponent
-    vec4 fogDistances; //x for min, y for max, zw unused.
-    vec4 sunlightDirection; //w for sun power
-    vec4 sunlightColor;
-    float specularFactor;
-} sceneData;
+
+//layout(std140, set = 0, binding = 1) uniform SceneData {
+//    vec4 fogColor; // w is for exponent
+//    vec4 fogDistances; //x for min, y for max, zw unused.
+//    vec4 sunlightDirection; //w for sun power
+//    vec4 sunlightColor;
+//    float specularFactor;
+//} sceneData;
+
+const int MAX_LIGHT = 10;
+
+layout(std140, set = 0, binding = 1) uniform LightingData {
+    int num_lights;
+    vec4 direction[MAX_LIGHT];
+    vec4 color[MAX_LIGHT];
+} lightingData;
 
 layout(set = 0, binding = 2) uniform sampler2D irradianceMap; // aka. environment map
 
@@ -83,22 +92,23 @@ vec2 sample_spherical_map(vec3 v) {
 
 void main()
 {
-    int sources = 1;
-    vec3 lightPos = sceneData.sunlightDirection.xyz;
-    float lightFactor = sceneData.sunlightDirection.w;
+
+    // vec3 lightPos = sceneData.sunlightDirection.xyz;
+    // float lightFactor = sceneData.sunlightDirection.w;
 
     vec3 V = normalize(inCameraPos - inFragPos);
     vec3 N = normalize(inNormal);
-    vec3 C = sceneData.sunlightColor.rgb;
     vec2 uv = sample_spherical_map(N);
     vec3 A = texture(irradianceMap, uv).rgb; // vec3(0.03)
 
     vec3 Lo = vec3(0.0);
-    for (int i = 0; i < sources; i++) {
-        vec3 L = normalize(lightPos - inFragPos);
+    for (int i = 0; i < lightingData.num_lights; i++) {
+        vec3 L = normalize(lightingData.direction[i].xyz - inFragPos);
+        vec3 C = lightingData.color[i].rgb;
+
         Lo += BRDF(L, V, N, C);
 
-        vec3 ambient = A * material.albedo.xyz * material.ao * vec3(dot(N, L) / sources); // lightFactor
+        vec3 ambient = A * material.albedo.xyz * material.ao * vec3(dot(N, L) / lightingData.num_lights); // lightFactor
         Lo += ambient;
     };
 

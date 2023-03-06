@@ -2,7 +2,7 @@
 
 #include <functional>
 #include <array>
-#include "core/vk_camera.h"
+#include "core/camera/vk_camera.h"
 
 class Camera;
 

@@ -1,5 +1,5 @@
 #include "vk_imgui_controller.h"
-#include "core/vk_camera.h"
+#include "core/camera/vk_camera.h"
 
 std::function<int ()> UIController::get_type(Camera& camera) {
     return [&]() { return static_cast<int>(camera.get_type()); };

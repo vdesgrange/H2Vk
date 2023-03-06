@@ -4,7 +4,7 @@
 #include "core/vk_command_buffer.h"
 #include "core/vk_command_pool.h"
 #include "vk_engine.h"
-#include "core/vk_camera.h"
+#include "core/camera/vk_camera.h"
 
 std::atomic<uint32_t> Model::nextID {0};
 

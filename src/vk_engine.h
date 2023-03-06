@@ -17,8 +17,9 @@
 #include "ui/vk_imgui.h"
 #include "core/model/vk_model.h"
 #include "core/skybox/vk_skybox.h"
+#include "core/lighting/vk_light.h"
 #include "core/vk_buffer.h"
-#include "core/vk_camera.h"
+#include "core/camera/vk_camera.h"
 #include "core/vk_command_buffer.h"
 #include "core/vk_command_pool.h"
 #include "core/vk_descriptor_allocator.h"
@@ -81,6 +82,7 @@ struct FrameData {
     VkDescriptorSet skyboxDescriptor;
 
     AllocatedBuffer cameraBuffer;
+    AllocatedBuffer lightingBuffer;
     VkDescriptorSet environmentDescriptor;
 
     AllocatedBuffer objectBuffer;
@@ -107,9 +109,11 @@ public:
     std::unique_ptr<class Scene> _scene;
     std::unique_ptr<class UInterface> _ui;
     std::unique_ptr<class Skybox> _skybox;
+    std::unique_ptr<class Camera> _camera;
 
     FrameData _frames[FRAME_OVERLAP];
     std::vector<RenderObject> _renderables;
+    std::vector<Light> _lights;
 
     DescriptorLayoutCache* _layoutCache;
     DescriptorAllocator* _allocator;
@@ -125,10 +129,9 @@ public:
     DeletionQueue _mainDeletionQueue;
 
     UploadContext _uploadContext;
-    std::unique_ptr<Camera> _camera;
 
-    GPUSceneData _sceneParameters;
-    AllocatedBuffer _sceneParameterBuffer;
+//    GPUSceneData _sceneParameters;
+//    AllocatedBuffer _sceneParameterBuffer;
 
 	void init();
 	void cleanup();

@@ -1,5 +1,5 @@
 #include "vk_scene_listing.h"
-#include "core/vk_camera.h"
+#include "core/camera/vk_camera.h"
 #include "vk_engine.h"
 #include "core/model/vk_model.h"
 #include "core/model/vk_obj.h"
@@ -25,6 +25,8 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     camera.set_position({ 0.f, 0.0f, 5.f });
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.set_type(Camera::Type::look_at);
+
+    engine->_lights.emplace_back(Light());
 
     for (int x = 0; x <= 6; x++) {
         for (int y = 0; y <= 6; y++) {
