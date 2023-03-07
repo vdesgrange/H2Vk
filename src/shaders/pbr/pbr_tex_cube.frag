@@ -2,13 +2,13 @@
 
 const float PI = 3.14159265359;
 
-layout(std140, set = 0, binding = 1) uniform SceneData {
-    vec4 fogColor; // w is for exponent
-    vec4 fogDistances; //x for min, y for max, zw unused.
-    vec4 sunlightDirection; //w for sun power
-    vec4 sunlightColor;
-    float specularFactor;
-} sceneData;
+const int MAX_LIGHT = 8;
+layout(std140, set = 0, binding = 1) uniform LightingData {
+    layout(offset = 0) uint num_lights;
+    layout(offset = 16) vec4 position[MAX_LIGHT];
+    vec4 color[MAX_LIGHT];
+} lightingData;
+
 
 layout(set = 0, binding = 2) uniform samplerCube irradianceMap; // aka. environment map
 layout(set = 0, binding = 3) uniform samplerCube prefilteredMap; // aka. prefiltered map
@@ -132,20 +132,17 @@ void main()
     float ao = texture(samplerAOMap, inUV).r;
     vec3 emissive = texture(samplerEmissiveMap, inUV).rgb;
 
-    int sources = 1;
-    vec3 lightPos = sceneData.sunlightDirection.xyz;
-    float lightFactor = sceneData.sunlightDirection.w;
-
     vec3 V = normalize(inCameraPos - inFragPos);
     vec3 N = calculateNormal(); // normalize(inNormal);
-    vec3 C = sceneData.sunlightColor.rgb;
     vec3 R = reflect(-V, N);
 
     vec2 uv = sample_spherical_map(N);
 
     vec3 Lo = vec3(0.0);
-    for (int i = 0; i < sources; i++) {
-        vec3 L = normalize(lightPos - inFragPos);
+    for (int i = 0; i < lightingData.num_lights; i++) {
+        vec3 L = normalize(lightingData.position[i].xyz - inFragPos);
+        vec3 C = lightingData.color[i].rgb;
+
         Lo += BRDF(L, V, N, C, albedo, roughness, metallic);
     };
 

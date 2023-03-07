@@ -2,6 +2,7 @@
 
 #include "vk_mem_alloc.h"
 #include "glm/glm.hpp"
+#include "core/vk_shaders.h"
 
 #include <deque>
 #include <functional>
@@ -17,6 +18,15 @@ struct GPUSceneData {
 struct GPUObjectData {
     glm::mat4 model;
 };
+
+class Model;
+struct RenderObject {
+    std::shared_ptr<Model> model;
+    std::shared_ptr<Material> material;
+    glm::mat4 transformMatrix;
+};
+
+typedef std::vector<RenderObject> Renderables;
 
 struct DeletionQueue
 {

@@ -7,8 +7,8 @@
 
 class Window final {
 public:
-    static const uint32_t CWIDTH = 800;
-    static const uint32_t CHEIGHT = 600;
+    static const uint32_t CWIDTH = 1200;
+    static const uint32_t CHEIGHT = 800;
 
     GLFWwindow* _window;
     VkExtent2D _windowExtent{ CWIDTH , CHEIGHT };

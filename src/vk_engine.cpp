@@ -150,16 +150,9 @@ void VulkanEngine::init_descriptors() {
     _layoutCache = new DescriptorLayoutCache(*_device);
     _allocator = new DescriptorAllocator(*_device);
 
-    // === Environment 1 ===
-    const size_t sceneParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData));
-    _sceneParameterBuffer = Buffer::create_buffer(*_device, sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-    VkDescriptorBufferInfo sceneBInfo{};
-    sceneBInfo.buffer = _sceneParameterBuffer._buffer;
-    sceneBInfo.range = sizeof(GPUSceneData);
-
     for (int i = 0; i < FRAME_OVERLAP; i++) {
 
-        // === Environment 2 ===
+        // === Camera ===
         _frames[i].skyboxDescriptor = VkDescriptorSet();
         _frames[i].environmentDescriptor = VkDescriptorSet();
         _frames[i].cameraBuffer = Buffer::create_buffer(*_device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
@@ -169,9 +162,16 @@ void VulkanEngine::init_descriptors() {
         camBInfo.offset = 0;
         camBInfo.range = sizeof(GPUCameraData);
 
+        // === Light ===
+        const size_t lightBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData));
+        _frames[i].lightingBuffer = Buffer::create_buffer(*_device, lightBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        VkDescriptorBufferInfo lightingBInfo{};
+        lightingBInfo.buffer = _frames[i].lightingBuffer._buffer;
+        lightingBInfo.range = sizeof(GPULightData);
+
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
                 .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-                .bind_buffer(sceneBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
                 .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
                 .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
                 .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
@@ -188,7 +188,7 @@ void VulkanEngine::init_descriptors() {
         // === Object ===
         const uint32_t MAX_OBJECTS = 10000;
         _frames[i].objectDescriptor = VkDescriptorSet();
-        _frames[i].objectBuffer = Buffer::create_buffer(*_device, sizeof(GPUCameraData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        _frames[i].objectBuffer = Buffer::create_buffer(*_device, sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
         VkDescriptorBufferInfo objectsBInfo{};
         objectsBInfo.buffer = _frames[i].objectBuffer._buffer;
@@ -212,10 +212,11 @@ void VulkanEngine::init_descriptors() {
 
     // === Clean up ===
     _mainDeletionQueue.push_function([&]() {
-        vmaDestroyBuffer(_device->_allocator, _sceneParameterBuffer._buffer, _sceneParameterBuffer._allocation);
+        // vmaDestroyBuffer(_device->_allocator, _sceneParameterBuffer._buffer, _sceneParameterBuffer._allocation);
 
         for (int i = 0; i < FRAME_OVERLAP; i++) {
             vmaDestroyBuffer(_device->_allocator, _frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
+            vmaDestroyBuffer(_device->_allocator, _frames[i].lightingBuffer._buffer, _frames[i].lightingBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, _frames[i].objectBuffer._buffer, _frames[i].objectBuffer._allocation);
         }
 
@@ -242,19 +243,13 @@ void VulkanEngine::setup_descriptors(){
                 VkDescriptorImageInfo emissiveMap = renderable.model->_images[material.emissiveTextureIndex]._texture._descriptor;
 
                 DescriptorBuilder::begin(*_layoutCache, *_allocator)
-                        .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
-                                    0)
-                        .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
-                                    1)
-                        .bind_image(metallicRoughnessMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
-                                    2)
-                        .bind_image(aoMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
-                                    3)
-                        .bind_image(emissiveMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
-                                    4)
+                        .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,0)
+                        .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,1)
+                        .bind_image(metallicRoughnessMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,2)
+                        .bind_image(aoMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,3)
+                        .bind_image(emissiveMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,4)
                         .layout(_descriptorSetLayouts.textures)
-                        .build(renderable.model->_images[material.baseColorTextureIndex]._descriptorSet,
-                               _descriptorSetLayouts.textures, poolSizes);
+                        .build(material._descriptorSet,_descriptorSetLayouts.textures, poolSizes); // _images[material.baseColorTextureIndex]._descriptorSet
             }
         }
     }
@@ -265,8 +260,7 @@ void VulkanEngine::init_pipelines() {
 
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
     _pipelineBuilder->scene_light(setLayouts);
-    _pipelineBuilder->scene_monkey_triangle(setLayouts);
-    _pipelineBuilder->scene_karibu_hippo(setLayouts);
+    _pipelineBuilder->scene_spheres(setLayouts);
     _pipelineBuilder->scene_damaged_helmet(setLayouts);
 
     // === Skybox === (Build by default to handle if skybox enabled later)
@@ -318,7 +312,7 @@ void VulkanEngine::recreate_swap_chain() {
 
     if (_window->_windowExtent.width > 0.0f && _window->_windowExtent.height > 0.0f) {
         // _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
-        _camera->aspect = (float)_window->_windowExtent.width / (float)_window->_windowExtent.height;
+        _camera->set_aspect((float)_window->_windowExtent.width / (float)_window->_windowExtent.height);
         update_uniform_buffers();
     }
 
@@ -344,22 +338,12 @@ void VulkanEngine::ui_overlay() {
 
     bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
     if (updated) {
-        // Camera
-        _camera->speed = _ui->get_settings().speed;
-        // _camera->set_speed(_ui->get_settings().speed);
-        _camera->set_perspective(_ui->get_settings().fov, _camera->aspect, _ui->get_settings().z_near,_ui->get_settings().z_far); // _ui->get_settings().aspect
-
-        // Scene
-        _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
-        _sceneParameters.sunlightDirection = {_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2], _ui->get_settings().ambient};
-        _sceneParameters.specularFactor = _ui->get_settings().specular;
-
         // Skybox
         _skyboxDisplay = _ui->p_open[SKYBOX_EDITOR];
     }
 
     // Move camera when key press
-    _reset = _camera->update_camera(1. / stats.FrameRate);
+    _camera->update_camera(1.0f / stats.FrameRate);
 }
 
 void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
@@ -387,12 +371,21 @@ void VulkanEngine::update_uniform_buffers() {
     memcpy(data, &camData, sizeof(GPUCameraData));
     vmaUnmapMemory(_device->_allocator, frame.cameraBuffer._allocation);
 
-    // Environment : write scene data into environment buffer
-    char *sceneData;
-    vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation, (void **) &sceneData);
-    sceneData += Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData)) * frameIndex;
-    memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
-    vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
+    // Light : write scene data into lighting buffer
+    GPULightData lightingData{};
+    lightingData.num_lights = static_cast<uint32_t>(_lights.size());
+    int lightCount = 0;
+    for (auto& light : _lights) {
+        lightingData.position[lightCount] = light.get_position();
+        lightingData.color[lightCount] = light.get_color();
+        lightCount++;
+    }
+
+    char *data2;
+    vmaMapMemory(_device->_allocator, frame.lightingBuffer._allocation,   (void **) &data2);
+    data2 += Helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData)) * frameIndex;
+    memcpy(data2, &lightingData, sizeof(GPULightData));
+    vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
 }
 
 void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
@@ -420,18 +413,17 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
 
     // === Update required uniform buffers
     update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
-    // update_buffer_objects(first, count);
 
     // === Bind ===
     skybox(commandBuffer);
 
-    for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
+    for (int i=  0; i < count; i++) { // For each scene/object in the vector of scenes.
         RenderObject& object = first[i]; // Take the scene/object
 
         if (object.material != lastMaterial) { // Same material = (shaders/pipeline/descriptors) for multiple objects part of the same scene (e.g. monkey + triangles)
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
             lastMaterial = object.material;
-            uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPUSceneData)) * frameIndex;
+            uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex; // GPUSceneData
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
         }

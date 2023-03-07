@@ -10,7 +10,7 @@ Device::Device(Window& window) {
     vkb::InstanceBuilder builder;
 
     //make the Vulkan instance, with basic debug features
-    auto inst_ret = builder.set_app_name("Vulkan Application")
+    auto inst_ret = builder.set_app_name("H2Vk")
             .request_validation_layers(true)
             .require_api_version(1, 1, 0)
             .use_default_debug_messenger()

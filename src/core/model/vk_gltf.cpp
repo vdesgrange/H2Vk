@@ -48,10 +48,14 @@ void ModelGLTF::load_images(VulkanEngine& engine, tinygltf::Model &input) {
             bufferSize = gltfImage.image.size();
         }
 
-        // _images[i]._textures.fromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height, vulkanDevice, copyQueue);
-
         _images[i]._texture.load_image_from_buffer(engine, buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height);
-        // vkutil::load_image_from_buffer(engine, buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM,   gltfImage.width,  gltfImage.height, _images[i]);
+        _images[i]._texture._name = gltfImage.name.empty() ? "Unknown" : gltfImage.name;
+        _images[i]._texture._uri = gltfImage.uri.empty() ? "Unknown" : gltfImage.uri;
+
+//        DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
+//                .bind_image(_images[i]._texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,0)
+//                .layout(engine._descriptorSetLayouts.textures)
+//                .build( _images[i]._descriptorSet, engine._descriptorSetLayouts.textures, {{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }});
 
         if (deleteBuffer) {
             delete[] buffer;
@@ -102,6 +106,10 @@ void ModelGLTF::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, N
     node->matrix = glm::mat4(1.f);
     node->parent = nullptr;
 
+    if (!iNode.name.empty()) {
+        node->name = iNode.name;
+    }
+
     if (iNode.translation.size() == 3) {
         node->matrix = glm::translate(node->matrix, glm::vec3(glm::make_vec3(iNode.translation.data())));
     }
@@ -125,6 +133,10 @@ void ModelGLTF::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, N
 
     if (iNode.mesh > -1) {
         const tinygltf::Mesh mesh = input.meshes[iNode.mesh];
+
+        if (!mesh.name.empty()) {
+            node->mesh.name = mesh.name;
+        }
 
         for (uint32_t i = 0; i < mesh.primitives.size(); i++) {
             const tinygltf::Primitive& gltfPrimitive = mesh.primitives[i];
@@ -245,6 +257,8 @@ void ModelGLTF::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, N
 
 void ModelGLTF::load_scene(tinygltf::Model &input, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer) {
     const tinygltf::Scene& scene = input.scenes[0];
+    this->_name = scene.name.empty() ? "Unknown" : scene.name;
+
     for (uint32_t i = 0; i < scene.nodes.size(); i++) {
         const tinygltf::Node node = input.nodes[scene.nodes[i]];
         this->load_node(node, input, nullptr, indexBuffer, vertexBuffer);

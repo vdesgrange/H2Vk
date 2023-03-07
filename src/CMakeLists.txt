@@ -32,7 +32,7 @@ add_custom_target(shaders DEPENDS ${SPIRV_BINARY_FILES})
 add_dependencies(h2vk shaders) # keep
 
 target_include_directories(h2vk PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}") # keep
-target_link_libraries(h2vk vk-bootstrap VulkanMemoryAllocator glm tinyobjloader tinygltf imgui stb_image glfw) # ${LIBGLFW3} ${LIBVULKAN13} ${LIBVULKAN1} # keep
+target_link_libraries(h2vk vk-bootstrap VulkanMemoryAllocator glm tinyobjloader tinygltf imgui stb_image fonts glfw) # ${LIBGLFW3} ${LIBVULKAN13} ${LIBVULKAN1} # keep
 target_link_libraries(h2vk Tracy::TracyClient) # keep
 
 #find_library(LIBVULKAN13 libvulkan.1.3.204.dylib ~/VulkanSDK/1.3.204.1/macOS/lib/)

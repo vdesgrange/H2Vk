@@ -31,8 +31,7 @@ public:
 
     std::shared_ptr<ShaderPass> get_material(const std::string &name);
     void scene_light(std::vector<VkDescriptorSetLayout> setLayouts);
-    void scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts);
-    void scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setLayouts);
+    void scene_spheres(std::vector<VkDescriptorSetLayout> setLayouts);
     void scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts);
 
     std::shared_ptr<ShaderEffect> build_effect(std::vector<VkDescriptorSetLayout> setLayouts,  std::vector<VkPushConstantRange> pushConstants, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> shaderModules);

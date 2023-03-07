@@ -4,10 +4,11 @@
 #include "core/vk_command_buffer.h"
 #include "core/vk_command_pool.h"
 #include "vk_engine.h"
-#include "core/vk_camera.h"
+#include "core/camera/vk_camera.h"
 
+std::atomic<uint32_t> Model::nextID {0};
 
-Model::Model(Device* device) : _device(device) {}
+Model::Model(Device* device) : _uid(++nextID), _device(device) {}
 
 Model::~Model() {
     this->destroy(); // break for some reason
@@ -90,8 +91,8 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
                     if (material.pbr) {
                         vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Materials::Properties), &material.properties);
                     } else {
-                        // descriptor set of baseColorTextureIndex contains all textures?
-                        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &_images[material.baseColorTextureIndex]._descriptorSet, 0, nullptr);
+                        // _images[material.baseColorTextureIndex]._descriptorSet
+                        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &material._descriptorSet, 0, nullptr);
                     }
                 }
                 vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance);

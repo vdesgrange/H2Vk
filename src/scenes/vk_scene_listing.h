@@ -3,7 +3,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "core/model/vk_model.h"
-#include "core/vk_shaders.h"
+#include "core/utilities/vk_types.h"
 
 #include <vector>
 #include <utility>
@@ -15,14 +15,6 @@ class Camera;
 class Model;
 class MeshManager;
 class Device;
-
-struct RenderObject {
-    std::shared_ptr<Model> model;
-    std::shared_ptr<Material> material;
-    glm::mat4 transformMatrix;
-};
-
-typedef std::vector<RenderObject> Renderables;
 
 class SceneListing final {
 public:

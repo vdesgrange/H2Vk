@@ -10,6 +10,7 @@ IF(APPLE)
 ENDIF()
 
 set(CMAKE_CXX_STANDARD 17) # keep
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin") # keep
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -O0 ") # keep
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -O0") # keep # -fsanitize=address -fsanitize=thread -fsanitize=undefined

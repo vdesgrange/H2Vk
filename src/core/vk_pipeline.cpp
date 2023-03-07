@@ -195,12 +195,7 @@ void PipelineBuilder::scene_light(std::vector<VkDescriptorSetLayout> setLayouts)
     }
 }
 
-void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene.frag.spv"},
-    };
-
+void PipelineBuilder::scene_spheres(std::vector<VkDescriptorSetLayout> setLayouts) {
     VkPushConstantRange push_model;
     push_model.offset = 0;
     push_model.size = sizeof(glm::mat4);
@@ -211,9 +206,14 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
     push_properties.size = sizeof(Materials::Properties);
     push_properties.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
+            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh/mesh_tex.vert.spv"},
+            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene.frag.spv"},
+    };
+
     std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {push_model, push_properties}, modules);
     std::shared_ptr<ShaderPass> pass_mesh = this->build_pass(effect_mesh);
-    create_material("monkeyMaterial", pass_mesh);
+    create_material("basicMaterial", pass_mesh);
 
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr_ibp.vert.spv"},
@@ -229,26 +229,6 @@ void PipelineBuilder::scene_monkey_triangle(std::vector<VkDescriptorSetLayout> s
     }
 
     for (auto& shader : effect_pbr->shaderStages) {
-        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
-    }
-}
-
-void PipelineBuilder::scene_karibu_hippo(std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene_tex.frag.spv"},
-    };
-
-    VkPushConstantRange push_constant;
-    push_constant.offset = 0;
-    push_constant.size = sizeof(glm::mat4);
-    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {push_constant}, modules);
-    std::shared_ptr<ShaderPass> pass = this->build_pass(effect_mesh);
-    create_material("karibuMaterial", pass);
-
-    for (auto& shader : effect_mesh->shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
     }
 }

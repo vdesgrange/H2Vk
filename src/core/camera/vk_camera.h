@@ -2,22 +2,29 @@
 
 #include <GLFW/glfw3.h>
 #include <cmath>
+#include <unordered_map>
 #include "glm/gtc/matrix_transform.hpp"
 
 struct GPUCameraData{
-    alignas(sizeof(glm::mat4)) glm::mat4 view;
-    alignas(sizeof(glm::mat4)) glm::mat4 proj;
-    alignas(sizeof(glm::vec4)) glm::vec3 pos;
-    alignas(sizeof(bool)) bool flip;
+    alignas(glm::mat4) glm::mat4 view;
+    alignas(glm::mat4) glm::mat4 proj;
+    alignas(glm::vec4) glm::vec3 pos;
+    alignas(bool) bool flip;
 };
 
 class Camera final {
 public:
-    enum Type { pov, axis, look_at };
-    Type type = Type::pov;
-    float aspect {1.0f};
-    float speed {1.0f};
-    glm::vec3 target {glm::vec3(0.0f)};
+    enum Type {
+        pov = 0,
+        axis = 1,
+        look_at = 2
+    };
+    static inline std::unordered_map<Type, const char*> AllType = {
+        {pov, "Point of view"},
+        {axis, "Axis"},
+        {look_at, "Look at"}
+    };
+
 
     bool on_key(int key, int action);
     bool on_mouse_button(int button, int action, int mods);
@@ -27,9 +34,22 @@ public:
     glm::mat4 get_view_matrix();
     glm::vec3 get_position_vector();
     glm::mat4 get_rotation_matrix();
+    glm::vec3 get_target();
+
+    float get_aspect();
+    float get_speed();
+    float get_angle();
+    float get_z_near();
+    float get_z_far();
     bool get_flip();
+    Type get_type();
 
     void inverse(bool flip);
+    void set_type(Type type);
+    void set_target(glm::vec3 target);
+    void set_speed(float speed);
+    void set_angle(float angle);
+    void set_aspect(float aspect);
     void set_position(glm::vec3 position);
     void set_perspective(float fov, float aspect, float zNear, float zFar);
 
@@ -41,10 +61,14 @@ private:
     glm::mat4 view = glm::mat4();
     glm::vec3 rotation = glm::vec3();
 
+    Type type = Type::pov;
     bool flip_y {false};
     float fov {70.f};
     float z_near {0.01f};
     float z_far {200.f};
+    float aspect {1.0f};
+    float speed {1.0f};
+    glm::vec3 target {glm::vec3(0.0f)};
 
     bool leftAction {false};
     bool rightAction {false};
