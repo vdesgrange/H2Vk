@@ -98,7 +98,6 @@ vec2 sample_spherical_map(vec3 v) {
 
 void main()
 {
-    int sources = 1;
     float roughness = material.roughness;
     vec3 V = normalize(inCameraPos - inFragPos);
     vec3 N = normalize(inNormal);
