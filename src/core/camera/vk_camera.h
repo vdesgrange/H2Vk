@@ -6,10 +6,10 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 struct GPUCameraData{
-    alignas(sizeof(glm::mat4)) glm::mat4 view;
-    alignas(sizeof(glm::mat4)) glm::mat4 proj;
-    alignas(sizeof(glm::vec4)) glm::vec3 pos;
-    alignas(sizeof(bool)) bool flip;
+    alignas(glm::mat4) glm::mat4 view;
+    alignas(glm::mat4) glm::mat4 proj;
+    alignas(glm::vec4) glm::vec3 pos;
+    alignas(bool) bool flip;
 };
 
 class Camera final {

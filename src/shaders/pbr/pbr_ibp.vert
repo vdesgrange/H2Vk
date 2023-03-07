@@ -13,7 +13,7 @@ layout (location = 3) out vec3 outFragPos; // fragment position
 layout (location = 4) out vec3 outCameraPos; // fragment position
 layout (location = 5) out vec4 outTangent;
 
-layout(set = 0, binding = 0) uniform  CameraBuffer
+layout(std140, set = 0, binding = 0) uniform  CameraBuffer
 {
     mat4 view;
     mat4 proj;

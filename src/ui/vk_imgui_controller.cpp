@@ -51,3 +51,29 @@ std::function<void (std::array<float, 3>)> UIController::set_target(Camera& came
         camera.set_target(glm::vec3(z[0], z[1], z[2]));
     };
 }
+
+std::function<std::array<float, 3> ()> UIController::get_position(Light& light) {
+    return [&]() {
+        glm::vec3 p = light.get_position();
+        return std::array<float, 3>({p.x, p.y, p.z});
+    };
+}
+
+std::function<void (std::array<float, 3>)> UIController::set_position(Light& light) {
+    return [&](std::array<float, 3> p) {
+        light.set_position(glm::vec4(p[0], p[1], p[2], 0.0f));
+    };
+}
+
+std::function<std::array<float, 3> ()> UIController::get_color(Light& light) {
+    return [&]() {
+        glm::vec3 c = light.get_color();
+        return std::array<float, 3>({c.x, c.y, c.z});
+    };
+}
+
+std::function<void (std::array<float, 3>)> UIController::set_color(Light& light) {
+    return [&](std::array<float, 3> c) {
+        light.set_position(glm::vec4(c[0], c[1], c[2], 1.0f));
+    };
+}

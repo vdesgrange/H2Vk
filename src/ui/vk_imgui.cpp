@@ -4,6 +4,7 @@
 #include "vk_engine.h"
 #include "core/vk_window.h"
 #include "core/camera/vk_camera.h"
+#include "core/lighting/vk_light.h"
 #include "core/utilities/vk_helpers.h"
 #include "scenes/vk_scene_listing.h"
 #include "core/vk_command_buffer.h"
@@ -135,7 +136,7 @@ bool UInterface::interface(Statistics statistics) {
     const auto& io = ImGui::GetIO();
     bool updated = false;
 
-    ImGui::ShowDemoWindow();
+    // ImGui::ShowDemoWindow();
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Tools")) {
             updated |= ImGui::MenuItem("View tools", nullptr, &this->p_open[VIEW_EDITOR]);
@@ -193,7 +194,8 @@ bool UInterface::scene_editor() {
         ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 
         if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen)) {
-            static int selected_object = -1;
+            static int selected_object = -1; // todo make a general entity manager
+            static int selected_light = -1;
             static int selected_tex = -1;
 
             ImGui::PushID("##scene_content");
@@ -201,10 +203,26 @@ bool UInterface::scene_editor() {
 
             const ImGuiID child_id = ImGui::GetID((void*)(intptr_t)0);
             float x = ImGui::GetContentRegionAvail().x;
-            float y = (selected_object == -1 && selected_tex == -1) ? ImGui::GetContentRegionAvail().y : ImGui::GetContentRegionAvail().y / 3;
+            float y = (selected_object == -1 && selected_tex == -1 && selected_light == -1) ? ImGui::GetContentRegionAvail().y : ImGui::GetContentRegionAvail().y / 3;
             const bool child_is_visible = ImGui::BeginChild(child_id, ImVec2(x, y), true, 0);
 
             if (child_is_visible) {
+                // Lighting
+                for (uint32_t i = 0; i < _engine._lights.size(); i++) {
+                    auto &light = _engine._lights[i];
+                    std::string label = "   " + std::string(ICON_FA_LIGHTBULB) + " " + Light::types[light.get_type()] + " light";
+                    std::string light_id = "##light_" + std::to_string(i) + std::to_string(i);
+                    ImGui::PushID(light_id.c_str());
+                    if (ImGui::Selectable(label.c_str(), selected_light == i)) {
+                        selected_light = i;
+                        selected_object = -1;
+                        selected_tex = -1;
+                    }
+
+                    ImGui::PopID();
+                }
+
+                // Mesh
                 for (uint32_t i = 0; i < _engine._scene->_renderables.size(); i++) {
                     const auto &object = _engine._scene->_renderables[i];
 
@@ -214,6 +232,7 @@ bool UInterface::scene_editor() {
                     bool node_open = ImGui::TreeNodeEx((void *) (intptr_t) i, node_flags, "%s %s", ICON_FA_CUBES, object.model->_name.c_str());
                     if (ImGui::IsItemClicked()) { //  && !ImGui::IsItemToggledOpen()
                         selected_object = i;
+                        selected_light = -1;
                     }
 
                     if (node_open) {
@@ -235,58 +254,73 @@ bool UInterface::scene_editor() {
                         ImGui::TreePop();
                     }
                 }
+
             }
             ImGui::EndChild();
             ImGui::EndGroup();
             ImGui::PopID();
 
             ImGui::Separator();
-
             ImGui::BeginGroup();
-            if (selected_object != -1 && selected_object < _engine._scene->_renderables.size()) {
 
-                if (ImGui::BeginTabBar("##scene_information", ImGuiTabBarFlags_None)) {
+            if (ImGui::BeginTabBar("##scene_information", ImGuiTabBarFlags_None)) {
+
+                if (selected_light != -1 && selected_light < _engine._lights.size()) {
+                    auto &light = _engine._lights[selected_light];
+
+                    if (ImGui::BeginTabItem("Properties")) {
+                        ImGui::Text("Name"); ImGui::SameLine(100); ImGui::Text("%s", "Light");
+                        ImGui::Text("Unique ID"); ImGui::SameLine(100); ImGui::Text("%i", light._uid);
+                        ImGui::Text("Type"); ImGui::SameLine(100); ImGui::Text("%s", Light::types[light.get_type()]);
+                        float color[3] = {light.get_color()[0], light.get_color()[1], light.get_color()[2]};
+                        ImGui::Text("Color"); ImGui::SameLine(100); ImGui::ColorEdit3("", color, 0);
+                        ImGui::Text("Position"); ImGui::SameLine(100);
+                        updated |= ImGui::InputFloat3("", UIController::get_position(light), UIController::set_position(light), "%.2f");
+
+                        ImGui::EndTabItem();
+                    }
+                }
+
+                if (selected_object != -1 && selected_object < _engine._scene->_renderables.size()) {
+
                     const auto &model = _engine._scene->_renderables[selected_object].model;
 
                     if (ImGui::BeginTabItem("Properties")) {
                         ImGui::Text("Name"); ImGui::SameLine(100); ImGui::Text("%s", model->_name.c_str());
                         ImGui::Text("Unique ID"); ImGui::SameLine(100); ImGui::Text("%i", model->_uid);
-
                         ImGui::Text("Vertices"); ImGui::SameLine(100); ImGui::Text("%lu", model->_verticesBuffer.size());
                         ImGui::Text("Indexes"); ImGui::SameLine(100); ImGui::Text("%lu", model->_indexesBuffer.size());
-
                         ImGui::Text("Transform"); ImGui::SameLine(100); ImGui::Text("%i", model->_uid);
-
                         ImGui::EndTabItem();
                     }
 
                     if (selected_tex != -1 && selected_tex < model->_images.size()) {
-                        auto &image = model->_images[selected_tex]; // .at slower, better checking
+                            auto &image = model->_images[selected_tex]; // .at slower, better checking
 
-                        if (get_settings().texture_index != selected_tex) {
-                            get_settings().texture_index = selected_tex;
-                            DescriptorBuilder::begin(*_layoutCache, *_allocator)
-                                    .bind_image(image._texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                                                VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-                                    .layout(_engine._descriptorSetLayouts.gui)
-                                    .build(get_settings()._textureDescriptorSet, _engine._descriptorSetLayouts.gui,
-                                           {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}});
+                            if (get_settings().texture_index != selected_tex) {
+                                get_settings().texture_index = selected_tex;
+                                DescriptorBuilder::begin(*_layoutCache, *_allocator)
+                                        .bind_image(image._texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                                                    VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                                        .layout(_engine._descriptorSetLayouts.gui)
+                                        .build(get_settings()._textureDescriptorSet, _engine._descriptorSetLayouts.gui,
+                                               {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}});
+                            }
+
+                            if (ImGui::BeginTabItem("Texture")) {
+                                ImGui::Text("URI"); ImGui::SameLine(100); ImGui::Text("%s", image._texture._uri.c_str());
+
+                                float tex_width = fmin(ImGui::GetContentRegionAvail().x, image._texture._width);
+                                float tex_height = fmin(ImGui::GetContentRegionAvail().y, image._texture._height);
+                                ImGui::Image(get_settings()._textureDescriptorSet, ImVec2(tex_width, tex_height));
+                                ImGui::EndTabItem();
+                            }
                         }
 
-                        if (ImGui::BeginTabItem("Texture")) {
-                            ImGui::Text("URI"); ImGui::SameLine(100); ImGui::Text("%s", image._texture._uri.c_str());
-
-                            float tex_width = fmin(ImGui::GetContentRegionAvail().x, image._texture._width);
-                            float tex_height = fmin(ImGui::GetContentRegionAvail().y, image._texture._height);
-                            ImGui::Image(get_settings()._textureDescriptorSet, ImVec2(tex_width, tex_height));
-                            ImGui::EndTabItem();
-                        }
-                    }
-
-                    ImGui::EndTabBar();
                 }
-            }
 
+                ImGui::EndTabBar();
+            }
             ImGui::EndGroup();
         }
     }
@@ -334,21 +368,6 @@ bool UInterface::view_editor() {
         updated |= ImGui::SliderFloat("Angle", UIController::get_fov(*_engine._camera), UIController::set_fov(*_engine._camera), 0.01f, 360.0f);
         updated |= ImGui::SliderFloat("Speed", UIController::get_speed(*_engine._camera), UIController::set_speed(*_engine._camera), 0.01f, 50.0f);
         ImGui::NewLine();
-
-//        const char* preview_value = types[get_settings().type];
-//        if (ImGui::BeginCombo("Mode", preview_value)) {
-//            for (const auto& type : Camera::AllType) {
-//                const bool is_selected = (get_settings().type == type.first);
-//                if (ImGui::Selectable(type.second, is_selected))
-//                    get_settings().type = type.first;
-//
-//                if (is_selected)
-//                    ImGui::SetItemDefaultFocus();
-//
-//            }
-//            ImGui::EndCombo();
-//        }
-//        ImGui::NewLine();
 
     }
     ImGui::End();

@@ -150,13 +150,6 @@ void VulkanEngine::init_descriptors() {
     _layoutCache = new DescriptorLayoutCache(*_device);
     _allocator = new DescriptorAllocator(*_device);
 
-    // === Environment 1 ===
-//    const size_t sceneParamBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData));
-//    _sceneParameterBuffer = Buffer::create_buffer(*_device, sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-//    VkDescriptorBufferInfo sceneBInfo{};
-//    sceneBInfo.buffer = _sceneParameterBuffer._buffer;
-//    sceneBInfo.range = sizeof(GPUSceneData);
-
     for (int i = 0; i < FRAME_OVERLAP; i++) {
 
         // === Camera ===
@@ -345,23 +338,12 @@ void VulkanEngine::ui_overlay() {
 
     bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
     if (updated) {
-        // Camera
-        // _camera->set_type(static_cast<Camera::Type>(_ui->get_settings().type));
-        // _camera->set_speed(_ui->get_settings().speed);
-        // _camera->set_perspective(_ui->get_settings().angle, _camera->get_aspect(), _ui->get_settings().zNearFar[0],_ui->get_settings().zNearFar[1]);
-        // _camera->set_target({_ui->get_settings().target[0], _ui->get_settings().target[1], _ui->get_settings().target[2]});
-
-        // Scene
-//        _sceneParameters.sunlightColor = {_ui->get_settings().colors[0], _ui->get_settings().colors[1], _ui->get_settings().colors[2], 1.0};
-//        _sceneParameters.sunlightDirection = {_ui->get_settings().coordinates[0], _ui->get_settings().coordinates[1], _ui->get_settings().coordinates[2], _ui->get_settings().ambient};
-//        _sceneParameters.specularFactor = _ui->get_settings().specular;
-
         // Skybox
         _skyboxDisplay = _ui->p_open[SKYBOX_EDITOR];
     }
 
     // Move camera when key press
-    _reset = _camera->update_camera(1. / stats.FrameRate);
+    _camera->update_camera(1.0f / stats.FrameRate);
 }
 
 void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
@@ -390,31 +372,20 @@ void VulkanEngine::update_uniform_buffers() {
     vmaUnmapMemory(_device->_allocator, frame.cameraBuffer._allocation);
 
     // Light : write scene data into lighting buffer
-    // === Camera & Objects & Environment ===
     GPULightData lightingData{};
     lightingData.num_lights = static_cast<uint32_t>(_lights.size());
     int lightCount = 0;
-    for (const auto& light : _lights) {
-        lightingData.position[lightCount] = light._position; // glm::vec4(0.0f, 0.0f, 5.0f, 0.0f);
-        lightingData.color[lightCount] = light._color; // glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    for (auto& light : _lights) {
+        lightingData.position[lightCount] = light.get_position();
+        lightingData.color[lightCount] = light.get_color();
         lightCount++;
     }
-//    lightingData.position[0] = glm::vec4(0.0f, 0.0f, 5.0f, 0.0f);
-//    lightingData.color[0] = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
     char *data2;
     vmaMapMemory(_device->_allocator, frame.lightingBuffer._allocation,   (void **) &data2);
     data2 += Helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData)) * frameIndex;
     memcpy(data2, &lightingData, sizeof(GPULightData));
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
-
-    // Environment : write scene data into environment buffer
-//    char *sceneData;
-//    vmaMapMemory(_device->_allocator, _sceneParameterBuffer._allocation, (void **) &sceneData);
-//    sceneData += Helper::pad_uniform_buffer_size(*_device, sizeof(GPUSceneData)) * frameIndex;
-//    memcpy(sceneData, &_sceneParameters, sizeof(GPUSceneData));
-//    vmaUnmapMemory(_device->_allocator, _sceneParameterBuffer._allocation);
-
 }
 
 void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
@@ -442,12 +413,11 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
 
     // === Update required uniform buffers
     update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
-    // update_buffer_objects(first, count);
 
     // === Bind ===
     skybox(commandBuffer);
 
-    for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
+    for (int i=  0; i < count; i++) { // For each scene/object in the vector of scenes.
         RenderObject& object = first[i]; // Take the scene/object
 
         if (object.material != lastMaterial) { // Same material = (shaders/pipeline/descriptors) for multiple objects part of the same scene (e.g. monkey + triangles)

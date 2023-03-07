@@ -9,7 +9,7 @@
 //    float specularFactor;
 //} sceneData;
 
-const int MAX_LIGHT = 10;
+const int MAX_LIGHT = 8;
 
 layout(std140, set = 0, binding = 1) uniform LightingData {
     int num_lights;

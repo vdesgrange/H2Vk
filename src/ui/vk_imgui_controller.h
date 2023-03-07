@@ -3,6 +3,7 @@
 #include <functional>
 #include <array>
 #include "core/camera/vk_camera.h"
+#include "core/lighting/vk_light.h"
 
 class Camera;
 
@@ -18,4 +19,8 @@ public:
     static std::function<void (std::array<float, 3>)> set_target(Camera& camera);
     static std::function<int ()> get_type(Camera& camera);
     static std::function<void (int)> set_type(Camera& camera);
+    static std::function<std::array<float, 3> ()> get_position(Light& light);
+    static std::function<void (std::array<float, 3>)> set_position(Light& light);
+    static std::function<std::array<float, 3> ()> get_color(Light& light);
+    static std::function<void (std::array<float, 3>)> set_color(Light& light);
 };
