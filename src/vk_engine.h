@@ -104,7 +104,6 @@ public:
     std::unique_ptr<class PipelineBuilder> _pipelineBuilder;
     std::unique_ptr<class MeshManager> _meshManager;
     std::unique_ptr<class TextureManager> _textureManager;
-    std::unique_ptr<class SamplerManager> _samplerManager;
     std::unique_ptr<class SceneListing> _sceneListing;
     std::unique_ptr<class Scene> _scene;
     std::unique_ptr<class UInterface> _ui;

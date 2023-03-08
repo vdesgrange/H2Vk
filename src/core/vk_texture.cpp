@@ -212,11 +212,3 @@ bool Texture::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDevic
 
     return true;
 }
-
-SamplerManager::~SamplerManager() {
-    for (auto const& it : _loadedSampler) {
-        if (it.second != VK_NULL_HANDLE) {
-            vkDestroySampler(_engine._device->_logicalDevice, it.second, nullptr);
-        }
-    }
-}

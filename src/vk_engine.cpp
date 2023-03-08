@@ -274,7 +274,6 @@ FrameData& VulkanEngine::get_current_frame() {
 void VulkanEngine::init_managers() {
     _meshManager = std::make_unique<MeshManager>(*_device, _uploadContext); // move to sceneListing ?
     _textureManager = std::make_unique<TextureManager>(*this);
-    _samplerManager = std::make_unique<SamplerManager>(*this);
 }
 
 void VulkanEngine::init_scene() {
@@ -571,7 +570,6 @@ void VulkanEngine::cleanup()
         _scene->_renderables.clear();
         _skybox.reset();
         _ui.reset();
-        _samplerManager.reset();
         _textureManager.reset();
         _meshManager.reset();
         _pipelineBuilder.reset();
