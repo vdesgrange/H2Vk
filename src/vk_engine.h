@@ -109,10 +109,10 @@ public:
 
     std::unique_ptr<class SystemManager> _systemManager;
     std::shared_ptr<class MeshManager> _meshManager;
+    std::shared_ptr<class LightingManager> _lightingManager;
 
     FrameData _frames[FRAME_OVERLAP];
     std::vector<RenderObject> _renderables;
-    std::vector<Light> _lights;
 
     DescriptorLayoutCache* _layoutCache;
     DescriptorAllocator* _allocator;

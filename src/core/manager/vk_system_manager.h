@@ -16,11 +16,12 @@ public:
 
 class System {
 public:
+    std::unordered_map<std::string, std::shared_ptr<Entity>> _entities {};
+
     void add_entity(std::string name, std::shared_ptr<Entity> entity);
     std::shared_ptr<Entity> get_entity(const std::string name);
 
-protected:
-    std::unordered_map<std::string, std::shared_ptr<Entity>> _entities {};
+    void clear_entities();
 };
 
 class SystemManager final {

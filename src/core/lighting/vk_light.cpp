@@ -34,3 +34,18 @@ void Light::set_position(glm::vec4 p) {
 void Light::set_color(glm::vec4 c) {
     this->_color = c;
 }
+
+GPULightData LightingManager::gpu_format() {
+    GPULightData lightingData{};
+
+    lightingData.num_lights = static_cast<uint32_t>(this->_entities.size());
+    int lightCount = 0;
+    for (auto& l : this->_entities) {
+        std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
+        lightingData.position[lightCount] = light->get_position();
+        lightingData.color[lightCount] = light->get_color();
+        lightCount++;
+    }
+
+    return lightingData;
+}

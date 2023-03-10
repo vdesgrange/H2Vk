@@ -1,6 +1,7 @@
 #pragma once
 
 #include "glm/glm.hpp"
+#include "core/manager/vk_system_manager.h"
 
 #include <atomic>
 #include <unordered_map>
@@ -14,7 +15,7 @@ struct GPULightData {
     // float cut_off;
 };
 
-class Light final {
+class Light : public Entity {
 protected:
     static std::atomic<uint32_t> nextID;
 
@@ -48,4 +49,9 @@ private:
     Type _type = Type::POINT;
     glm::vec4 _position = {0.0f, 0.0f, 0.0f, 0.0f};
     glm::vec4 _color {1.0f, 1.0f, 1.0f, 1.0f};
+};
+
+class LightingManager : public System {
+public:
+    GPULightData gpu_format();
 };

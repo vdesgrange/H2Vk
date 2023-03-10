@@ -274,6 +274,7 @@ FrameData& VulkanEngine::get_current_frame() {
 void VulkanEngine::init_managers() {
     _systemManager = std::make_unique<SystemManager>();
     _meshManager = _systemManager->register_system<MeshManager>(_device.get(), &_uploadContext);
+    _lightingManager = _systemManager->register_system<LightingManager>();
 }
 
 void VulkanEngine::init_scene() {
@@ -354,8 +355,8 @@ void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
 }
 
 void VulkanEngine::update_uniform_buffers() {
-    FrameData frame =  get_current_frame(); // _frames[i];
-    uint32_t frameIndex = _frameNumber % FRAME_OVERLAP; // i;
+    FrameData frame =  get_current_frame();
+    uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
 
     // === Camera & Objects & Environment ===
     GPUCameraData camData{};
@@ -371,14 +372,7 @@ void VulkanEngine::update_uniform_buffers() {
     vmaUnmapMemory(_device->_allocator, frame.cameraBuffer._allocation);
 
     // Light : write scene data into lighting buffer
-    GPULightData lightingData{};
-    lightingData.num_lights = static_cast<uint32_t>(_lights.size());
-    int lightCount = 0;
-    for (auto& light : _lights) {
-        lightingData.position[lightCount] = light.get_position();
-        lightingData.color[lightCount] = light.get_color();
-        lightCount++;
-    }
+    GPULightData lightingData = _lightingManager->gpu_format();
 
     char *data2;
     vmaMapMemory(_device->_allocator, frame.lightingBuffer._allocation,   (void **) &data2);

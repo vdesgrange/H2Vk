@@ -12,11 +12,8 @@ std::shared_ptr<Entity> System::get_entity(const std::string name) {
     } catch (const std::out_of_range&) {
         return nullptr;
     }
+}
 
-//    auto it = _entities.find(name);
-//    if ( it == _entities.end()) {
-//        return nullptr;
-//    } else {
-//        return it->second;
-//    }
+void System::clear_entities() {
+    _entities.clear();
 }

@@ -26,8 +26,8 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.set_type(Camera::Type::look_at);
 
-    engine->_lights.clear();
-    engine->_lights.emplace_back(Light(Light::POINT, glm::vec4(0.f, 0.f, 10.f, 0.f), glm::vec4(1.f)));
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("light", std::make_shared<Light>(Light::POINT, glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 
     for (int x = 0; x <= 6; x++) {
         for (int y = 0; y <= 6; y++) {
@@ -61,8 +61,8 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);  // 1700.f / 1200.f
     camera.set_type(Camera::Type::look_at);
 
-    engine->_lights.clear();
-    engine->_lights.emplace_back(Light(Light::POINT, glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("light", std::make_shared<Light>(Light::POINT, glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 
     std::shared_ptr<ModelGLB> helmetModel = std::make_shared<ModelGLB>(engine->_device.get());
     helmetModel->load_model(*engine, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");
