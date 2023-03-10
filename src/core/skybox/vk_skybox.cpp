@@ -12,8 +12,8 @@
 
 #include <stb_image.h>
 
-Skybox::Skybox(Device& device, PipelineBuilder& pipelineBuilder, TextureManager& textureManager, MeshManager& meshManager, UploadContext& uploadContext) :
-    _device(device), _pipelineBuilder(pipelineBuilder), _textureManager(textureManager), _meshManager(meshManager), _uploadContext(uploadContext) {
+Skybox::Skybox(Device& device, PipelineBuilder& pipelineBuilder, MeshManager& meshManager, UploadContext& uploadContext) :
+    _device(device), _pipelineBuilder(pipelineBuilder), _meshManager(meshManager), _uploadContext(uploadContext) {
 
 }
 

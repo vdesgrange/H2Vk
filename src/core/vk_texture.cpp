@@ -9,24 +9,6 @@
 #include <stb_image.h>
 #include <iostream>
 
-TextureManager::~TextureManager() {
-    for (auto& it : this->_loadedTextures) {
-        it.second.destroy(*(this->_engine._device));
-    }
-}
-
-void TextureManager::load_texture(const char* file, std::string name) {
-    Texture texture{};  // ajouter hashage pour ne pas dupliquer les textures?
-
-    texture.load_image_from_file(_engine, file);
-
-    // duplicate ?
-    VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, texture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-    vkCreateImageView(_engine._device->_logicalDevice, &imageinfo, nullptr, &texture._imageView);
-
-    _loadedTextures.emplace(name, texture);
-}
-
 void Texture::destroy(const Device& device) {
     if (this->_imageView) {
         vkDestroyImageView(device._logicalDevice, this->_imageView, nullptr);

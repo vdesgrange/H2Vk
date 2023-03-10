@@ -62,8 +62,6 @@ class ImDrawData;
 class Statistics;
 class Scene;
 class SceneListing;
-class TextureManager;
-class SamplerManager;
 class Skybox;
 
 struct Texture;
@@ -111,7 +109,6 @@ public:
 
     std::unique_ptr<class SystemManager> _systemManager;
     std::shared_ptr<class MeshManager> _meshManager;
-    std::unique_ptr<class TextureManager> _textureManager;
 
     FrameData _frames[FRAME_OVERLAP];
     std::vector<RenderObject> _renderables;

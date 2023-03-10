@@ -8,7 +8,6 @@
 class Model;
 class Device;
 class Texture;
-class TextureManager;
 class MeshManager;
 class PipelineBuilder;
 struct UploadContext;
@@ -25,7 +24,7 @@ public:
 
     Type _type = Type::box;
 
-    Skybox(Device& device, PipelineBuilder& pipelineBuilder, TextureManager& textureManager, MeshManager& meshManager, UploadContext& uploadContext);
+    Skybox(Device& device, PipelineBuilder& pipelineBuilder, MeshManager& meshManager, UploadContext& uploadContext);
     ~Skybox();
 
     void load();
@@ -41,7 +40,6 @@ private:
     class Device& _device;
     class UploadContext& _uploadContext;
     class PipelineBuilder& _pipelineBuilder;
-    class TextureManager& _textureManager;
     class MeshManager& _meshManager;
 
     void submit_texture();

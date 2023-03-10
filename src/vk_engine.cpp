@@ -274,13 +274,10 @@ FrameData& VulkanEngine::get_current_frame() {
 void VulkanEngine::init_managers() {
     _systemManager = std::make_unique<SystemManager>();
     _meshManager = _systemManager->register_system<MeshManager>(_device.get(), &_uploadContext);
-
-    // _meshManager = std::make_shared<MeshManager>(*_device, _uploadContext); // move to sceneListing ?
-    _textureManager = std::make_unique<TextureManager>(*this);
 }
 
 void VulkanEngine::init_scene() {
-    _skybox = std::make_unique<Skybox>(*_device, *_pipelineBuilder, *_textureManager, *_meshManager, _uploadContext);
+    _skybox = std::make_unique<Skybox>(*_device, *_pipelineBuilder, *_meshManager, _uploadContext);
     _skybox->_type = Skybox::Type::box;
     _skybox->load();
 
@@ -573,7 +570,6 @@ void VulkanEngine::cleanup()
         _scene->_renderables.clear();
         _skybox.reset();
         _ui.reset();
-        _textureManager.reset();
         _meshManager.reset();
         _systemManager.reset();
         _pipelineBuilder.reset();
