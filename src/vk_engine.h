@@ -30,7 +30,7 @@
 #include "core/vk_framebuffers.h"
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
-#include "core/vk_mesh_manager.h"
+#include "core/manager/vk_mesh_manager.h"
 #include "core/vk_pipeline.h"
 #include "core/vk_renderpass.h"
 #include "scenes/vk_scene.h"
@@ -102,13 +102,16 @@ public:
     std::unique_ptr<class RenderPass> _renderPass;
     std::unique_ptr<class FrameBuffers> _frameBuffers;
     std::unique_ptr<class PipelineBuilder> _pipelineBuilder;
-    std::unique_ptr<class MeshManager> _meshManager;
-    std::unique_ptr<class TextureManager> _textureManager;
+
     std::unique_ptr<class SceneListing> _sceneListing;
     std::unique_ptr<class Scene> _scene;
     std::unique_ptr<class UInterface> _ui;
     std::unique_ptr<class Skybox> _skybox;
     std::unique_ptr<class Camera> _camera;
+
+    std::unique_ptr<class SystemManager> _systemManager;
+    std::shared_ptr<class MeshManager> _meshManager;
+    std::unique_ptr<class TextureManager> _textureManager;
 
     FrameData _frames[FRAME_OVERLAP];
     std::vector<RenderObject> _renderables;
@@ -128,9 +131,6 @@ public:
     DeletionQueue _mainDeletionQueue;
 
     UploadContext _uploadContext;
-
-//    GPUSceneData _sceneParameters;
-//    AllocatedBuffer _sceneParameterBuffer;
 
 	void init();
 	void cleanup();

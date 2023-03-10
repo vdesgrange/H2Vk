@@ -11,10 +11,11 @@
 #include <atomic>
 
 #include "vk_engine.h"
+#include "core/manager/vk_system_manager.h"
 #include "core/vk_texture.h"
 #include "core/vk_buffer.h"
 #include "core/utilities/vk_types.h"
-#include "core/vk_mesh_manager.h"
+#include "core/manager/vk_mesh_manager.h"
 #include "core/vk_descriptor_builder.h"
 
 class Device;
@@ -105,7 +106,7 @@ struct Textures {
     int32_t imageIndex;
 };
 
-class Model {
+class Model : public Entity {
 protected:
     static std::atomic<uint32_t> nextID;
 

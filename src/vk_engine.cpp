@@ -272,7 +272,10 @@ FrameData& VulkanEngine::get_current_frame() {
 }
 
 void VulkanEngine::init_managers() {
-    _meshManager = std::make_unique<MeshManager>(*_device, _uploadContext); // move to sceneListing ?
+    _systemManager = std::make_unique<SystemManager>();
+    _meshManager = _systemManager->register_system<MeshManager>(_device.get(), &_uploadContext);
+
+    // _meshManager = std::make_shared<MeshManager>(*_device, _uploadContext); // move to sceneListing ?
     _textureManager = std::make_unique<TextureManager>(*this);
 }
 
@@ -572,6 +575,7 @@ void VulkanEngine::cleanup()
         _ui.reset();
         _textureManager.reset();
         _meshManager.reset();
+        _systemManager.reset();
         _pipelineBuilder.reset();
         _frameBuffers.reset();
         _renderPass.reset();

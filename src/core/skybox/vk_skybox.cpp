@@ -3,7 +3,7 @@
 #include "core/vk_swapchain.h"
 #include "core/vk_device.h"
 #include "core/vk_buffer.h"
-#include "core/vk_mesh_manager.h"
+#include "core/manager/vk_mesh_manager.h"
 #include "core/vk_pipeline.h"
 #include "core/utilities/vk_initializers.h"
 #include "core/vk_command_buffer.h"

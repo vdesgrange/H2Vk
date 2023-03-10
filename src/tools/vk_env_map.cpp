@@ -1,9 +1,7 @@
 #include "vk_env_map.h"
-#include "core/vk_window.h"
 #include "core/vk_device.h"
 #include "core/vk_renderpass.h"
 #include "core/vk_pipeline.h"
-#include "core/vk_mesh_manager.h"
 #include "core/vk_command_pool.h"
 #include "core/vk_command_buffer.h"
 #include "core/vk_descriptor_allocator.h"
@@ -11,6 +9,7 @@
 #include "core/vk_descriptor_builder.h"
 #include "core/vk_texture.h"
 #include "core/model/vk_poly.h"
+#include "core/manager/vk_mesh_manager.h"
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
 
