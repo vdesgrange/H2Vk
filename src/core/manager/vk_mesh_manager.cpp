@@ -59,6 +59,6 @@ void MeshManager::upload_mesh(Model& mesh) {
     vmaDestroyBuffer(_device->_allocator, indexStaging._buffer, indexStaging._allocation);
 }
 
-std::shared_ptr<Entity> MeshManager::get_model(const std::string &name) {
-    return this->get_entity(name);
+std::shared_ptr<Model> MeshManager::get_model(const std::string &name) {
+    return std::static_pointer_cast<Model>(this->get_entity(name));
 }

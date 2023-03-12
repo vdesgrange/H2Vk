@@ -21,8 +21,7 @@
  * @param device
  * @param renderPass
  */
-PipelineBuilder::PipelineBuilder(const Device& device, RenderPass& renderPass) :
-    _device(device), _renderPass(renderPass)
+PipelineBuilder::PipelineBuilder(const Device& device, RenderPass& renderPass) : _device(device), _renderPass(renderPass)
 {
     this->_viewport = vkinit::get_viewport((float) Window::CWIDTH, (float) Window::CHEIGHT); // default
     this->_scissor = vkinit::get_scissor((float) Window::CWIDTH, (float) Window::CHEIGHT); // default
@@ -35,14 +34,6 @@ PipelineBuilder::PipelineBuilder(const Device& device, RenderPass& renderPass) :
     this->_colorBlendAttachment = vkinit::color_blend_attachment_state();
 }
 
-PipelineBuilder::~PipelineBuilder() {
-    for (const auto& item : this->_materials) {
-        vkDestroyPipeline(_device._logicalDevice, item.second->pipeline, nullptr);
-        vkDestroyPipelineLayout(_device._logicalDevice, item.second->pipelineLayout, nullptr);
-    }
-    _materials.clear();
-}
-
 std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> shaderModules) {
     std::shared_ptr<ShaderEffect> effect = std::make_shared<ShaderEffect>();
     effect->setLayouts = setLayouts;
@@ -52,10 +43,7 @@ std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescri
         VkShaderModule shader;
         if (!Shader::load_shader_module(_device, module.second, &shader)) {
             std::cout << "Error when building the shader module" << std::string(module.second) << std::endl;
-        } else {
-            // std::cout << "Shader " << std::string(module.second) << " successfully loaded" << std::endl;
         }
-
         effect->shaderStages.push_back(ShaderEffect::ShaderStage{module.first, shader});
     }
 
@@ -167,35 +155,22 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, const RenderPas
     return pipeline;
 }
 
-void PipelineBuilder::create_material(const std::string &name, std::shared_ptr<Material> pass) {
-    _materials.emplace(name, pass);
-}
-
-std::shared_ptr<Material> PipelineBuilder::get_material(const std::string &name) {
-    auto it = _materials.find(name);
-    if ( it == _materials.end()) {
-        return {};
-    } else {
-        return it->second;
-    }
-}
-
-void PipelineBuilder::scene_light(std::vector<VkDescriptorSetLayout> setLayouts) {
+void MaterialManager::scene_light(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/light/light.vert.spv"},
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/light/light.frag.spv"},
     };
 
-    std::shared_ptr<ShaderEffect> effect = this->build_effect(setLayouts, {}, modules);
-    std::shared_ptr<ShaderPass> pass = this->build_pass(effect);
-    create_material("light", pass);
+    std::shared_ptr<ShaderEffect> effect = _pipelineBuilder->build_effect(setLayouts, {}, modules);
+    std::shared_ptr<ShaderPass> pass = _pipelineBuilder->build_pass(effect);
+    this->add_entity("light", pass);
 
     for (auto& shader : effect->shaderStages) {
-        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+        vkDestroyShaderModule(_device->_logicalDevice, shader.shaderModule, nullptr);
     }
 }
 
-void PipelineBuilder::scene_spheres(std::vector<VkDescriptorSetLayout> setLayouts) {
+void MaterialManager::scene_spheres(std::vector<VkDescriptorSetLayout> setLayouts) {
     VkPushConstantRange push_model;
     push_model.offset = 0;
     push_model.size = sizeof(glm::mat4);
@@ -211,29 +186,29 @@ void PipelineBuilder::scene_spheres(std::vector<VkDescriptorSetLayout> setLayout
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene.frag.spv"},
     };
 
-    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {push_model, push_properties}, modules);
-    std::shared_ptr<ShaderPass> pass_mesh = this->build_pass(effect_mesh);
-    create_material("basicMaterial", pass_mesh);
+    std::shared_ptr<ShaderEffect> effect_mesh = _pipelineBuilder->build_effect(setLayouts, {push_model, push_properties}, modules);
+    std::shared_ptr<ShaderPass> pass_mesh = _pipelineBuilder->build_pass(effect_mesh);
+    this->add_entity("basicMaterial", pass_mesh); // todo replace by MaterialManager
 
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr_ibp.vert.spv"},
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_ibl_cube.frag.spv"},
     };
 
-    std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {push_model, push_properties}, pbr_modules);
-    std::shared_ptr<ShaderPass> pass_pbr = this->build_pass(effect_pbr);
-    create_material("pbrMaterial", pass_pbr);
+    std::shared_ptr<ShaderEffect> effect_pbr = _pipelineBuilder->build_effect(setLayouts, {push_model, push_properties}, pbr_modules);
+    std::shared_ptr<ShaderPass> pass_pbr = _pipelineBuilder->build_pass(effect_pbr);
+    this->add_entity("pbrMaterial", pass_pbr);
 
     for (auto& shader : effect_mesh->shaderStages) {
-        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+        vkDestroyShaderModule(_device->_logicalDevice, shader.shaderModule, nullptr);
     }
 
     for (auto& shader : effect_pbr->shaderStages) {
-        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+        vkDestroyShaderModule(_device->_logicalDevice, shader.shaderModule, nullptr);
     }
 }
 
-void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts) {
+void MaterialManager::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts) {
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
             {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh/mesh_tex.vert.spv"},
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene_tex.frag.spv"},
@@ -244,12 +219,12 @@ void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> se
     push_constant.size = sizeof(glm::mat4);
     push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    std::shared_ptr<ShaderEffect> effect_mesh = this->build_effect(setLayouts, {push_constant}, modules); // {push_constant}
-    std::shared_ptr<ShaderPass> pass = this->build_pass(effect_mesh);
-    create_material("helmetMaterial", pass);
+    std::shared_ptr<ShaderEffect> effect_mesh = _pipelineBuilder->build_effect(setLayouts, {push_constant}, modules); // {push_constant}
+    std::shared_ptr<ShaderPass> pass = _pipelineBuilder->build_pass(effect_mesh);
+    this->add_entity("helmetMaterial", pass);
 
     for (auto& shader : effect_mesh->shaderStages) {
-        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+        vkDestroyShaderModule(_device->_logicalDevice, shader.shaderModule, nullptr);
     }
 
     std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
@@ -257,11 +232,28 @@ void PipelineBuilder::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> se
             {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_tex_cube.frag.spv"},
     };
 
-    std::shared_ptr<ShaderEffect> effect_pbr = this->build_effect(setLayouts, {push_constant}, pbr_modules);
-    std::shared_ptr<ShaderPass> pass_pbr = this->build_pass(effect_pbr);
-    create_material("pbrTextureMaterial", pass_pbr);
+    std::shared_ptr<ShaderEffect> effect_pbr = _pipelineBuilder->build_effect(setLayouts, {push_constant}, pbr_modules);
+    std::shared_ptr<ShaderPass> pass_pbr = _pipelineBuilder->build_pass(effect_pbr);
+    this->add_entity("pbrTextureMaterial", pass_pbr);
 
     for (auto& shader : effect_pbr->shaderStages) {
-        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+        vkDestroyShaderModule(_device->_logicalDevice, shader.shaderModule, nullptr);
     }
+}
+
+MaterialManager::MaterialManager(const Device* device, PipelineBuilder* pipelineBuilder) : _device(device), _pipelineBuilder(pipelineBuilder) {}
+
+MaterialManager::~MaterialManager() {
+
+    for (const auto& item : this->_entities) {
+        std::shared_ptr<Material> material = std::static_pointer_cast<Material>(item.second);
+
+        vkDestroyPipeline(_device->_logicalDevice, material->pipeline, nullptr);
+        vkDestroyPipelineLayout(_device->_logicalDevice, material->pipelineLayout, nullptr);
+    }
+    _entities.clear();
+}
+
+std::shared_ptr<Material> MaterialManager::get_material(const std::string &name) {
+    return std::static_pointer_cast<Material>(this->get_entity(name));
 }

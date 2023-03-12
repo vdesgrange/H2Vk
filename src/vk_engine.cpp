@@ -32,7 +32,7 @@ void VulkanEngine::init()
     init_camera();
     init_scene();
     init_descriptors();
-    init_pipelines();
+    init_materials();
 
     // update_uniform_buffers();
     update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
@@ -255,16 +255,14 @@ void VulkanEngine::setup_descriptors(){
     }
 }
 
-void VulkanEngine::init_pipelines() {
-    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_device, *_renderPass);
-
+void VulkanEngine::init_materials() {
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
-    _pipelineBuilder->scene_light(setLayouts);
-    _pipelineBuilder->scene_spheres(setLayouts);
-    _pipelineBuilder->scene_damaged_helmet(setLayouts);
+    _materialManager->scene_light(setLayouts);
+    _materialManager->scene_spheres(setLayouts);
+    _materialManager->scene_damaged_helmet(setLayouts);
 
     // === Skybox === (Build by default to handle if skybox enabled later)
-    _skybox->setup_pipeline(*_pipelineBuilder, {_descriptorSetLayouts.skybox});
+    _skybox->setup_pipeline(*_materialManager, *_pipelineBuilder, {_descriptorSetLayouts.skybox});
 }
 
 FrameData& VulkanEngine::get_current_frame() {
@@ -272,7 +270,10 @@ FrameData& VulkanEngine::get_current_frame() {
 }
 
 void VulkanEngine::init_managers() {
+    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_device, *_renderPass);
+
     _systemManager = std::make_unique<SystemManager>();
+    _materialManager = _systemManager->register_system<MaterialManager>(_device.get(), _pipelineBuilder.get());
     _meshManager = _systemManager->register_system<MeshManager>(_device.get(), &_uploadContext);
     _lightingManager = _systemManager->register_system<LightingManager>();
 }
@@ -553,8 +554,7 @@ void VulkanEngine::run()
     vkDeviceWaitIdle(_device->_logicalDevice);
 }
 
-void VulkanEngine::cleanup()
-{
+void VulkanEngine::cleanup() {
     if (_isInitialized) {
         vkDeviceWaitIdle(_device->_logicalDevice);
         for (int i=0; i < FRAME_OVERLAP; i++) {
@@ -564,7 +564,8 @@ void VulkanEngine::cleanup()
         _scene->_renderables.clear();
         _skybox.reset();
         _ui.reset();
-        _meshManager.reset();
+         _meshManager.reset();
+         _materialManager.reset();
         _systemManager.reset();
         _pipelineBuilder.reset();
         _frameBuffers.reset();

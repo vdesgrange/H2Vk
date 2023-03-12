@@ -25,6 +25,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     camera.set_position({ 0.f, 0.0f, 5.f });
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.set_type(Camera::Type::look_at);
+    camera.set_speed(10.0f);
 
     engine->_lightingManager->clear_entities();
     engine->_lightingManager->add_entity("light", std::make_shared<Light>(Light::POINT, glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
@@ -41,8 +42,8 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
             engine->_meshManager->add_entity(name, std::static_pointer_cast<Entity>(sphereModel));             // engine->_meshManager->_models.emplace(name, sphereModel);
 
             RenderObject sphere;
-            sphere.model = std::static_pointer_cast<Model>(engine->_meshManager->get_model(name));
-            sphere.material = engine->_pipelineBuilder->get_material("pbrMaterial");
+            sphere.model = engine->_meshManager->get_model(name);
+            sphere.material = engine->_materialManager->get_material("pbrMaterial"); // engine->_pipelineBuilder->get_material("pbrMaterial");
             glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x - 3, y - 3, 0));
             glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.5, 0.5, 0.5));
             sphere.transformMatrix = translation * scale;
@@ -60,6 +61,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     camera.set_position({ 0.0f, 0.0f, 3.0f }); // Re-initialize position after scene change = camera jumping.
     camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);  // 1700.f / 1200.f
     camera.set_type(Camera::Type::look_at);
+    camera.set_speed(10.0f);
 
     engine->_lightingManager->clear_entities();
     engine->_lightingManager->add_entity("light", std::make_shared<Light>(Light::POINT, glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
@@ -70,8 +72,8 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     engine->_meshManager->add_entity("helmet", std::static_pointer_cast<Entity>(helmetModel)); // engine->_meshManager->_models.emplace("helmet", std::shared_ptr<Model>(helmetModel));
 
     RenderObject helmet;
-    helmet.model = std::static_pointer_cast<Model>(engine->_meshManager->get_model("helmet")); // helmet.model = engine->_meshManager->get_model("helmet");
-    helmet.material = engine->_pipelineBuilder->get_material("pbrTextureMaterial");
+    helmet.model = engine->_meshManager->get_model("helmet"); // helmet.model = engine->_meshManager->get_model("helmet");
+    helmet.material = engine->_materialManager->get_material("pbrTextureMaterial");
     helmet.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(helmet);
 

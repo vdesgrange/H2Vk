@@ -105,11 +105,12 @@ public:
     std::unique_ptr<class Scene> _scene;
     std::unique_ptr<class UInterface> _ui;
     std::unique_ptr<class Skybox> _skybox;
-    std::unique_ptr<class Camera> _camera;
 
     std::unique_ptr<class SystemManager> _systemManager;
+    std::shared_ptr<class MaterialManager> _materialManager;
     std::shared_ptr<class MeshManager> _meshManager;
     std::shared_ptr<class LightingManager> _lightingManager;
+    std::unique_ptr<class Camera> _camera; // std::shared_ptr<class CameraManager> _cameraManager; todo
 
     FrameData _frames[FRAME_OVERLAP];
     std::vector<RenderObject> _renderables;
@@ -148,7 +149,7 @@ private:
     void init_sync_structures();
     void init_descriptors(); // can be call before choice of model
     void setup_descriptors(); // when switching model
-    void init_pipelines();
+    void init_materials();
     void init_managers();
     void recreate_swap_chain();
     void skybox(VkCommandBuffer commandBuffer);

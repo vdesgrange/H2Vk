@@ -2,6 +2,8 @@
 
 std::atomic<uint32_t> Entity::nextGUID {0};
 
+Entity::Entity() : _guid(++nextGUID) {}
+
 void System::add_entity(std::string name, std::shared_ptr<Entity> entity) {
     _entities.emplace(name, entity);
 }

@@ -11,7 +11,7 @@ protected:
 public:
     uint32_t _guid{0}; // global unique id
 
-    Entity() : _guid(++nextGUID) {};
+    Entity();
 };
 
 class System {

@@ -1,10 +1,12 @@
 #pragma once
 
 #include "vulkan/vulkan_core.h"
+#include "core/manager/vk_system_manager.h"
 
 #include <vector>
 #include <iostream>
 #include <memory>
+
 
 class Device;
 
@@ -23,7 +25,7 @@ struct ShaderEffect {
 //    }
 };
 
-struct ShaderPass {
+struct ShaderPass : public Entity {
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
     std::shared_ptr<ShaderEffect> effect;

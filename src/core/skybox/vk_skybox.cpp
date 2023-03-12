@@ -341,7 +341,7 @@ void  Skybox::setup_descriptor() {
     // todo
 }
 
-void Skybox::setup_pipeline(PipelineBuilder& pipelineBuilder, std::vector<VkDescriptorSetLayout> setLayouts) {
+void Skybox::setup_pipeline(MaterialManager& materialManager, PipelineBuilder& pipelineBuilder, std::vector<VkDescriptorSetLayout> setLayouts) {
     std::unordered_map<Skybox::Type, std::string> shader = {
             {Type::box, "../src/shaders/skybox/skybox"},
             {Type::sphere, "../src/shaders/skybox/skysphere"},
@@ -362,8 +362,8 @@ void Skybox::setup_pipeline(PipelineBuilder& pipelineBuilder, std::vector<VkDesc
 
     std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect(setLayouts, {push_constant}, modules);
     std::shared_ptr<ShaderPass> pass = pipelineBuilder.build_pass(effect);
-    pipelineBuilder.create_material("skyboxMaterial", pass);
-    this->_material = pipelineBuilder.get_material("skyboxMaterial");
+    materialManager.add_entity("skyboxMaterial", pass);
+    this->_material = pass;  // this->_material = pipelineBuilder.get_material("skyboxMaterial");
 
     for (auto& shader : effect->shaderStages) {
         vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);

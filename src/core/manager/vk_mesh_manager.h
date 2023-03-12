@@ -21,7 +21,7 @@ public:
     ~MeshManager();
 
     void upload_mesh(Model& mesh);
-    std::shared_ptr<Entity> get_model(const std::string &name);
+    std::shared_ptr<Model> get_model(const std::string &name);
 
 private:
     const class Device* _device;

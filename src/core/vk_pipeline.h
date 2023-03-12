@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "core/utilities/vk_types.h"
+#include "core/manager/vk_system_manager.h"
 #include "vk_shaders.h"
 
 class Window;
@@ -24,19 +25,11 @@ public:
     VkPipelineColorBlendAttachmentState _colorBlendAttachment;
     VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
-    std::unordered_map<std::string, std::shared_ptr<Material>> _materials;
 
     PipelineBuilder(const Device& device, RenderPass& renderPass);
-    ~PipelineBuilder();
-
-    std::shared_ptr<ShaderPass> get_material(const std::string &name);
-    void scene_light(std::vector<VkDescriptorSetLayout> setLayouts);
-    void scene_spheres(std::vector<VkDescriptorSetLayout> setLayouts);
-    void scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts);
 
     std::shared_ptr<ShaderEffect> build_effect(std::vector<VkDescriptorSetLayout> setLayouts,  std::vector<VkPushConstantRange> pushConstants, std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> shaderModules);
     std::shared_ptr<ShaderPass> build_pass(std::shared_ptr<ShaderEffect> effect);
-    void create_material(const std::string &name, std::shared_ptr<Material> pass);
 
 private:
     const class Device& _device;
@@ -45,4 +38,20 @@ private:
     VkPipelineLayout build_layout(std::vector<VkDescriptorSetLayout> &setLayouts, std::vector<VkPushConstantRange> &pushConstants) const;
     VkPipeline build_pipeline(const Device& device, const RenderPass& renderPass, VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages);
 
+};
+
+class MaterialManager : public System {
+public:
+    MaterialManager(const Device* _device, PipelineBuilder* pipelineBuilder);
+    ~MaterialManager();
+
+    std::shared_ptr<Material> get_material(const std::string &name);
+
+    void scene_light(std::vector<VkDescriptorSetLayout> setLayouts);
+    void scene_spheres(std::vector<VkDescriptorSetLayout> setLayouts);
+    void scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts);
+
+private:
+    const class Device* _device;
+    class PipelineBuilder* _pipelineBuilder;
 };

@@ -141,7 +141,9 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
 
     std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {pushCst}, modules);
     std::shared_ptr<ShaderPass> converterPass = pipelineBuilder.build_pass(effect);
-    pipelineBuilder.create_material("converter", converterPass);
+
+    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
+    materialManager.add_entity("converter", converterPass);
 
     glm::mat4 projection = glm::perspective(glm::radians(90.0f), ENV_WIDTH / static_cast<float>(ENV_HEIGHT),  0.1f, 10.0f);
     std::array<glm::mat4, 6> views = {
@@ -322,7 +324,9 @@ Texture EnvMap::irradiance_mapping(Device& device, UploadContext& uploadContext,
 
     std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {}, modules);
     std::shared_ptr<ShaderPass> irradiancePass = pipelineBuilder.build_pass(effect);
-    pipelineBuilder.create_material("irradiance", irradiancePass);
+
+    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
+    materialManager.add_entity("irradiance", irradiancePass); // pipelineBuilder.create_material("irradiance", irradiancePass);
 
     // Command pool + command buffer for compute operations
     {
@@ -524,7 +528,9 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
 
     std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {pushCst}, modules);
     std::shared_ptr<ShaderPass> irradiancePass = pipelineBuilder.build_pass(effect);
-    pipelineBuilder.create_material("irradiance", irradiancePass);
+
+    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
+    materialManager.add_entity("irradiance", irradiancePass); // pipelineBuilder.create_material("irradiance", irradiancePass);
 
     glm::mat4 projection = glm::perspective(glm::radians(90.0f), ENV_WIDTH / static_cast<float>(ENV_HEIGHT),  0.1f, 10.0f);
     std::array<glm::mat4, 6> views = {
@@ -765,22 +771,11 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
                 {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6}
         };
 
-//        struct GPURoughnessData {
-//            alignas(sizeof(float)) float roughness;
-//        };
-//
-//        AllocatedBuffer roughnessBuffer = Buffer::create_buffer(device, sizeof(GPURoughnessData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-//        VkDescriptorBufferInfo roughnessInfo{};
-//        roughnessInfo.buffer = roughnessBuffer._buffer;
-//        roughnessInfo.offset = 0;
-//        roughnessInfo.range = sizeof(GPURoughnessData);
-
         VkDescriptorSet descriptor;
         VkDescriptorSetLayout setLayout;
         DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
         DescriptorAllocator allocator = DescriptorAllocator(device);
         DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
-                // .bind_buffer(roughnessInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
                 .bind_image(inTexture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
                 .layout(setLayout)
                 .build(descriptor, setLayout, poolSizes);
@@ -802,16 +797,13 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
         push_frag.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
         std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {push_vert, push_frag}, modules);
-        std::shared_ptr<ShaderPass> irradiancePass = pipelineBuilder.build_pass(effect);
-        pipelineBuilder.create_material("prefilter", irradiancePass);
+        std::shared_ptr<ShaderPass> prefilterPass = pipelineBuilder.build_pass(effect);
+
+        MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
+        materialManager.add_entity("prefilter", prefilterPass); // pipelineBuilder.create_material("prefilter", prefilterPass);
 
         // Command pool + command buffer for compute operations
         float roughness = static_cast<float>(mipLevel) / float(PRE_FILTER_MIP_LEVEL);
-
-//        void *data;
-//        vmaMapMemory(device._allocator, roughnessBuffer._allocation, &data);
-//        memcpy(data, &roughness, sizeof(float));
-//        vmaUnmapMemory(device._allocator, roughnessBuffer._allocation);
 
         for (int face = 0; face < count; face++) {
             CommandPool commandPool = CommandPool(device); // can use graphic queue for compute work
@@ -843,11 +835,11 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
                     VkRect2D scissor = vkinit::get_scissor((float) inTexture._width, (float) inTexture._height);
                     vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
 
-                    vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irradiancePass->pipeline);
-                    vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4), sizeof(glm::mat4), &viewProj);
-                    vkCmdPushConstants(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 2 * sizeof(glm::mat4), sizeof(float), &roughness);
-                    vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,irradiancePass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
-                    cube->draw(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, 0, true);
+                    vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, prefilterPass->pipeline);
+                    vkCmdPushConstants(commandBuffer._commandBuffer, prefilterPass->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4), sizeof(glm::mat4), &viewProj);
+                    vkCmdPushConstants(commandBuffer._commandBuffer, prefilterPass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 2 * sizeof(glm::mat4), sizeof(float), &roughness);
+                    vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,prefilterPass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
+                    cube->draw(commandBuffer._commandBuffer, prefilterPass->pipelineLayout, 0, true);
                 }
                 vkCmdEndRenderPass(commandBuffer._commandBuffer);
             }
@@ -960,7 +952,9 @@ Texture EnvMap::brdf_convolution(Device& device, UploadContext& uploadContext) {
 
     std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect({setLayout}, {}, modules);
     std::shared_ptr<ShaderPass> brdfPass = pipelineBuilder.build_pass(effect);
-    pipelineBuilder.create_material("brdf", brdfPass);
+
+    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
+    materialManager.add_entity("brdf", brdfPass); // pipelineBuilder.create_material("brdf", brdfPass);
 
     // Command pool + command buffer for compute operations
     {

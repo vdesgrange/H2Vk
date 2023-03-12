@@ -51,7 +51,7 @@ private:
     glm::vec4 _color {1.0f, 1.0f, 1.0f, 1.0f};
 };
 
-class LightingManager : public System {
+class LightingManager final : public System {
 public:
     GPULightData gpu_format();
 };
