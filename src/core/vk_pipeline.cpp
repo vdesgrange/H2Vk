@@ -50,6 +50,22 @@ std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescri
     return effect;
 }
 
+std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::vector<std::pair<VkShaderStageFlagBits, const char*>> shaderModules) {
+    std::shared_ptr<ShaderEffect> effect = std::make_shared<ShaderEffect>();
+    effect->setLayouts = setLayouts;
+    effect->pushConstants = pushConstants;
+
+    for (auto const& module: shaderModules) {
+        VkShaderModule shader;
+        if (!Shader::load_shader_module(_device, module.second, &shader)) {
+            std::cout << "Error when building the shader module" << std::string(module.second) << std::endl;
+        }
+        effect->shaderStages.push_back(ShaderEffect::ShaderStage{module.first, shader});
+    }
+
+    return effect;
+}
+
 std::shared_ptr<ShaderPass> PipelineBuilder::build_pass(std::shared_ptr<ShaderEffect> effect) {
     std::shared_ptr<ShaderPass> pass = std::make_shared<ShaderPass>();
     pass->effect = std::shared_ptr<ShaderEffect>(effect);
@@ -155,105 +171,3 @@ VkPipeline PipelineBuilder::build_pipeline(const Device& device, const RenderPas
     return pipeline;
 }
 
-void MaterialManager::scene_light(std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/light/light.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/light/light.frag.spv"},
-    };
-
-    std::shared_ptr<ShaderEffect> effect = _pipelineBuilder->build_effect(setLayouts, {}, modules);
-    std::shared_ptr<ShaderPass> pass = _pipelineBuilder->build_pass(effect);
-    this->add_entity("light", pass);
-
-    for (auto& shader : effect->shaderStages) {
-        vkDestroyShaderModule(_device->_logicalDevice, shader.shaderModule, nullptr);
-    }
-}
-
-void MaterialManager::scene_spheres(std::vector<VkDescriptorSetLayout> setLayouts) {
-    VkPushConstantRange push_model;
-    push_model.offset = 0;
-    push_model.size = sizeof(glm::mat4);
-    push_model.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-    VkPushConstantRange push_properties;
-    push_properties.offset = sizeof(glm::mat4);
-    push_properties.size = sizeof(Materials::Properties);
-    push_properties.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene.frag.spv"},
-    };
-
-    std::shared_ptr<ShaderEffect> effect_mesh = _pipelineBuilder->build_effect(setLayouts, {push_model, push_properties}, modules);
-    std::shared_ptr<ShaderPass> pass_mesh = _pipelineBuilder->build_pass(effect_mesh);
-    this->add_entity("basicMaterial", pass_mesh); // todo replace by MaterialManager
-
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr_ibp.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_ibl_cube.frag.spv"},
-    };
-
-    std::shared_ptr<ShaderEffect> effect_pbr = _pipelineBuilder->build_effect(setLayouts, {push_model, push_properties}, pbr_modules);
-    std::shared_ptr<ShaderPass> pass_pbr = _pipelineBuilder->build_pass(effect_pbr);
-    this->add_entity("pbrMaterial", pass_pbr);
-
-    for (auto& shader : effect_mesh->shaderStages) {
-        vkDestroyShaderModule(_device->_logicalDevice, shader.shaderModule, nullptr);
-    }
-
-    for (auto& shader : effect_pbr->shaderStages) {
-        vkDestroyShaderModule(_device->_logicalDevice, shader.shaderModule, nullptr);
-    }
-}
-
-void MaterialManager::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/mesh/mesh_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/mesh/scene_tex.frag.spv"},
-    };
-
-    VkPushConstantRange push_constant;
-    push_constant.offset = 0;
-    push_constant.size = sizeof(glm::mat4);
-    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-    std::shared_ptr<ShaderEffect> effect_mesh = _pipelineBuilder->build_effect(setLayouts, {push_constant}, modules); // {push_constant}
-    std::shared_ptr<ShaderPass> pass = _pipelineBuilder->build_pass(effect_mesh);
-    this->add_entity("helmetMaterial", pass);
-
-    for (auto& shader : effect_mesh->shaderStages) {
-        vkDestroyShaderModule(_device->_logicalDevice, shader.shaderModule, nullptr);
-    }
-
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> pbr_modules {
-            {VK_SHADER_STAGE_VERTEX_BIT, "../src/shaders/pbr/pbr_tex.vert.spv"},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, "../src/shaders/pbr/pbr_tex_cube.frag.spv"},
-    };
-
-    std::shared_ptr<ShaderEffect> effect_pbr = _pipelineBuilder->build_effect(setLayouts, {push_constant}, pbr_modules);
-    std::shared_ptr<ShaderPass> pass_pbr = _pipelineBuilder->build_pass(effect_pbr);
-    this->add_entity("pbrTextureMaterial", pass_pbr);
-
-    for (auto& shader : effect_pbr->shaderStages) {
-        vkDestroyShaderModule(_device->_logicalDevice, shader.shaderModule, nullptr);
-    }
-}
-
-MaterialManager::MaterialManager(const Device* device, PipelineBuilder* pipelineBuilder) : _device(device), _pipelineBuilder(pipelineBuilder) {}
-
-MaterialManager::~MaterialManager() {
-
-    for (const auto& item : this->_entities) {
-        std::shared_ptr<Material> material = std::static_pointer_cast<Material>(item.second);
-
-        vkDestroyPipeline(_device->_logicalDevice, material->pipeline, nullptr);
-        vkDestroyPipelineLayout(_device->_logicalDevice, material->pipelineLayout, nullptr);
-    }
-    _entities.clear();
-}
-
-std::shared_ptr<Material> MaterialManager::get_material(const std::string &name) {
-    return std::static_pointer_cast<Material>(this->get_entity(name));
-}

@@ -31,6 +31,7 @@
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
 #include "core/manager/vk_mesh_manager.h"
+#include "core/manager/vk_material_manager.h"
 #include "core/vk_pipeline.h"
 #include "core/vk_renderpass.h"
 #include "scenes/vk_scene.h"

@@ -4,6 +4,7 @@
 #include "core/vk_device.h"
 #include "core/vk_buffer.h"
 #include "core/manager/vk_mesh_manager.h"
+#include "core/manager/vk_material_manager.h"
 #include "core/vk_pipeline.h"
 #include "core/utilities/vk_initializers.h"
 #include "core/vk_command_buffer.h"
@@ -350,24 +351,31 @@ void Skybox::setup_pipeline(MaterialManager& materialManager, PipelineBuilder& p
     std::string vert = shader.at(_type) + ".vert.spv";
     std::string frag = shader.at(_type) + ".frag.spv";
 
-    std::initializer_list<std::pair<VkShaderStageFlagBits, const char*>> modules = {
-            {VK_SHADER_STAGE_VERTEX_BIT, vert.c_str()},
-            {VK_SHADER_STAGE_FRAGMENT_BIT, frag.c_str()},
+    std::vector<std::pair<ShaderType, const char*>> modules {
+            {ShaderType::VERTEX, vert.c_str()},
+            {ShaderType::FRAGMENT, frag.c_str()},
     };
 
-    VkPushConstantRange push_constant;
-    push_constant.offset = 0;
-    push_constant.size = sizeof(glm::mat4);
-    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    std::vector<PushConstant> constants {
+            {sizeof(glm::mat4), ShaderType::VERTEX},
+    };
 
-    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect(setLayouts, {push_constant}, modules);
-    std::shared_ptr<ShaderPass> pass = pipelineBuilder.build_pass(effect);
-    materialManager.add_entity("skyboxMaterial", pass);
-    this->_material = pass;  // this->_material = pipelineBuilder.get_material("skyboxMaterial");
+    this->_material = materialManager.create_material("skyboxMaterial", setLayouts, constants, modules);
 
-    for (auto& shader : effect->shaderStages) {
-        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
-    }
+
+//    VkPushConstantRange push_constant;
+//    push_constant.offset = 0;
+//    push_constant.size = sizeof(glm::mat4);
+//    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+//
+//    std::shared_ptr<ShaderEffect> effect = pipelineBuilder.build_effect(setLayouts, {push_constant}, modules);
+//    std::shared_ptr<ShaderPass> pass = pipelineBuilder.build_pass(effect);
+//    materialManager.add_entity("skyboxMaterial", pass);
+//    this->_material = pass;  // this->_material = pipelineBuilder.get_material("skyboxMaterial");
+//
+//    for (auto& shader : effect->shaderStages) {
+//        vkDestroyShaderModule(_device._logicalDevice, shader.shaderModule, nullptr);
+//    }
 }
 
 void Skybox::draw(VkCommandBuffer& commandBuffer) {

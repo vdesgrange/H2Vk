@@ -7,14 +7,6 @@
 #include <deque>
 #include <functional>
 
-struct GPUSceneData {
-    glm::vec4 fogColor;
-    glm::vec4 fogDistance;
-    glm::vec4 sunlightDirection;
-    glm::vec4 sunlightColor;
-    glm::float32 specularFactor;
-};
-
 struct GPUObjectData {
     glm::mat4 model;
 };

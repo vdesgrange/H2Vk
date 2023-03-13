@@ -257,7 +257,6 @@ void VulkanEngine::setup_descriptors(){
 
 void VulkanEngine::init_materials() {
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
-    _materialManager->scene_light(setLayouts);
     _materialManager->scene_spheres(setLayouts);
     _materialManager->scene_damaged_helmet(setLayouts);
 

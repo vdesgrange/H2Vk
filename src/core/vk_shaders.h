@@ -10,8 +10,22 @@
 
 class Device;
 
+enum struct ShaderType {
+    VERTEX,
+    TESSELATION_CONTROL,
+    TESSELATION_EVALUATION,
+    GEOMETRY,
+    FRAGMENT,
+    COMPUTE
+};
+
+struct PushConstant {
+    uint32_t size;
+    ShaderType stage;
+};
+
 struct ShaderEffect {
-    struct ShaderStage { // Temporary structure used by VkPipelineShaderStageCreateInfo
+    struct ShaderStage {
         VkShaderStageFlagBits flags;
         VkShaderModule shaderModule;
     };
@@ -29,7 +43,6 @@ struct ShaderPass : public Entity {
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
     std::shared_ptr<ShaderEffect> effect;
-    // todo: move _materials destruction of pipeline here?
 };
 
 typedef ShaderPass Material;
@@ -38,4 +51,5 @@ class Shader final {
 public:
     static bool load_shader_module(const Device& device, const char* filePath, VkShaderModule* out);
     static bool create_shader_module(const Device& device, const std::vector<uint32_t>& code, VkShaderModule* out);
+    static VkShaderStageFlagBits get_shader_stage(ShaderType type);
 };
