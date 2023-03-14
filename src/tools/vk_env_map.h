@@ -36,6 +36,4 @@ public:
     Texture irradiance_cube_mapping(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture);
     Texture prefilter_cube_mapping(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture);
     Texture brdf_convolution(Device& device, UploadContext& uploadContext);
-
-    Texture irradiance_mapping(Device& device, UploadContext& uploadContext, Texture& inTexture);
 };

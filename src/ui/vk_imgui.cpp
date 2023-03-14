@@ -195,7 +195,7 @@ bool UInterface::scene_editor() {
 
         if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen)) {
             static int selected_object = -1; // todo make a general entity manager
-            static int selected_light = -1;
+            static std::string selected_light = "";
             static int selected_tex = -1;
 
             ImGui::PushID("##scene_content");
@@ -203,18 +203,18 @@ bool UInterface::scene_editor() {
 
             const ImGuiID child_id = ImGui::GetID((void*)(intptr_t)0);
             float x = ImGui::GetContentRegionAvail().x;
-            float y = (selected_object == -1 && selected_tex == -1 && selected_light == -1) ? ImGui::GetContentRegionAvail().y : ImGui::GetContentRegionAvail().y / 3;
+            float y = (selected_object == -1 && selected_tex == -1 && selected_light.empty()) ? ImGui::GetContentRegionAvail().y : ImGui::GetContentRegionAvail().y / 3;
             const bool child_is_visible = ImGui::BeginChild(child_id, ImVec2(x, y), true, 0);
 
             if (child_is_visible) {
                 // Lighting
-                for (uint32_t i = 0; i < _engine._lights.size(); i++) {
-                    auto &light = _engine._lights[i];
-                    std::string label = "   " + std::string(ICON_FA_LIGHTBULB) + " " + Light::types[light.get_type()] + " light";
-                    std::string light_id = "##light_" + std::to_string(i) + std::to_string(i);
+                for (auto& l : _engine._lightingManager->_entities) {
+                    auto light = std::static_pointer_cast<Light>(l.second);
+                    std::string label = "   " + std::string(ICON_FA_LIGHTBULB) + " " + Light::types[light->get_type()] + " light";
+                    std::string light_id = "##light_" + std::to_string(light->_uid);
                     ImGui::PushID(light_id.c_str());
-                    if (ImGui::Selectable(label.c_str(), selected_light == i)) {
-                        selected_light = i;
+                    if (ImGui::Selectable(label.c_str(), selected_light == l.first)) {
+                        selected_light = l.first;
                         selected_object = -1;
                         selected_tex = -1;
                     }
@@ -232,7 +232,7 @@ bool UInterface::scene_editor() {
                     bool node_open = ImGui::TreeNodeEx((void *) (intptr_t) i, node_flags, "%s %s", ICON_FA_CUBES, object.model->_name.c_str());
                     if (ImGui::IsItemClicked()) { //  && !ImGui::IsItemToggledOpen()
                         selected_object = i;
-                        selected_light = -1;
+                        selected_light = "";
                     }
 
                     if (node_open) {
@@ -265,17 +265,18 @@ bool UInterface::scene_editor() {
 
             if (ImGui::BeginTabBar("##scene_information", ImGuiTabBarFlags_None)) {
 
-                if (selected_light != -1 && selected_light < _engine._lights.size()) {
-                    auto &light = _engine._lights[selected_light];
+                if (!selected_light.empty()) { //  selected_light < _engine._lightingManager->_entities.size()
+                    std::shared_ptr<Light> light = std::static_pointer_cast<Light>(_engine._lightingManager->get_entity(selected_light));
 
                     if (ImGui::BeginTabItem("Properties")) {
                         ImGui::Text("Name"); ImGui::SameLine(100); ImGui::Text("%s", "Light");
-                        ImGui::Text("Unique ID"); ImGui::SameLine(100); ImGui::Text("%i", light._uid);
-                        ImGui::Text("Type"); ImGui::SameLine(100); ImGui::Text("%s", Light::types[light.get_type()]);
-                        float color[3] = {light.get_color()[0], light.get_color()[1], light.get_color()[2]};
+                        ImGui::Text("Global UID"); ImGui::SameLine(100); ImGui::Text("%i", light->_guid);
+                        ImGui::Text("Local ID"); ImGui::SameLine(100); ImGui::Text("%i", light->_uid);
+                        ImGui::Text("Type"); ImGui::SameLine(100); ImGui::Text("%s", Light::types[light->get_type()]);
+                        float color[3] = {light->get_color()[0], light->get_color()[1], light->get_color()[2]};
                         ImGui::Text("Color"); ImGui::SameLine(100); ImGui::ColorEdit3("", color, 0);
                         ImGui::Text("Position"); ImGui::SameLine(100);
-                        updated |= ImGui::InputFloat3("", UIController::get_position(light), UIController::set_position(light), "%.2f");
+                        updated |= ImGui::InputFloat3("", UIController::get_position(*light), UIController::set_position(*light), "%.2f");
 
                         ImGui::EndTabItem();
                     }

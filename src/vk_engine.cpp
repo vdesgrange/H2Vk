@@ -32,7 +32,7 @@ void VulkanEngine::init()
     init_camera();
     init_scene();
     init_descriptors();
-    init_pipelines();
+    init_materials();
 
     // update_uniform_buffers();
     update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
@@ -255,16 +255,13 @@ void VulkanEngine::setup_descriptors(){
     }
 }
 
-void VulkanEngine::init_pipelines() {
-    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_device, *_renderPass);
-
+void VulkanEngine::init_materials() {
     std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
-    _pipelineBuilder->scene_light(setLayouts);
-    _pipelineBuilder->scene_spheres(setLayouts);
-    _pipelineBuilder->scene_damaged_helmet(setLayouts);
+    _materialManager->scene_spheres(setLayouts);
+    _materialManager->scene_damaged_helmet(setLayouts);
 
     // === Skybox === (Build by default to handle if skybox enabled later)
-    _skybox->setup_pipeline(*_pipelineBuilder, {_descriptorSetLayouts.skybox});
+    _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
 }
 
 FrameData& VulkanEngine::get_current_frame() {
@@ -272,13 +269,16 @@ FrameData& VulkanEngine::get_current_frame() {
 }
 
 void VulkanEngine::init_managers() {
-    _meshManager = std::make_unique<MeshManager>(*_device, _uploadContext); // move to sceneListing ?
-    _textureManager = std::make_unique<TextureManager>(*this);
-    _samplerManager = std::make_unique<SamplerManager>(*this);
+    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass);
+
+    _systemManager = std::make_unique<SystemManager>();
+    _materialManager = _systemManager->register_system<MaterialManager>(_device.get(), _pipelineBuilder.get());
+    _meshManager = _systemManager->register_system<MeshManager>(_device.get(), &_uploadContext);
+    _lightingManager = _systemManager->register_system<LightingManager>();
 }
 
 void VulkanEngine::init_scene() {
-    _skybox = std::make_unique<Skybox>(*_device, *_pipelineBuilder, *_textureManager, *_meshManager, _uploadContext);
+    _skybox = std::make_unique<Skybox>(*_device, *_meshManager, _uploadContext);
     _skybox->_type = Skybox::Type::box;
     _skybox->load();
 
@@ -311,7 +311,6 @@ void VulkanEngine::recreate_swap_chain() {
     init_framebuffers();
 
     if (_window->_windowExtent.width > 0.0f && _window->_windowExtent.height > 0.0f) {
-        // _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
         _camera->set_aspect((float)_window->_windowExtent.width / (float)_window->_windowExtent.height);
         update_uniform_buffers();
     }
@@ -355,8 +354,8 @@ void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
 }
 
 void VulkanEngine::update_uniform_buffers() {
-    FrameData frame =  get_current_frame(); // _frames[i];
-    uint32_t frameIndex = _frameNumber % FRAME_OVERLAP; // i;
+    FrameData frame =  get_current_frame();
+    uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
 
     // === Camera & Objects & Environment ===
     GPUCameraData camData{};
@@ -372,14 +371,7 @@ void VulkanEngine::update_uniform_buffers() {
     vmaUnmapMemory(_device->_allocator, frame.cameraBuffer._allocation);
 
     // Light : write scene data into lighting buffer
-    GPULightData lightingData{};
-    lightingData.num_lights = static_cast<uint32_t>(_lights.size());
-    int lightCount = 0;
-    for (auto& light : _lights) {
-        lightingData.position[lightCount] = light.get_position();
-        lightingData.color[lightCount] = light.get_color();
-        lightCount++;
-    }
+    GPULightData lightingData = _lightingManager->gpu_format();
 
     char *data2;
     vmaMapMemory(_device->_allocator, frame.lightingBuffer._allocation,   (void **) &data2);
@@ -560,8 +552,7 @@ void VulkanEngine::run()
     vkDeviceWaitIdle(_device->_logicalDevice);
 }
 
-void VulkanEngine::cleanup()
-{
+void VulkanEngine::cleanup() {
     if (_isInitialized) {
         vkDeviceWaitIdle(_device->_logicalDevice);
         for (int i=0; i < FRAME_OVERLAP; i++) {
@@ -571,9 +562,9 @@ void VulkanEngine::cleanup()
         _scene->_renderables.clear();
         _skybox.reset();
         _ui.reset();
-        _samplerManager.reset();
-        _textureManager.reset();
-        _meshManager.reset();
+         _meshManager.reset();
+         _materialManager.reset();
+        _systemManager.reset();
         _pipelineBuilder.reset();
         _frameBuffers.reset();
         _renderPass.reset();

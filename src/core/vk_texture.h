@@ -32,25 +32,3 @@ struct Texture {
 
     void destroy(const Device& device);
 };
-
-class TextureManager final {
-public:
-    class VulkanEngine& _engine;
-    std::unordered_map<std::string, Texture> _loadedTextures;
-
-    TextureManager(VulkanEngine& engine) : _engine(engine) {};
-    ~TextureManager();
-
-    void load_texture(const char* file, std::string name);
-};
-
-
-class SamplerManager final {
-public:
-    class VulkanEngine& _engine;
-    std::unordered_map<std::string, VkSampler> _loadedSampler;
-
-    SamplerManager(VulkanEngine& engine) : _engine(engine) {};
-    ~SamplerManager();
-
-};

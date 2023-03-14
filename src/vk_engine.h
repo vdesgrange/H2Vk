@@ -30,7 +30,8 @@
 #include "core/vk_framebuffers.h"
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
-#include "core/vk_mesh_manager.h"
+#include "core/manager/vk_mesh_manager.h"
+#include "core/manager/vk_material_manager.h"
 #include "core/vk_pipeline.h"
 #include "core/vk_renderpass.h"
 #include "scenes/vk_scene.h"
@@ -62,8 +63,6 @@ class ImDrawData;
 class Statistics;
 class Scene;
 class SceneListing;
-class TextureManager;
-class SamplerManager;
 class Skybox;
 
 struct Texture;
@@ -101,19 +100,21 @@ public:
     std::unique_ptr<class SwapChain> _swapchain;
     std::unique_ptr<class RenderPass> _renderPass;
     std::unique_ptr<class FrameBuffers> _frameBuffers;
-    std::unique_ptr<class PipelineBuilder> _pipelineBuilder;
-    std::unique_ptr<class MeshManager> _meshManager;
-    std::unique_ptr<class TextureManager> _textureManager;
-    std::unique_ptr<class SamplerManager> _samplerManager;
+    std::unique_ptr<class GraphicPipeline> _pipelineBuilder;
+
     std::unique_ptr<class SceneListing> _sceneListing;
     std::unique_ptr<class Scene> _scene;
     std::unique_ptr<class UInterface> _ui;
     std::unique_ptr<class Skybox> _skybox;
-    std::unique_ptr<class Camera> _camera;
+
+    std::unique_ptr<class SystemManager> _systemManager;
+    std::shared_ptr<class MaterialManager> _materialManager;
+    std::shared_ptr<class MeshManager> _meshManager;
+    std::shared_ptr<class LightingManager> _lightingManager;
+    std::unique_ptr<class Camera> _camera; // std::shared_ptr<class CameraManager> _cameraManager; todo
 
     FrameData _frames[FRAME_OVERLAP];
     std::vector<RenderObject> _renderables;
-    std::vector<Light> _lights;
 
     DescriptorLayoutCache* _layoutCache;
     DescriptorAllocator* _allocator;
@@ -129,9 +130,6 @@ public:
     DeletionQueue _mainDeletionQueue;
 
     UploadContext _uploadContext;
-
-//    GPUSceneData _sceneParameters;
-//    AllocatedBuffer _sceneParameterBuffer;
 
 	void init();
 	void cleanup();
@@ -152,7 +150,7 @@ private:
     void init_sync_structures();
     void init_descriptors(); // can be call before choice of model
     void setup_descriptors(); // when switching model
-    void init_pipelines();
+    void init_materials();
     void init_managers();
     void recreate_swap_chain();
     void skybox(VkCommandBuffer commandBuffer);
