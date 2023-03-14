@@ -11,7 +11,7 @@ void System::add_entity(std::string name, std::shared_ptr<Entity> entity) {
 std::shared_ptr<Entity> System::get_entity(const std::string name) {
     try {
         return _entities.at(name);
-    } catch (const std::out_of_range&) {
+    } catch (const std::out_of_range& e) {
         return nullptr;
     }
 }
