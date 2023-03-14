@@ -1,5 +1,7 @@
 #include "vk_system_manager.h"
 
+#include <stdexcept>
+
 std::atomic<uint32_t> Entity::nextGUID {0};
 
 Entity::Entity() : _guid(++nextGUID) {}
