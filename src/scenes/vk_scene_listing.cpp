@@ -1,12 +1,10 @@
 #include "vk_scene_listing.h"
 #include "core/camera/vk_camera.h"
-#include "vk_engine.h"
 #include "core/model/vk_model.h"
-#include "core/model/vk_obj.h"
 #include "core/model/vk_poly.h"
 #include "core/model/vk_glb.h"
-#include "core/model/vk_pbr_material.h"
 #include "core/vk_descriptor_builder.h"
+#include "vk_engine.h"
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
         {"None", SceneListing::empty},
@@ -39,11 +37,11 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
             std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f}, gold);
 
             engine->_meshManager->upload_mesh(*sphereModel);
-            engine->_meshManager->add_entity(name, std::static_pointer_cast<Entity>(sphereModel));             // engine->_meshManager->_models.emplace(name, sphereModel);
+            engine->_meshManager->add_entity(name, std::static_pointer_cast<Entity>(sphereModel));
 
             RenderObject sphere;
             sphere.model = engine->_meshManager->get_model(name);
-            sphere.material = engine->_materialManager->get_material("pbrMaterial"); // engine->_pipelineBuilder->get_material("pbrMaterial");
+            sphere.material = engine->_materialManager->get_material("pbrMaterial");
             glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x - 3, y - 3, 0));
             glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.5, 0.5, 0.5));
             sphere.transformMatrix = translation * scale;
@@ -69,10 +67,10 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     std::shared_ptr<ModelGLB> helmetModel = std::make_shared<ModelGLB>(engine->_device.get());
     helmetModel->load_model(*engine, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");
     engine->_meshManager->upload_mesh(*helmetModel);
-    engine->_meshManager->add_entity("helmet", std::static_pointer_cast<Entity>(helmetModel)); // engine->_meshManager->_models.emplace("helmet", std::shared_ptr<Model>(helmetModel));
+    engine->_meshManager->add_entity("helmet", std::static_pointer_cast<Entity>(helmetModel));
 
     RenderObject helmet;
-    helmet.model = engine->_meshManager->get_model("helmet"); // helmet.model = engine->_meshManager->get_model("helmet");
+    helmet.model = engine->_meshManager->get_model("helmet");
     helmet.material = engine->_materialManager->get_material("pbrTextureMaterial");
     helmet.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(helmet);

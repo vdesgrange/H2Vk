@@ -261,7 +261,7 @@ void VulkanEngine::init_materials() {
     _materialManager->scene_damaged_helmet(setLayouts);
 
     // === Skybox === (Build by default to handle if skybox enabled later)
-    _skybox->setup_pipeline(*_materialManager, *_pipelineBuilder, {_descriptorSetLayouts.skybox});
+    _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
 }
 
 FrameData& VulkanEngine::get_current_frame() {
@@ -269,7 +269,7 @@ FrameData& VulkanEngine::get_current_frame() {
 }
 
 void VulkanEngine::init_managers() {
-    _pipelineBuilder = std::make_unique<PipelineBuilder>(*_device, *_renderPass);
+    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass);
 
     _systemManager = std::make_unique<SystemManager>();
     _materialManager = _systemManager->register_system<MaterialManager>(_device.get(), _pipelineBuilder.get());
@@ -278,7 +278,7 @@ void VulkanEngine::init_managers() {
 }
 
 void VulkanEngine::init_scene() {
-    _skybox = std::make_unique<Skybox>(*_device, *_pipelineBuilder, *_meshManager, _uploadContext);
+    _skybox = std::make_unique<Skybox>(*_device, *_meshManager, _uploadContext);
     _skybox->_type = Skybox::Type::box;
     _skybox->load();
 
@@ -311,7 +311,6 @@ void VulkanEngine::recreate_swap_chain() {
     init_framebuffers();
 
     if (_window->_windowExtent.width > 0.0f && _window->_windowExtent.height > 0.0f) {
-        // _camera->set_aspect((float)_window->_windowExtent.width /(float)_window->_windowExtent.height);
         _camera->set_aspect((float)_window->_windowExtent.width / (float)_window->_windowExtent.height);
         update_uniform_buffers();
     }

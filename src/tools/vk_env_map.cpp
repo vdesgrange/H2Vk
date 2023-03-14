@@ -123,10 +123,7 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
         .build(descriptor, setLayout, poolSizes);
 
     // Build pipeline
-    PipelineBuilder pipelineBuilder = PipelineBuilder(device, renderPass);
-    pipelineBuilder._type = PipelineBuilder::Type::graphic;
-    pipelineBuilder._viewport = vkinit::get_viewport((float) ENV_WIDTH, (float) ENV_HEIGHT);
-    pipelineBuilder._scissor = vkinit::get_scissor((float) ENV_WIDTH, (float) ENV_HEIGHT);
+    GraphicPipeline pipelineBuilder = GraphicPipeline(device, renderPass);
 
     std::vector<std::pair<ShaderType, const char*>> modules {
             {ShaderType::VERTEX, "../src/shaders/env_map/cube_map.vert.spv"},
@@ -329,10 +326,7 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
             .build(descriptor, setLayout, poolSizes);
 
     // Build pipeline
-    PipelineBuilder pipelineBuilder = PipelineBuilder(device, renderPass); // renderPass useless
-    pipelineBuilder._type = PipelineBuilder::Type::graphic;
-    pipelineBuilder._viewport = vkinit::get_viewport((float) CONVOLVE_WIDTH, (float) CONVOLVE_HEIGHT);
-    pipelineBuilder._scissor = vkinit::get_scissor((float) CONVOLVE_WIDTH, (float) CONVOLVE_HEIGHT);
+    GraphicPipeline pipelineBuilder = GraphicPipeline(device, renderPass);
 
     std::vector<std::pair<ShaderType, const char*>> modules {
             {ShaderType::VERTEX, "../src/shaders/env_map/cube_map.vert.spv"},
@@ -590,10 +584,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
                 .build(descriptor, setLayout, poolSizes);
 
         // Build pipeline
-        PipelineBuilder pipelineBuilder = PipelineBuilder(device, renderPass); // renderPass useless
-        pipelineBuilder._type = PipelineBuilder::Type::graphic;
-        pipelineBuilder._viewport = vkinit::get_viewport((float) mipWidth, (float) mipHeight);
-        pipelineBuilder._scissor = vkinit::get_scissor((float) mipWidth, (float) mipHeight);
+        GraphicPipeline pipelineBuilder = GraphicPipeline(device, renderPass);
 
         std::vector<PushConstant> constants {
                 {2 * sizeof(glm::mat4), ShaderType::VERTEX},
@@ -738,11 +729,7 @@ Texture EnvMap::brdf_convolution(Device& device, UploadContext& uploadContext) {
             .build(descriptor, setLayout, poolSizes);
 
     // Build pipeline
-    RenderPass renderPass = RenderPass(device);
-    PipelineBuilder pipelineBuilder = PipelineBuilder(device, renderPass); // renderPass useless
-    pipelineBuilder._type = PipelineBuilder::Type::compute;
-    pipelineBuilder._viewport = vkinit::get_viewport((float) BRDF_WIDTH, (float) BRDF_HEIGHT);
-    pipelineBuilder._scissor = vkinit::get_scissor((float) BRDF_WIDTH, (float) BRDF_HEIGHT);
+    ComputePipeline pipelineBuilder = ComputePipeline(device);
 
     std::vector<std::pair<ShaderType, const char*>> modules = {
             {ShaderType::COMPUTE, "../src/shaders/env_map/brdf.comp.spv"},

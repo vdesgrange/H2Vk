@@ -100,7 +100,7 @@ public:
     std::unique_ptr<class SwapChain> _swapchain;
     std::unique_ptr<class RenderPass> _renderPass;
     std::unique_ptr<class FrameBuffers> _frameBuffers;
-    std::unique_ptr<class PipelineBuilder> _pipelineBuilder;
+    std::unique_ptr<class GraphicPipeline> _pipelineBuilder;
 
     std::unique_ptr<class SceneListing> _sceneListing;
     std::unique_ptr<class Scene> _scene;
