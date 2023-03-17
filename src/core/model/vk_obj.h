@@ -9,7 +9,7 @@ class ModelOBJ final: public Model {
 public:
     using Model::Model;
 
-    bool load_model(VulkanEngine& engine, const char *filename) override;
+    bool load_model(const Device& device, const UploadContext& ctx, const char *filename) override;
 
 private:
     void load_node(tinyobj::attrib_t attrib, std::vector<tinyobj::shape_t>& shapes);

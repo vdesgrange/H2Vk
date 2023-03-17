@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "VkBootstrap.h"
+#include "core/utilities/vk_resources.h"
 
 class Device;
 

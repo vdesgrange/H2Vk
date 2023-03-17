@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vk_mem_alloc.h"
+#include "core/utilities/vk_resources.h"
 
 class Device;
 

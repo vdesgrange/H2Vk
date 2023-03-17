@@ -2,10 +2,8 @@
 
 #include <string>
 
-#include "vk_mem_alloc.h"
-
-class Device;
-class VulkanEngine;
+#include "vk_command_buffer.h"
+#include "core/utilities/vk_resources.h"
 
 struct Texture {
     std::string _name;
@@ -15,12 +13,13 @@ struct Texture {
     VmaAllocation _allocation;
     VkImageView _imageView;  // duplicate
     VkSampler _sampler;  // duplicate
+
     VkDescriptorImageInfo _descriptor;
     uint32_t _width;
     uint32_t _height;
 
-    bool load_image_from_file(VulkanEngine &engine, const char *file); // , AllocatedImage &outImage
-    bool load_image_from_buffer(VulkanEngine &engine, void *buffer, VkDeviceSize bufferSize, VkFormat format,
+    bool load_image_from_file(const Device& device, const UploadContext& ctx, const char *file);
+    bool load_image_from_buffer(const Device& device, const UploadContext& ctx, void *buffer, VkDeviceSize bufferSize, VkFormat format,
                                 uint32_t texWidth, uint32_t texHeight); // , Image &outImage
 
     void updateDescriptor() {

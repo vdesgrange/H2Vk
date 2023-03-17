@@ -2,9 +2,7 @@
 #include <array>
 
 #include "vk_framebuffers.h"
-#include "core/utilities/vk_helpers.h"
 #include "vk_window.h"
-#include "vk_device.h"
 #include "vk_renderpass.h"
 #include "vk_swapchain.h"
 

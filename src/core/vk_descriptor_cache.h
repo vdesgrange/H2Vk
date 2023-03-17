@@ -3,7 +3,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include "VkBootstrap.h"
+#include "core/utilities/vk_resources.h"
 
 class Device;
 

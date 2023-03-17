@@ -1,6 +1,4 @@
 #include "vk_renderpass.h"
-#include "core/utilities/vk_helpers.h"
-#include "vk_device.h"
 
 /**
  * RenderPass

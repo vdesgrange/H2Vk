@@ -1,7 +1,7 @@
 #include "vk_helpers.h"
 #include "core/vk_device.h"
 
-std::vector<uint32_t> Helper::read_file(const char* filePath) {
+std::vector<uint32_t> helper::read_file(const char* filePath) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
         throw std::runtime_error("failed to open file.");
@@ -16,7 +16,7 @@ std::vector<uint32_t> Helper::read_file(const char* filePath) {
     return buffer;
 }
 
-size_t Helper::pad_uniform_buffer_size(const Device& device, size_t originalSize) {
+size_t helper::pad_uniform_buffer_size(const Device& device, size_t originalSize) {
     size_t minUboAlignment = device._gpuProperties.limits.minUniformBufferOffsetAlignment;
     size_t alignedSize = originalSize;
     if (minUboAlignment > 0 ) {

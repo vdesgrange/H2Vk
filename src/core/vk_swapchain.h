@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 
-#include "vk_mem_alloc.h"
+#include "core/utilities/vk_resources.h"
 #include "core/utilities/vk_types.h"
 
 const std::vector<const char*> deviceExtensions = {

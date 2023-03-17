@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VkBootstrap.h"
+#include "core/utilities/vk_resources.h"
 
 class Window;
 class Device;

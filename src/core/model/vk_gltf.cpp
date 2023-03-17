@@ -4,7 +4,7 @@
 
 #include "vk_gltf.h"
 
-bool ModelGLTF::load_model(VulkanEngine& engine, const char *filename) {
+bool ModelGLTF::load_model(const Device& device, const UploadContext& ctx, const char *filename) {
     tinygltf::Model input;
     tinygltf::TinyGLTF loader;
     std::string err;
@@ -16,14 +16,14 @@ bool ModelGLTF::load_model(VulkanEngine& engine, const char *filename) {
         return false;
     }
 
-    this->load_images(engine, input);
+    this->load_images(device, ctx, input);
     this->load_textures(input);
     this->load_materials(input);
     this->load_scene(input, _indexesBuffer, _verticesBuffer);
     return true;
 }
 
-void ModelGLTF::load_images(VulkanEngine& engine, tinygltf::Model &input) {
+void ModelGLTF::load_images(const Device& device, const UploadContext& ctx, tinygltf::Model &input) {
     _images.resize(input.images.size());
 
     for (uint32_t i = 0; i < input.images.size(); i++) {
@@ -48,7 +48,7 @@ void ModelGLTF::load_images(VulkanEngine& engine, tinygltf::Model &input) {
             bufferSize = gltfImage.image.size();
         }
 
-        _images[i]._texture.load_image_from_buffer(engine, buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height);
+        _images[i]._texture.load_image_from_buffer(device, ctx, buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height);
         _images[i]._texture._name = gltfImage.name.empty() ? "Unknown" : gltfImage.name;
         _images[i]._texture._uri = gltfImage.uri.empty() ? "Unknown" : gltfImage.uri;
 

@@ -3,9 +3,7 @@
 #endif
 
 #include "vk_swapchain.h"
-#include "core/utilities/vk_helpers.h"
 #include "vk_window.h"
-#include "vk_device.h"
 #include "core/utilities/vk_initializers.h"
 
 /**

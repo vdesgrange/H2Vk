@@ -9,10 +9,10 @@ class ModelGLTF: public Model {
 public:
     using Model::Model;
 
-    bool load_model(VulkanEngine& engine, const char *filename) override;
+    bool load_model(const Device& device, const UploadContext& ctx, const char *filename) override;
 
 protected:
-    void load_images(VulkanEngine& _engine, tinygltf::Model& input);
+    void load_images(const Device& device, const UploadContext& ctx, tinygltf::Model& input);
     void load_textures(tinygltf::Model& input);
     void load_materials(tinygltf::Model& input);
     void load_node(const tinygltf::Node& iNode, tinygltf::Model& input, Node* parent, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer);

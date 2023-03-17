@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include "vk_obj.h"
 
-bool ModelOBJ::load_model(VulkanEngine& engine, const char *filename) {
+bool ModelOBJ::load_model(const Device& device, const UploadContext& ctx, const char *filename) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;

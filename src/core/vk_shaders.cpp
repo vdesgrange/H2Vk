@@ -1,6 +1,5 @@
 #include "vk_shaders.h"
-#include "vk_device.h"
-#include "utilities/vk_helpers.h"
+#include "core/utilities/vk_resources.h"
 
 bool Shader::create_shader_module(const Device& device, const std::vector<uint32_t>& code, VkShaderModule* out) {
     VkShaderModuleCreateInfo createInfo{};
@@ -19,7 +18,7 @@ bool Shader::create_shader_module(const Device& device, const std::vector<uint32
 }
 
 bool Shader::load_shader_module(const Device& device, const char* filePath, VkShaderModule* out) {
-    const std::vector<uint32_t> code = Helper::read_file(filePath);
+    const std::vector<uint32_t> code = helper::read_file(filePath);
     return create_shader_module(device, code, out);
 }
 

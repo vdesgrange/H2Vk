@@ -10,7 +10,6 @@
 #include <iostream>
 #include <atomic>
 
-#include "vk_engine.h"
 #include "core/manager/vk_system_manager.h"
 #include "core/vk_texture.h"
 #include "core/vk_buffer.h"
@@ -19,7 +18,6 @@
 #include "core/vk_descriptor_builder.h"
 
 class Device;
-class VulkanEngine;
 
 struct VertexInputDescription {
     std::vector<VkVertexInputBindingDescription> bindings;
@@ -133,7 +131,7 @@ public:
     ~Model();
     Model& operator=(const Model& rhs);
 
-    virtual bool load_model(VulkanEngine& engine, const char *filename) { return false; };
+    virtual bool load_model(const Device& device, const UploadContext& ctx, const char *filename) { return false; };
 
     void destroy();
     void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);

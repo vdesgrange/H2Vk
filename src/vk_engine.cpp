@@ -17,7 +17,6 @@
 
 #include "vk_engine.h"
 
-
 using namespace std;
 
 void VulkanEngine::init()
@@ -164,7 +163,7 @@ void VulkanEngine::init_descriptors() {
         camBInfo.range = sizeof(GPUCameraData);
 
         // === Light ===
-        const size_t lightBufferSize = FRAME_OVERLAP * Helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData));
+        const size_t lightBufferSize = FRAME_OVERLAP * helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData));
         _frames[i].lightingBuffer = Buffer::create_buffer(*_device, lightBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
         VkDescriptorBufferInfo lightingBInfo{};
         lightingBInfo.buffer = _frames[i].lightingBuffer._buffer;
@@ -294,6 +293,7 @@ void VulkanEngine::recreate_swap_chain() {
         glfwGetFramebufferSize(_window->_window, &width, &height);
         glfwWaitEvents();
     }
+
     vkDeviceWaitIdle(_device->_logicalDevice);
     _frameBuffers.reset();
     _renderPass.reset();
@@ -376,7 +376,7 @@ void VulkanEngine::update_uniform_buffers() {
 
     char *data2;
     vmaMapMemory(_device->_allocator, frame.lightingBuffer._allocation,   (void **) &data2);
-    data2 += Helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData)) * frameIndex;
+    data2 += helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData)) * frameIndex;
     memcpy(data2, &lightingData, sizeof(GPULightData));
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
 }
@@ -416,7 +416,7 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
         if (object.material != lastMaterial) { // Same material = (shaders/pipeline/descriptors) for multiple objects part of the same scene (e.g. monkey + triangles)
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
             lastMaterial = object.material;
-            uint32_t dynOffset = Helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex; // GPUSceneData
+            uint32_t dynOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex; // GPUSceneData
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
         }

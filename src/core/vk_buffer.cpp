@@ -1,6 +1,4 @@
 #include "vk_buffer.h"
-#include "core/utilities/vk_helpers.h"
-#include "vk_device.h"
 
 /**
  * AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)

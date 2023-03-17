@@ -10,6 +10,7 @@
 #include "core/vk_texture.h"
 #include "core/model/vk_poly.h"
 #include "core/manager/vk_mesh_manager.h"
+#include "core/manager/vk_material_manager.h"
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
 

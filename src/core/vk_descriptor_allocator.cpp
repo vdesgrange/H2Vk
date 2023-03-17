@@ -1,5 +1,4 @@
 #include "vk_descriptor_allocator.h"
-#include "vk_device.h"
 #include <iostream>
 
 DescriptorAllocator::~DescriptorAllocator() {

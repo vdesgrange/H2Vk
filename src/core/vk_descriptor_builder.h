@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "VkBootstrap.h"
+#include "core/utilities/vk_resources.h"
 
 struct DescriptorLayoutCache;
 

@@ -1,7 +1,5 @@
 #include "vk_fence.h"
-#include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
-#include "vk_device.h"
 
 Fence::Fence(const Device& device) : _device(device) {
     // Used for CPU -> GPU communication

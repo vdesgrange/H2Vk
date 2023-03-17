@@ -5,8 +5,6 @@
 
 #include "vk_texture.h"
 #include "vk_buffer.h"
-#include "vk_device.h"
-#include "vk_engine.h"
 #include "core/utilities/vk_initializers.h"
 
 void Texture::destroy(const Device& device) {
@@ -23,8 +21,9 @@ void Texture::destroy(const Device& device) {
     }
 }
 
-bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
+bool Texture::load_image_from_file(const Device& device, const UploadContext& ctx, const char* file) {
     int texWidth, texHeight, texChannels;
+
 
     stbi_uc* pixels = stbi_load(file, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     if (!pixels) {
@@ -39,12 +38,12 @@ bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
     VkDeviceSize imageSize = texWidth * texHeight * 4;
     VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
-    AllocatedBuffer buffer = Buffer::create_buffer(*engine._device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    AllocatedBuffer buffer = Buffer::create_buffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
     void* data;
-    vmaMapMemory(engine._device->_allocator, buffer._allocation, &data);
+    vmaMapMemory(device._allocator, buffer._allocation, &data);
     memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
-    vmaUnmapMemory(engine._device->_allocator, buffer._allocation);
+    vmaUnmapMemory(device._allocator, buffer._allocation);
     stbi_image_free(pixels);
 
     VkExtent3D imageExtent;
@@ -56,9 +55,9 @@ bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(engine._device->_allocator, &imgInfo, &imgAllocinfo, &this->_image, &this->_allocation, nullptr);
+    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &this->_image, &this->_allocation, nullptr);
 
-    CommandBuffer::immediate_submit(*engine._device, engine._uploadContext, [&](VkCommandBuffer cmd) {
+    CommandBuffer::immediate_submit(device, ctx, [&](VkCommandBuffer cmd) {
         VkImageSubresourceRange range;
         range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         range.baseMipLevel = 0;
@@ -104,26 +103,26 @@ bool Texture::load_image_from_file(VulkanEngine& engine, const char* file) {
 
         // unrelated to command buffer: can be move outside?
         VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        vkCreateSampler(engine._device->_logicalDevice, &samplerInfo, nullptr, &this->_sampler);
+        vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &this->_sampler);
 
         VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(format, this->_image, VK_IMAGE_ASPECT_COLOR_BIT);
-        vkCreateImageView(engine._device->_logicalDevice, &imageinfo, nullptr, &this->_imageView);
+        vkCreateImageView(device._logicalDevice, &imageinfo, nullptr, &this->_imageView);
     });
 
-    vmaDestroyBuffer(engine._device->_allocator, buffer._buffer, buffer._allocation);
+    vmaDestroyBuffer(device._allocator, buffer._buffer, buffer._allocation);
     std::cout << "Texture loaded successfully " << file << std::endl;
 
     return true;
 }
 
-bool Texture::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
+bool Texture::load_image_from_buffer(const Device& device, const UploadContext& ctx, void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
 
-    AllocatedBuffer stagingBuffer = Buffer::create_buffer(*engine._device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
     void* data;
-    vmaMapMemory(engine._device->_allocator, stagingBuffer._allocation, &data);
+    vmaMapMemory(device._allocator, stagingBuffer._allocation, &data);
     memcpy(data, buffer, static_cast<size_t>(bufferSize));
-    vmaUnmapMemory(engine._device->_allocator, stagingBuffer._allocation);
+    vmaUnmapMemory(device._allocator, stagingBuffer._allocation);
 
     VkExtent3D imageExtent;
     imageExtent.width = static_cast<uint32_t>(texWidth);
@@ -139,9 +138,9 @@ bool Texture::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDevic
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(engine._device->_allocator, &imgInfo, &imgAllocinfo, &this->_image, &this->_allocation, nullptr);
+    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &this->_image, &this->_allocation, nullptr);
 
-    CommandBuffer::immediate_submit(*engine._device, engine._uploadContext, [&](VkCommandBuffer cmd) {
+    CommandBuffer::immediate_submit(device, ctx, [&](VkCommandBuffer cmd) {
         VkImageSubresourceRange range;
         range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         range.baseMipLevel = 0;
@@ -181,15 +180,15 @@ bool Texture::load_image_from_buffer(VulkanEngine& engine, void* buffer, VkDevic
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
 
         VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        vkCreateSampler(engine._device->_logicalDevice, &samplerInfo, nullptr, &this->_sampler);
+        vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &this->_sampler);
 
         VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(format, this->_image, VK_IMAGE_ASPECT_COLOR_BIT);
-        vkCreateImageView(engine._device->_logicalDevice, &imageinfo, nullptr, &this->_imageView);
+        vkCreateImageView(device._logicalDevice, &imageinfo, nullptr, &this->_imageView);
 
         this->updateDescriptor(); // update descriptor with sample, imageView, imageLayout
     });
 
-    vmaDestroyBuffer(engine._device->_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+    vmaDestroyBuffer(device._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
     std::cout << "Texture loaded successfully " << std::endl;
 
     return true;
