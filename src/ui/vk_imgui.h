@@ -4,7 +4,6 @@ class VulkanEngine;
 
 #include <unordered_map>
 #include "VkBootstrap.h"
-#include "core/utilities/vk_types.h"
 #include "core/vk_descriptor_cache.h"
 #include "core/vk_descriptor_allocator.h"
 
@@ -30,12 +29,6 @@ struct Settings final {
     // Scene
     int texture_index {-1};
     VkDescriptorSet _textureDescriptorSet {};
-
-    // Light
-    float coordinates[3] {1.0f, 0.0f, 0.0f};
-    float colors[3] {1.0f, 1.0f, 1.0f};
-    float ambient {0.0005};
-    float specular {0.75};
 
     // Skybox
     bool display = false;
@@ -70,5 +63,4 @@ private:
     bool stats_viewer(const Statistics& statistics);
     bool skybox_editor();
     bool light_editor();
-    bool log_console();
 };

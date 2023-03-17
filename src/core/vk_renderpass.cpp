@@ -9,15 +9,11 @@
  * Framebuffer attachments : description of the image which will be written into the rendering commands (iow. pixels
  * are rendered on a framebuffer).
  * @param device
- * @param swapchain
  */
 RenderPass::RenderPass(const Device& device) : _device(device) { }
 
 RenderPass::~RenderPass() {
     vkDestroyRenderPass(_device._logicalDevice, _renderPass, nullptr);
-    //    swapchain._swapChainDeletionQueue.push_function([=]() {
-//        vkDestroyRenderPass(device._logicalDevice, _renderPass, nullptr);
-//    });
 }
 
 void RenderPass::init(std::vector<VkAttachmentDescription> attachments, std::vector<VkSubpassDependency> dependencies, VkSubpassDescription subpass) {

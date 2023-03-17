@@ -1,9 +1,9 @@
 #include "vk_command_buffer.h"
-#include "core/utilities/vk_helpers.h"
 #include "vk_device.h"
 #include "vk_command_pool.h"
-#include "core/utilities/vk_initializers.h"
 #include "vk_fence.h"
+#include "core/utilities/vk_helpers.h"
+#include "core/utilities/vk_initializers.h"
 
 /**
  * Command buffers are allocated from Command pools and executed on queues.

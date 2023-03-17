@@ -1,13 +1,9 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
-#include <array>
+#include <vector>
 
 #include "VkBootstrap.h"
-#include "core/utilities/vk_types.h"
-#include "vk_swapchain.h"
 
-class SwapChain;
 class Device;
 
 class RenderPass final {

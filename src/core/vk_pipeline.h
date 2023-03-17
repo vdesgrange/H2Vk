@@ -1,11 +1,9 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
 #include <vector>
 
-#include "core/utilities/vk_types.h"
-#include "core/manager/vk_system_manager.h"
 #include "vk_shaders.h"
+#include "core/manager/vk_system_manager.h"
 
 class Device;
 class RenderPass;

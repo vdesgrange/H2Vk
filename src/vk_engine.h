@@ -2,7 +2,6 @@
 
 #include <GLFW/glfw3.h>
 #include <vector>
-#include <string>
 #include <fstream>
 #include <deque>
 #include <functional>
@@ -11,61 +10,66 @@
 
 #include "vk_mem_alloc.h"
 #include "VkBootstrap.h"
-#include "glm/gtc/matrix_transform.hpp"
-#include "imgui.h"
 
-#include "ui/vk_imgui.h"
-#include "core/model/vk_model.h"
-#include "core/skybox/vk_skybox.h"
-#include "core/lighting/vk_light.h"
-#include "core/vk_buffer.h"
-#include "core/camera/vk_camera.h"
-#include "core/vk_command_buffer.h"
-#include "core/vk_command_pool.h"
+#include "core/vk_window.h"
+#include "core/vk_device.h"
+#include "core/vk_swapchain.h"
+#include "core/vk_renderpass.h"
+#include "core/vk_framebuffers.h"
+#include "core/vk_pipeline.h"
 #include "core/vk_descriptor_allocator.h"
 #include "core/vk_descriptor_builder.h"
 #include "core/vk_descriptor_cache.h"
-#include "core/vk_device.h"
 #include "core/vk_fence.h"
-#include "core/vk_framebuffers.h"
+#include "core/vk_semaphore.h"
+#include "core/vk_texture.h"
+#include "core/vk_command_pool.h"
+#include "core/vk_command_buffer.h"
+#include "core/vk_buffer.h"
+
+#include "core/manager/vk_material_manager.h"
+#include "core/manager/vk_mesh_manager.h"
+
+#include "core/skybox/vk_skybox.h"
+#include "core/camera/vk_camera.h"
+#include "core/model/vk_model.h"
+#include "core/lighting/vk_light.h"
+
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
-#include "core/manager/vk_mesh_manager.h"
-#include "core/manager/vk_material_manager.h"
-#include "core/vk_pipeline.h"
-#include "core/vk_renderpass.h"
-#include "scenes/vk_scene.h"
-#include "scenes/vk_scene_listing.h"
-#include "core/vk_semaphore.h"
-#include "core/vk_swapchain.h"
-#include "core/vk_texture.h"
 #include "core/utilities/vk_types.h"
-#include "core/vk_window.h"
+
+#include "ui/vk_imgui.h"
+
+#include "scenes/vk_scene_listing.h"
+#include "scenes/vk_scene.h"
 
 class Window;
 class Device;
 class SwapChain;
-class CommandPool;
-class CommandBuffer;
 class RenderPass;
 class FrameBuffers;
-class Fence;
-class Semaphore;
-class PipelineBuilder;
-class MeshManager;
-class DeletionQueue;
-class Camera;
-class Mesh;
-class DescriptorLayoutCache;
-class DescriptorAllocator;
-class UInterface;
-class ImDrawData;
-class Statistics;
-class Scene;
+class GraphicPipeline;
+
 class SceneListing;
+class Scene;
+class UInterface;
 class Skybox;
 
-struct Texture;
+class SystemManager;
+class MaterialManager;
+class MeshManager;
+class LightingManager;
+class Camera;
+
+class CommandPool;
+class CommandBuffer;
+
+class Semaphore;
+class Fence;
+class DescriptorLayoutCache;
+class DescriptorAllocator;
+class Statistics;
 
 const bool enableValidationLayers = true;
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -95,23 +99,23 @@ public:
     uint32_t _frameNumber = 0;
     double _time = 0;
 
-    std::unique_ptr<class Window> _window;
-    std::unique_ptr<class Device> _device;
-    std::unique_ptr<class SwapChain> _swapchain;
-    std::unique_ptr<class RenderPass> _renderPass;
-    std::unique_ptr<class FrameBuffers> _frameBuffers;
-    std::unique_ptr<class GraphicPipeline> _pipelineBuilder;
+    std::unique_ptr<Window> _window;
+    std::unique_ptr<Device> _device;
+    std::unique_ptr<SwapChain> _swapchain;
+    std::unique_ptr<RenderPass> _renderPass;
+    std::unique_ptr<FrameBuffers> _frameBuffers;
+    std::unique_ptr<GraphicPipeline> _pipelineBuilder;
 
-    std::unique_ptr<class SceneListing> _sceneListing;
-    std::unique_ptr<class Scene> _scene;
-    std::unique_ptr<class UInterface> _ui;
-    std::unique_ptr<class Skybox> _skybox;
+    std::unique_ptr<SceneListing> _sceneListing;
+    std::unique_ptr<Scene> _scene;
+    std::unique_ptr<UInterface> _ui;
+    std::unique_ptr<Skybox> _skybox;
 
-    std::unique_ptr<class SystemManager> _systemManager;
-    std::shared_ptr<class MaterialManager> _materialManager;
-    std::shared_ptr<class MeshManager> _meshManager;
-    std::shared_ptr<class LightingManager> _lightingManager;
-    std::unique_ptr<class Camera> _camera; // std::shared_ptr<class CameraManager> _cameraManager; todo
+    std::unique_ptr<SystemManager> _systemManager;
+    std::shared_ptr<MaterialManager> _materialManager;
+    std::shared_ptr<MeshManager> _meshManager;
+    std::shared_ptr<LightingManager> _lightingManager;
+    std::unique_ptr<Camera> _camera; // std::shared_ptr<class CameraManager> _cameraManager; todo
 
     FrameData _frames[FRAME_OVERLAP];
     std::vector<RenderObject> _renderables;

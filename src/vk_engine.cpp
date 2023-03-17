@@ -13,8 +13,10 @@
 #include <GLFW/glfw3.h>
 #include "glm/glm.hpp"
 #include <iostream>
+#include <array>
 
 #include "vk_engine.h"
+
 
 using namespace std;
 
@@ -34,7 +36,6 @@ void VulkanEngine::init()
     init_descriptors();
     init_materials();
 
-    // update_uniform_buffers();
     update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
 	_isInitialized = true;
 }

@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "vk_mem_alloc.h"
 #include "glm/glm.hpp"
 #include "core/vk_shaders.h"
 

@@ -1,3 +1,6 @@
+
+#include <array>
+
 #include "vk_framebuffers.h"
 #include "core/utilities/vk_helpers.h"
 #include "vk_window.h"

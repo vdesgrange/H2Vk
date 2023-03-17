@@ -1,6 +1,8 @@
 #include "vk_descriptor_cache.h"
 #include "vk_device.h"
 
+#include <algorithm>
+
 DescriptorLayoutCache::~DescriptorLayoutCache() {
     for (auto setLayout : cache) {
         vkDestroyDescriptorSetLayout(_device._logicalDevice, setLayout.second, nullptr);

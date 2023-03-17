@@ -12,7 +12,7 @@ const std::vector<const char*> deviceExtensions = {
 };
 
 class Window;
-class Device; // forward declaration
+class Device;
 
 class SwapChain final {
 public:
@@ -22,8 +22,7 @@ public:
     std::vector<VkImageView> _swapChainImageViews;
 
     VkFormat _depthFormat;
-    VkImageView _depthImageView; // VkImageView contains details about image. Must go through it before using VkImage.
-    // AllocatedImage _depthImageOld;
+    VkImageView _depthImageView;
     VkImage _depthImage;
     VmaAllocation _depthAllocation;
 

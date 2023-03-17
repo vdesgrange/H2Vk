@@ -1,9 +1,7 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
 #include "VkBootstrap.h"
 #include "vk_mem_alloc.h"
-#include "core/utilities/vk_types.h"
 
 class Window;
 
@@ -19,7 +17,6 @@ public:
     VkPhysicalDeviceProperties _gpuProperties; // request gpu information
 
     VmaAllocator _allocator;
-
 
     Device(Window& _window);
     ~Device();

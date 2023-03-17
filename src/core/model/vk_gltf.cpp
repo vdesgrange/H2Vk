@@ -52,11 +52,6 @@ void ModelGLTF::load_images(VulkanEngine& engine, tinygltf::Model &input) {
         _images[i]._texture._name = gltfImage.name.empty() ? "Unknown" : gltfImage.name;
         _images[i]._texture._uri = gltfImage.uri.empty() ? "Unknown" : gltfImage.uri;
 
-//        DescriptorBuilder::begin(*engine._layoutCache, *engine._allocator)
-//                .bind_image(_images[i]._texture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,0)
-//                .layout(engine._descriptorSetLayouts.textures)
-//                .build( _images[i]._descriptorSet, engine._descriptorSetLayouts.textures, {{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }});
-
         if (deleteBuffer) {
             delete[] buffer;
         }

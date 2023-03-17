@@ -2,7 +2,6 @@
 #include "vk_imgui_wrapper.h"
 #include "vk_imgui_controller.h"
 #include "vk_engine.h"
-#include "core/vk_window.h"
 #include "core/camera/vk_camera.h"
 #include "core/lighting/vk_light.h"
 #include "core/utilities/vk_helpers.h"
@@ -311,8 +310,8 @@ bool UInterface::scene_editor() {
                             if (ImGui::BeginTabItem("Texture")) {
                                 ImGui::Text("URI"); ImGui::SameLine(100); ImGui::Text("%s", image._texture._uri.c_str());
 
-                                float tex_width = fmin(ImGui::GetContentRegionAvail().x, image._texture._width);
-                                float tex_height = fmin(ImGui::GetContentRegionAvail().y, image._texture._height);
+                                float tex_width = fminf(ImGui::GetContentRegionAvail().x, (float)image._texture._width);
+                                float tex_height = fminf(ImGui::GetContentRegionAvail().y, (float)image._texture._height);
                                 ImGui::Image(get_settings()._textureDescriptorSet, ImVec2(tex_width, tex_height));
                                 ImGui::EndTabItem();
                             }

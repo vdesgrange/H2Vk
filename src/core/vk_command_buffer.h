@@ -1,8 +1,8 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
 #include "VkBootstrap.h"
-#include "core/utilities/vk_types.h"
+
+#include <functional>
 
 class CommandPool;
 class Device;

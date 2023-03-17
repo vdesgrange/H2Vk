@@ -1,9 +1,8 @@
 #pragma once
 
-#include <unordered_map>
 #include <string>
 
-#include "core/utilities/vk_types.h"
+#include "vk_mem_alloc.h"
 
 class Device;
 class VulkanEngine;

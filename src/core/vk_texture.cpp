@@ -1,13 +1,13 @@
 // #define STB_IMAGE_IMPLEMENTATION
 
+#include <stb_image.h>
+#include <iostream>
+
 #include "vk_texture.h"
-#include "core/utilities/vk_initializers.h"
 #include "vk_buffer.h"
 #include "vk_device.h"
 #include "vk_engine.h"
-
-#include <stb_image.h>
-#include <iostream>
+#include "core/utilities/vk_initializers.h"
 
 void Texture::destroy(const Device& device) {
     if (this->_imageView) {
