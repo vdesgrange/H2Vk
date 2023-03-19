@@ -96,6 +96,18 @@ VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
     return colorBlendAttachment;
 }
 
+VkPipelineColorBlendStateCreateInfo vkinit::color_blend_state_create_info(VkPipelineColorBlendAttachmentState* colorBlendAttachment) {
+    VkPipelineColorBlendStateCreateInfo colorBlending{};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.pNext = nullptr;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOp = VK_LOGIC_OP_COPY;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = colorBlendAttachment;
+
+    return colorBlending;
+}
+
 VkFenceCreateInfo vkinit::fence_create_info(VkFenceCreateFlags flags) {
     /**
      * Used for CPU -> GPU communication

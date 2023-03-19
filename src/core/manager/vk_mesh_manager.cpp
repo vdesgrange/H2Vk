@@ -9,11 +9,11 @@
 MeshManager::MeshManager(const Device* device, UploadContext* uploadContext) : _device(device), _uploadContext(uploadContext) {};
 
 MeshManager::~MeshManager() {
-    _entities.clear(); // _models.clear();
+    _entities.clear();
 
-    if (_uploadContext->_commandPool != nullptr) {
-        delete _uploadContext->_commandPool;
-    }
+//    if (_uploadContext->_commandPool != nullptr) {
+//        delete _uploadContext->_commandPool;
+//    }
 
 }
 

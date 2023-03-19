@@ -95,7 +95,6 @@ struct FrameData {
 class VulkanEngine {
 public:
 	bool _isInitialized = false;
-    bool _skyboxDisplay = true;
     uint32_t _frameNumber = 0;
     double _time = 0;
 
@@ -157,7 +156,6 @@ private:
     void init_materials();
     void init_managers();
     void recreate_swap_chain();
-    void skybox(VkCommandBuffer commandBuffer);
     void ui_overlay();
     void update_uniform_buffers();
     void update_buffer_objects(RenderObject *first, int count);

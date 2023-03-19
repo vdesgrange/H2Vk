@@ -9,6 +9,7 @@ namespace vkinit {
     VkPipelineRasterizationStateCreateInfo rasterization_state_create_info(VkPolygonMode polygonMode);
     VkPipelineMultisampleStateCreateInfo multisampling_state_create_info();
     VkPipelineColorBlendAttachmentState color_blend_attachment_state();
+    VkPipelineColorBlendStateCreateInfo color_blend_state_create_info(VkPipelineColorBlendAttachmentState* colorBlendAttachment);
     VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);
     VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags = 0);
     VkRenderPassBeginInfo renderpass_begin_info(VkRenderPass renderPass, VkExtent2D extent, VkFramebuffer frameBuffer);

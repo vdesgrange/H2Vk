@@ -339,19 +339,11 @@ void VulkanEngine::ui_overlay() {
     bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
     if (updated) {
         // Skybox
-        _skyboxDisplay = _ui->p_open[SKYBOX_EDITOR];
+        _skybox->_display = _ui->p_open[SKYBOX_EDITOR]; // _skyboxDisplay = _ui->p_open[SKYBOX_EDITOR];
     }
 
     // Move camera when key press
     _camera->update_camera(1.0f / stats.FrameRate);
-}
-
-void VulkanEngine::skybox(VkCommandBuffer commandBuffer) {
-    if (_skyboxDisplay) {
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipeline);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skybox->_material->pipelineLayout, 0,1, &get_current_frame().skyboxDescriptor, 0, nullptr);
-        _skybox->draw(commandBuffer);
-    }
 }
 
 void VulkanEngine::update_uniform_buffers() {
@@ -408,9 +400,9 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
     update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
 
     // === Bind ===
-    skybox(commandBuffer);
+    _skybox->build_command_buffer(commandBuffer, &get_current_frame().skyboxDescriptor);
 
-    for (int i=  0; i < count; i++) { // For each scene/object in the vector of scenes.
+    for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
         RenderObject& object = first[i]; // Take the scene/object
 
         if (object.material != lastMaterial) { // Same material = (shaders/pipeline/descriptors) for multiple objects part of the same scene (e.g. monkey + triangles)
@@ -563,14 +555,21 @@ void VulkanEngine::cleanup() {
         _scene->_renderables.clear();
         _skybox.reset();
         _ui.reset();
-         _meshManager.reset();
-         _materialManager.reset();
+        _meshManager.reset();
+        _materialManager.reset();
         _systemManager.reset();
         _pipelineBuilder.reset();
         _frameBuffers.reset();
         _renderPass.reset();
         _swapchain.reset();
         _mainDeletionQueue.flush();
+
+        if (_uploadContext._commandBuffer != nullptr) {
+            delete _uploadContext._commandBuffer;
+        }
+        if (_uploadContext._commandPool != nullptr) {
+            delete _uploadContext._commandPool;
+        }
 
         // todo find a way to move this into vk_device without breaking swapchain
         vmaDestroyAllocator(_device->_allocator);

@@ -28,8 +28,10 @@ public:
     VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
     VkPipelineRasterizationStateCreateInfo _rasterizer;
     VkPipelineColorBlendAttachmentState _colorBlendAttachment;
+    VkPipelineColorBlendStateCreateInfo _colorBlending;
     VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
+    std::vector<VkDynamicState> _dynamicStateEnables;
 
     GraphicPipeline(const Device& device, RenderPass& renderPass);
 

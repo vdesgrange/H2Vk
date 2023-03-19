@@ -58,6 +58,8 @@ GraphicPipeline::GraphicPipeline(const Device& device, RenderPass& renderPass) :
     _rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
     _multisampling = vkinit::multisampling_state_create_info();
     _colorBlendAttachment = vkinit::color_blend_attachment_state();
+    _colorBlending = vkinit::color_blend_state_create_info(&_colorBlendAttachment);
+    _dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 }
 
 VkPipeline GraphicPipeline::build_pipeline(VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) {
@@ -79,26 +81,18 @@ VkPipeline GraphicPipeline::build_pipeline(VkPipelineLayout& pipelineLayout, std
     viewportState.scissorCount = 1;
     viewportState.pScissors = nullptr;//&_scissor;
 
-    VkPipelineColorBlendStateCreateInfo colorBlending{};
-    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlending.pNext = nullptr;
-    colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.logicOp = VK_LOGIC_OP_COPY;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &_colorBlendAttachment;
-
-    std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    // std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamicState{};
     dynamicState.pNext = nullptr;
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = dynamicStateEnables.size();
-    dynamicState.pDynamicStates = dynamicStateEnables.data();
+    dynamicState.dynamicStateCount = _dynamicStateEnables.size();
+    dynamicState.pDynamicStates = _dynamicStateEnables.data();
     dynamicState.flags = 0;
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.pNext = nullptr;
-    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pColorBlendState = &_colorBlending;
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pDynamicState = &dynamicState;
