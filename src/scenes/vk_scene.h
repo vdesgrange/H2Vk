@@ -13,6 +13,7 @@ public:
     explicit Scene(VulkanEngine& engine) : _engine(engine) {};
 
     void load_scene(int sceneIndex, Camera& camera);
+    void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
 
 private:
     VulkanEngine& _engine;

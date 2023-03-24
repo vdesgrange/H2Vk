@@ -99,7 +99,7 @@ void VulkanEngine::init_commands() {
 }
 
 void VulkanEngine::init_default_renderpass() {
-    _renderPass = std::make_unique<RenderPass>(*_device); // , *_swapchain
+    _renderPass = std::make_unique<RenderPass>(*_device);
 
     RenderPass::Attachment color = _renderPass->color(_swapchain->_swapChainImageFormat);
     RenderPass::Attachment depth = _renderPass->depth(_swapchain->_depthFormat);
@@ -170,13 +170,13 @@ void VulkanEngine::init_descriptors() {
         lightingBInfo.range = sizeof(GPULightData);
 
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
-                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-                .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
-                .layout(_descriptorSetLayouts.environment) // use reference instead?
-                .build(_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
+            .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+            .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+            .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+            .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
+            .layout(_descriptorSetLayouts.environment) // use reference instead?
+            .build(_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 
         // === Skybox === (Build by default to handle if skybox enabled later)
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
@@ -202,13 +202,13 @@ void VulkanEngine::init_descriptors() {
     }
 
     // === Texture ===
-    DescriptorBuilder::begin(*_layoutCache, *_allocator)
-            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
-            .layout(_descriptorSetLayouts.textures);
+//    DescriptorBuilder::begin(*_layoutCache, *_allocator)
+//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
+//            .layout(_descriptorSetLayouts.textures);
 
     // === Clean up ===
     _mainDeletionQueue.push_function([&]() {
@@ -225,40 +225,10 @@ void VulkanEngine::init_descriptors() {
     });
 }
 
-void VulkanEngine::setup_descriptors(){
-    for (auto &renderable: _scene->_renderables) {
-        std::vector<VkDescriptorPoolSize> poolSizes = {
-                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>( renderable.model->_images.size() ) }
-        };
-
-        for (auto &material: renderable.model->_materials) {
-            if (material.pbr == false) {
-                VkDescriptorImageInfo colorMap = renderable.model->_images[material.baseColorTextureIndex]._texture._descriptor;
-                VkDescriptorImageInfo normalMap = renderable.model->_images[material.normalTextureIndex]._texture._descriptor;
-                VkDescriptorImageInfo metallicRoughnessMap = renderable.model->_images[material.metallicRoughnessTextureIndex]._texture._descriptor;
-                VkDescriptorImageInfo aoMap = renderable.model->_images[material.aoTextureIndex]._texture._descriptor;
-                VkDescriptorImageInfo emissiveMap = renderable.model->_images[material.emissiveTextureIndex]._texture._descriptor;
-
-                DescriptorBuilder::begin(*_layoutCache, *_allocator)
-                        .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,0)
-                        .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,1)
-                        .bind_image(metallicRoughnessMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,2)
-                        .bind_image(aoMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,3)
-                        .bind_image(emissiveMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,4)
-                        .layout(_descriptorSetLayouts.textures)
-                        .build(material._descriptorSet,_descriptorSetLayouts.textures, poolSizes); // _images[material.baseColorTextureIndex]._descriptorSet
-            }
-        }
-    }
-}
-
 void VulkanEngine::init_materials() {
-    std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
-    _materialManager->scene_spheres(setLayouts);
-    _materialManager->scene_damaged_helmet(setLayouts);
+//    std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
+//    _materialManager->scene_spheres(setLayouts);
+//    _materialManager->scene_damaged_helmet(setLayouts);
 
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
@@ -371,6 +341,8 @@ void VulkanEngine::update_uniform_buffers() {
     data2 += helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData)) * frameIndex;
     memcpy(data2, &lightingData, sizeof(GPULightData));
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
+
+
 }
 
 void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
@@ -443,19 +415,25 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
     cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     VK_CHECK(vkBeginCommandBuffer(frame._commandBuffer->_commandBuffer, &cmdBeginInfo));
+    // Depth map offscreen pass
     {
+
+    }
+
+    // Scene pass
+    {
+        VkViewport viewport = vkinit::get_viewport((float) _window->_windowExtent.width, (float) _window->_windowExtent.height);
+        vkCmdSetViewport(frame._commandBuffer->_commandBuffer, 0, 1, &viewport);
+
+        VkRect2D scissor = vkinit::get_scissor((float) _window->_windowExtent.width, (float) _window->_windowExtent.height);
+        vkCmdSetScissor(frame._commandBuffer->_commandBuffer, 0, 1, &scissor);
+
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
-            VkViewport viewport = vkinit::get_viewport((float) _window->_windowExtent.width, (float) _window->_windowExtent.height);
-            vkCmdSetViewport(frame._commandBuffer->_commandBuffer, 0, 1, &viewport);
-
-            VkRect2D scissor = vkinit::get_scissor((float) _window->_windowExtent.width, (float) _window->_windowExtent.height);
-            vkCmdSetScissor(frame._commandBuffer->_commandBuffer, 0, 1, &scissor);
-
             // Scene
             if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
                 _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-                this->setup_descriptors();
+                _scene->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
                 // update_uniform_buffers(); // Re-initialize position after scene change = camera jumping.
                 this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
             }

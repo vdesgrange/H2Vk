@@ -90,6 +90,9 @@ struct FrameData {
 
     AllocatedBuffer objectBuffer;
     VkDescriptorSet objectDescriptor;
+
+    AllocatedBuffer offscreenBuffer;
+    VkDescriptorSet offscreenDescriptor;
 };
 
 class VulkanEngine {
@@ -152,7 +155,6 @@ private:
     void init_framebuffers();
     void init_sync_structures();
     void init_descriptors(); // can be call before choice of model
-    void setup_descriptors(); // when switching model
     void init_materials();
     void init_managers();
     void recreate_swap_chain();

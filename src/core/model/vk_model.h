@@ -18,6 +18,8 @@
 #include "core/vk_descriptor_builder.h"
 
 class Device;
+class DescriptorLayoutCache;
+class DescriptorAllocator;
 
 struct VertexInputDescription {
     std::vector<VkVertexInputBindingDescription> bindings;
@@ -136,6 +138,7 @@ public:
     void destroy();
     void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);
     VkDescriptorImageInfo get_texture_descriptor(const size_t index);
+    void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
 
 protected:
     void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);

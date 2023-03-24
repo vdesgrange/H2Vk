@@ -10,3 +10,9 @@ void Scene::load_scene(int sceneIndex, Camera& camera) {
     _sceneIndex = sceneIndex;
     _renderables = renderables;
 }
+
+void Scene::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
+    for (auto &renderable: this->_renderables) {
+        renderable.model->setup_descriptors(layoutCache, allocator, setLayout);
+    }
+}

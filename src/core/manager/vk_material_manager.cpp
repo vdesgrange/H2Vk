@@ -51,42 +51,42 @@ std::shared_ptr<Material> MaterialManager::create_material(std::string name, std
     return pass;
 }
 
-void MaterialManager::scene_spheres(std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::vector<PushConstant> constants {
-            {sizeof(glm::mat4), ShaderType::VERTEX},
-            {sizeof(Materials::Properties), ShaderType::FRAGMENT}
-    };
+//void MaterialManager::scene_spheres(std::vector<VkDescriptorSetLayout> setLayouts) {
+//    std::vector<PushConstant> constants {
+//            {sizeof(glm::mat4), ShaderType::VERTEX},
+//            {sizeof(Materials::Properties), ShaderType::FRAGMENT}
+//    };
+//
+//    std::vector<std::pair<ShaderType, const char*>> modules {
+//            {ShaderType::VERTEX, "../src/shaders/mesh/mesh_tex.vert.spv"},
+//            {ShaderType::FRAGMENT, "../src/shaders/mesh/scene.frag.spv"},
+//    };
+//
+//    create_material("basicMaterial", setLayouts, constants, modules);
+//
+//    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
+//            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibp.vert.spv"},
+//            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_cube.frag.spv"},
+//    };
+//    create_material("pbrMaterial", setLayouts, constants, pbr_modules);
+//}
 
-    std::vector<std::pair<ShaderType, const char*>> modules {
-            {ShaderType::VERTEX, "../src/shaders/mesh/mesh_tex.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/mesh/scene.frag.spv"},
-    };
-
-    create_material("basicMaterial", setLayouts, constants, modules);
-
-    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
-            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibp.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_cube.frag.spv"},
-    };
-    create_material("pbrMaterial", setLayouts, constants, pbr_modules);
-}
-
-void MaterialManager::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts) {
-    std::vector<std::pair<ShaderType, const char*>> modules {
-            {ShaderType::VERTEX, "../src/shaders/mesh/mesh_tex.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/mesh/scene_tex.frag.spv"},
-    };
-
-    std::vector<PushConstant> constants {
-            {sizeof(glm::mat4), ShaderType::VERTEX},
-    };
-
-    create_material("helmetMaterial", setLayouts, constants, modules);
-
-    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
-            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_tex.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_tex_cube.frag.spv"},
-    };
-
-    create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
-}
+//void MaterialManager::scene_damaged_helmet(std::vector<VkDescriptorSetLayout> setLayouts) {
+//    std::vector<std::pair<ShaderType, const char*>> modules {
+//            {ShaderType::VERTEX, "../src/shaders/mesh/mesh_tex.vert.spv"},
+//            {ShaderType::FRAGMENT, "../src/shaders/mesh/scene_tex.frag.spv"},
+//    };
+//
+//    std::vector<PushConstant> constants {
+//            {sizeof(glm::mat4), ShaderType::VERTEX},
+//    };
+//
+//    create_material("helmetMaterial", setLayouts, constants, modules);
+//
+//    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
+//            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_tex.vert.spv"},
+//            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_tex_cube.frag.spv"},
+//    };
+//
+//    create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
+//}

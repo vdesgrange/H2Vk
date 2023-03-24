@@ -11,6 +11,10 @@ class Texture;
 class MeshManager;
 class MaterialManager;
 class PipelineBuilder;
+class DescriptorLayoutCache;
+class DescriptorAllocator;
+class FrameData;
+
 struct UploadContext;
 
 class Skybox final {
@@ -31,6 +35,7 @@ public:
 
     void load();
     void load_sphere_texture(const char* file, Texture& texture, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB);
+    void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
     void setup_pipeline(MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts);
     void draw(VkCommandBuffer& commandBuffer);
     void build_command_buffer(VkCommandBuffer& commandBuffer, VkDescriptorSet* descriptor);

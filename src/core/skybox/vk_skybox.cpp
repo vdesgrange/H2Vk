@@ -171,6 +171,19 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture, VkFormat fo
     std::cout << "Sphere map loaded successfully " << file << std::endl;
 }
 
+void Skybox::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
+//    std::vector<VkDescriptorPoolSize> skyboxPoolSizes = {
+//            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
+//            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}
+//    };
+//
+//    DescriptorBuilder::begin(layoutCache, allocator)
+//            .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+//            .bind_image(this->_background._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+//            .layout(setLayout)
+//            .build(_frames[i].skyboxDescriptor, setLayout, skyboxPoolSizes);
+}
+
 void Skybox::setup_pipeline(MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts) {
     std::unordered_map<Skybox::Type, std::string> shader = {
             {Type::box, "../src/shaders/skybox/skybox"},

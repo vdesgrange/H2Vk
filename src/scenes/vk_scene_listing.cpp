@@ -19,12 +19,28 @@ Renderables SceneListing::empty(Camera& camera, VulkanEngine* engine) {
 Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
+    // === Init camera ===
     camera.inverse(false);
     camera.set_position({ 0.f, 0.0f, 5.f });
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.set_type(Camera::Type::look_at);
     camera.set_speed(10.0f);
 
+    // === Init shader materials ===
+    std::vector<PushConstant> constants {
+            {sizeof(glm::mat4), ShaderType::VERTEX},
+            {sizeof(Materials::Properties), ShaderType::FRAGMENT}
+    };
+
+    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
+            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibp.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_cube.frag.spv"},
+    };
+
+    std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
+    engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, pbr_modules);
+
+    // === Add entities ===
     engine->_lightingManager->clear_entities();
     engine->_lightingManager->add_entity("light", std::make_shared<Light>(Light::POINT, glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 
@@ -55,12 +71,14 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
+    // === Init camera ===
     camera.inverse(true);
     camera.set_position({ 0.0f, 0.0f, 3.0f }); // Re-initialize position after scene change = camera jumping.
     camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);  // 1700.f / 1200.f
     camera.set_type(Camera::Type::look_at);
     camera.set_speed(10.0f);
 
+    // === Add entities ===
     engine->_lightingManager->clear_entities();
     engine->_lightingManager->add_entity("light", std::make_shared<Light>(Light::POINT, glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 
@@ -69,6 +87,23 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     engine->_meshManager->upload_mesh(*helmetModel);
     engine->_meshManager->add_entity("helmet", std::static_pointer_cast<Entity>(helmetModel));
 
+    // === Init shader materials ===
+    std::vector<PushConstant> constants {
+            {sizeof(glm::mat4), ShaderType::VERTEX},
+    };
+
+    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
+            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_tex.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_tex_cube.frag.spv"},
+    };
+
+    VkDescriptorSetLayout textures{};
+    helmetModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures);
+    std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, textures};
+
+    engine->_materialManager->create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
+
+    // == Init scene ==
     RenderObject helmet;
     helmet.model = engine->_meshManager->get_model("helmet");
     helmet.material = engine->_materialManager->get_material("pbrTextureMaterial");

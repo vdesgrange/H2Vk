@@ -1,9 +1,6 @@
 #include "vk_model.h"
 #include "core/vk_device.h"
-#include "core/vk_buffer.h"
 #include "core/vk_command_buffer.h"
-#include "core/vk_command_pool.h"
-#include "vk_engine.h"
 #include "core/camera/vk_camera.h"
 
 std::atomic<uint32_t> Model::nextID {0};
@@ -91,7 +88,6 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
                     if (material.pbr) {
                         vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Materials::Properties), &material.properties);
                     } else {
-                        // _images[material.baseColorTextureIndex]._descriptorSet
                         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &material._descriptorSet, 0, nullptr);
                     }
                 }
@@ -114,6 +110,34 @@ void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayou
 
     for (auto& node : _nodes) {
         draw_node(node, commandBuffer, pipelineLayout, instance);
+    }
+}
+
+void Model::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>( this->_images.size() ) }
+    };
+
+    for (auto &material: this->_materials) {
+        if (material.pbr == false) {
+            VkDescriptorImageInfo colorMap = this->_images[material.baseColorTextureIndex]._texture._descriptor;
+            VkDescriptorImageInfo normalMap = this->_images[material.normalTextureIndex]._texture._descriptor;
+            VkDescriptorImageInfo metallicRoughnessMap = this->_images[material.metallicRoughnessTextureIndex]._texture._descriptor;
+            VkDescriptorImageInfo aoMap = this->_images[material.aoTextureIndex]._texture._descriptor;
+            VkDescriptorImageInfo emissiveMap = this->_images[material.emissiveTextureIndex]._texture._descriptor;
+
+            DescriptorBuilder::begin(layoutCache, allocator)
+                    .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,0)
+                    .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,1)
+                    .bind_image(metallicRoughnessMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,2)
+                    .bind_image(aoMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,3)
+                    .bind_image(emissiveMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,4)
+                    .layout(setLayout)
+                    .build(material._descriptorSet, setLayout, poolSizes); // _images[material.baseColorTextureIndex]._descriptorSet
+        }
     }
 }
 
