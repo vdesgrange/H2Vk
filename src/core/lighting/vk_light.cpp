@@ -1,4 +1,5 @@
 #include "vk_light.h"
+#include "core/utilities/vk_global.h"
 
 std::atomic<uint32_t> Light::nextID {0};
 
@@ -48,4 +49,11 @@ GPULightData LightingManager::gpu_format() {
     }
 
     return lightingData;
+}
+
+void LightingManager::allocate_buffers(Device& device) {
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        const size_t lightBufferSize = FRAME_OVERLAP * helper::pad_uniform_buffer_size(device, sizeof(GPULightData));
+        g_frames[i].lightingBuffer = Buffer::create_buffer(device, lightBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    }
 }

@@ -2,6 +2,7 @@
 
 #include "glm/glm.hpp"
 #include "core/manager/vk_system_manager.h"
+#include "core/utilities/vk_resources.h"
 
 #include <atomic>
 #include <unordered_map>
@@ -54,4 +55,6 @@ private:
 class LightingManager final : public System {
 public:
     GPULightData gpu_format();
+
+    static void allocate_buffers(Device& device);
 };

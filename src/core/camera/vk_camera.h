@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include "glm/gtc/matrix_transform.hpp"
 
+class Device;
+
 struct GPUCameraData{
     alignas(glm::mat4) glm::mat4 view;
     alignas(glm::mat4) glm::mat4 proj;
@@ -54,6 +56,7 @@ public:
     void set_perspective(float fov, float aspect, float zNear, float zFar);
 
     bool update_camera(float delta);
+    static void allocate_buffers(Device& device);
 
 private:
     glm::vec3 position = glm::vec3();

@@ -8,8 +8,9 @@
 #include <cmath>
 #include <memory>
 
-#include "vk_mem_alloc.h"
-#include "VkBootstrap.h"
+#include "core/utilities/vk_resources.h"
+#include "core/utilities/vk_global.h"
+#include "core/utilities/vk_initializers.h"
 
 #include "core/vk_window.h"
 #include "core/vk_device.h"
@@ -34,10 +35,6 @@
 #include "core/camera/vk_camera.h"
 #include "core/model/vk_model.h"
 #include "core/lighting/vk_light.h"
-
-#include "core/utilities/vk_helpers.h"
-#include "core/utilities/vk_initializers.h"
-#include "core/utilities/vk_types.h"
 
 #include "ui/vk_imgui.h"
 
@@ -72,28 +69,6 @@ class DescriptorAllocator;
 class Statistics;
 
 const bool enableValidationLayers = true;
-constexpr unsigned int FRAME_OVERLAP = 2;
-
-struct FrameData {
-    Semaphore* _presentSemaphore;
-    Semaphore* _renderSemaphore;
-    Fence* _renderFence;
-
-    CommandPool* _commandPool;
-    CommandBuffer* _commandBuffer;
-
-    VkDescriptorSet skyboxDescriptor;
-
-    AllocatedBuffer cameraBuffer;
-    AllocatedBuffer lightingBuffer;
-    VkDescriptorSet environmentDescriptor;
-
-    AllocatedBuffer objectBuffer;
-    VkDescriptorSet objectDescriptor;
-
-    AllocatedBuffer offscreenBuffer;
-    VkDescriptorSet offscreenDescriptor;
-};
 
 class VulkanEngine {
 public:
@@ -119,7 +94,7 @@ public:
     std::shared_ptr<LightingManager> _lightingManager;
     std::unique_ptr<Camera> _camera; // std::shared_ptr<class CameraManager> _cameraManager; todo
 
-    FrameData _frames[FRAME_OVERLAP];
+    // FrameData _frames[FRAME_OVERLAP];
     std::vector<RenderObject> _renderables;
 
     DescriptorLayoutCache* _layoutCache;
@@ -154,7 +129,8 @@ private:
     void init_default_renderpass();
     void init_framebuffers();
     void init_sync_structures();
-    void init_descriptors(); // can be call before choice of model
+    void init_descriptors();
+    void setup_environment_descriptors();
     void init_materials();
     void init_managers();
     void recreate_swap_chain();

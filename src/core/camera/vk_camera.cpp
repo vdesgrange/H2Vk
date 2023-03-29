@@ -3,6 +3,8 @@
 #endif
 
 #include "vk_camera.h"
+#include "core/vk_device.h"
+#include "core/utilities/vk_global.h"
 #include <cmath>
 
 bool Camera::on_key(int key, int action) {
@@ -217,5 +219,11 @@ void Camera::update_view() {
         glm::mat4 translation = glm::translate(glm::mat4(1.f), this->position);
         glm::mat4 rotation = this->get_rotation_matrix();
         this->view = rotation * translation;  // Rotation around camera's origin. Swap for world origin.
+    }
+}
+
+void Camera::allocate_buffers(Device& device) {
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        g_frames[i].cameraBuffer = Buffer::create_buffer(device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     }
 }

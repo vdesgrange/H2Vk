@@ -38,7 +38,8 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* descriptor, VkDescriptorSetL
     }
 
     if (reallocate) {
-        _currentPool = getPool(sizes, 0, 100);  // todo : handle maxSets
+        _currentPool = getPool(sizes, 0, 1000);  // todo : handle maxSets
+        info.descriptorPool = _currentPool;
         usedPools.push_back(_currentPool);
         result = vkAllocateDescriptorSets(_device._logicalDevice, &info, descriptor);
         if (result == VK_SUCCESS){
@@ -61,22 +62,22 @@ void DescriptorAllocator::resetPools() {
 }
 
 VkDescriptorPool DescriptorAllocator::getPool(std::vector<VkDescriptorPoolSize> poolSizes, VkDescriptorPoolCreateFlags flags, uint32_t count) {
-    std::vector<VkDescriptorPoolSize> sizes;
-    sizes.reserve(poolSizes.size());
-    for (auto sz : poolSizes) {
-        sizes.push_back({ sz.type, uint32_t(sz.descriptorCount * count) });
-    }
-
     if (freePools.size() > 0) {
         VkDescriptorPool pool = freePools.back();
         freePools.pop_back();
         return pool;
     }
 
-    return createPool(sizes, flags, count);
+    return createPool(poolSizes, flags, count);
 }
 
-VkDescriptorPool DescriptorAllocator::createPool(std::vector<VkDescriptorPoolSize> sizes, VkDescriptorPoolCreateFlags flags, uint32_t count) {
+VkDescriptorPool DescriptorAllocator::createPool(std::vector<VkDescriptorPoolSize> poolSizes, VkDescriptorPoolCreateFlags flags, uint32_t count) {
+    std::vector<VkDescriptorPoolSize> sizes;
+    sizes.reserve(poolSizes.size());
+    for (auto sz : poolSizes) {
+        sizes.push_back({ sz.type, uint32_t(sz.descriptorCount * count) });
+    }
+
     VkDescriptorPoolCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     info.flags = flags;

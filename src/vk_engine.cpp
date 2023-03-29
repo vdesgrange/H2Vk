@@ -49,7 +49,7 @@ void VulkanEngine::init_vulkan() {
 }
 
 void VulkanEngine::init_interface() {
-    Settings settings = Settings{.scene_index=0};
+    auto settings = Settings{.scene_index=0};
     _ui = std::make_unique<UInterface>(*this, settings);
     _ui->init_imgui();
 }
@@ -61,7 +61,7 @@ void VulkanEngine::init_camera() {
     _camera->set_perspective(70.f, (float)_window->_windowExtent.width /(float)_window->_windowExtent.height, 0.1f, 200.0f);
 
     _window->on_get_key = [this](int key, int action) {
-        bool updated = _camera->on_key(key, action);
+        _camera->on_key(key, action);
 //        if (updated) {
 //            update_buffers();
 //        }
@@ -69,7 +69,7 @@ void VulkanEngine::init_camera() {
 
     _window->on_cursor_position = [this](double xpos, double ypos) {
         if (_ui->want_capture_mouse()) return;
-        bool updated = _camera->on_cursor_position(xpos, ypos);
+        _camera->on_cursor_position(xpos, ypos);
 //        if (updated) {
 //            update_uniform_buffers();
 //        }
@@ -77,7 +77,7 @@ void VulkanEngine::init_camera() {
 
     _window->on_mouse_button = [this](int button, int action, int mods) {
         if (_ui->want_capture_mouse()) return;
-        bool updated = _camera->on_mouse_button(button, action, mods);
+        _camera->on_mouse_button(button, action, mods);
     };
 }
 
@@ -87,10 +87,10 @@ void VulkanEngine::init_swapchain() {
 
 void VulkanEngine::init_commands() {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        _frames[i]._commandPool = new CommandPool(*_device);
-        _frames[i]._commandBuffer = new CommandBuffer(*_device, *_frames[i]._commandPool);
+        g_frames[i]._commandPool = new CommandPool(*_device);
+        g_frames[i]._commandBuffer = new CommandBuffer(*_device, *g_frames[i]._commandPool);
         _mainDeletionQueue.push_function([=]() {
-            delete _frames[i]._commandPool;
+            delete g_frames[i]._commandPool;
         });
     }
 
@@ -117,14 +117,14 @@ void VulkanEngine::init_framebuffers() {
 void VulkanEngine::init_sync_structures() {
     //  Used for GPU -> GPU synchronisation
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        _frames[i]._renderFence = new Fence(*_device, VK_FENCE_CREATE_SIGNALED_BIT);
-        _frames[i]._renderSemaphore = new Semaphore(*_device);
-        _frames[i]._presentSemaphore =  new Semaphore(*_device);
+        g_frames[i]._renderFence = new Fence(*_device, VK_FENCE_CREATE_SIGNALED_BIT);
+        g_frames[i]._renderSemaphore = new Semaphore(*_device);
+        g_frames[i]._presentSemaphore =  new Semaphore(*_device);
 
         _mainDeletionQueue.push_function([=]() { // Destruction of semaphores
-            delete _frames[i]._presentSemaphore;
-            delete _frames[i]._renderSemaphore;
-            delete _frames[i]._renderFence;
+            delete g_frames[i]._presentSemaphore;
+            delete g_frames[i]._renderSemaphore;
+            delete g_frames[i]._renderFence;
         });
     }
 
@@ -134,90 +134,56 @@ void VulkanEngine::init_sync_structures() {
     });
 }
 
-void VulkanEngine::init_descriptors() {
-    std::vector<VkDescriptorPoolSize> skyboxPoolSizes = {
-           {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}
-    };
-
+void VulkanEngine::setup_environment_descriptors() {
     std::vector<VkDescriptorPoolSize> poolSizes = {
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
             { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 20 }
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
     };
 
-    _layoutCache = new DescriptorLayoutCache(*_device);
-    _allocator = new DescriptorAllocator(*_device);
-
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-
-        // === Camera ===
-        _frames[i].skyboxDescriptor = VkDescriptorSet();
-        _frames[i].environmentDescriptor = VkDescriptorSet();
-        _frames[i].cameraBuffer = Buffer::create_buffer(*_device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        g_frames[i].environmentDescriptor = VkDescriptorSet();
 
         VkDescriptorBufferInfo camBInfo{};
-        camBInfo.buffer = _frames[i].cameraBuffer._buffer;
+        camBInfo.buffer = g_frames[i].cameraBuffer._buffer;
         camBInfo.offset = 0;
         camBInfo.range = sizeof(GPUCameraData);
 
-        // === Light ===
-        const size_t lightBufferSize = FRAME_OVERLAP * helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData));
-        _frames[i].lightingBuffer = Buffer::create_buffer(*_device, lightBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
         VkDescriptorBufferInfo lightingBInfo{};
-        lightingBInfo.buffer = _frames[i].lightingBuffer._buffer;
+        lightingBInfo.buffer = g_frames[i].lightingBuffer._buffer;
         lightingBInfo.range = sizeof(GPULightData);
 
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
-            .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-            .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-            .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-            .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
-            .layout(_descriptorSetLayouts.environment) // use reference instead?
-            .build(_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
+                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+                .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
+                .layout(_descriptorSetLayouts.environment)
+                .build(g_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 
-        // === Skybox === (Build by default to handle if skybox enabled later)
-        DescriptorBuilder::begin(*_layoutCache, *_allocator)
-            .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-            .bind_image(_skybox->_background._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .layout(_descriptorSetLayouts.skybox)
-            .build(_frames[i].skyboxDescriptor, _descriptorSetLayouts.skybox, skyboxPoolSizes);
-
-        // === Object ===
-        const uint32_t MAX_OBJECTS = 10000;
-        _frames[i].objectDescriptor = VkDescriptorSet();
-        _frames[i].objectBuffer = Buffer::create_buffer(*_device, sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-        VkDescriptorBufferInfo objectsBInfo{};
-        objectsBInfo.buffer = _frames[i].objectBuffer._buffer;
-        objectsBInfo.offset = 0;
-        objectsBInfo.range = sizeof(GPUObjectData) * MAX_OBJECTS;
-
-        DescriptorBuilder::begin(*_layoutCache, *_allocator)
-            .bind_buffer(objectsBInfo, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-            .layout(_descriptorSetLayouts.matrices) // use reference instead?
-            .build(_frames[i].objectDescriptor, _descriptorSetLayouts.matrices, poolSizes);
     }
+}
 
-    // === Texture ===
-//    DescriptorBuilder::begin(*_layoutCache, *_allocator)
-//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
-//            .layout(_descriptorSetLayouts.textures);
+void VulkanEngine::init_descriptors() {
+    _layoutCache = new DescriptorLayoutCache(*_device);
+    _allocator = new DescriptorAllocator(*_device);
 
-    // === Clean up ===
+    Camera::allocate_buffers(*_device);
+    LightingManager::allocate_buffers(*_device);
+    Scene::allocate_buffers(*_device);
+
+    _skybox->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.skybox);
+    _scene->setup_transformation_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.matrices);
+    this->setup_environment_descriptors();
+
+    // === Clean up === todo
     _mainDeletionQueue.push_function([&]() {
-        // vmaDestroyBuffer(_device->_allocator, _sceneParameterBuffer._buffer, _sceneParameterBuffer._allocation);
-
         for (int i = 0; i < FRAME_OVERLAP; i++) {
-            vmaDestroyBuffer(_device->_allocator, _frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
-            vmaDestroyBuffer(_device->_allocator, _frames[i].lightingBuffer._buffer, _frames[i].lightingBuffer._allocation);
-            vmaDestroyBuffer(_device->_allocator, _frames[i].objectBuffer._buffer, _frames[i].objectBuffer._allocation);
+            vmaDestroyBuffer(_device->_allocator, g_frames[i].cameraBuffer._buffer, g_frames[i].cameraBuffer._allocation);
+            vmaDestroyBuffer(_device->_allocator, g_frames[i].lightingBuffer._buffer, g_frames[i].lightingBuffer._allocation);
+            vmaDestroyBuffer(_device->_allocator, g_frames[i].objectBuffer._buffer, g_frames[i].objectBuffer._allocation);
         }
 
         delete _layoutCache;
@@ -226,16 +192,12 @@ void VulkanEngine::init_descriptors() {
 }
 
 void VulkanEngine::init_materials() {
-//    std::vector<VkDescriptorSetLayout> setLayouts = {_descriptorSetLayouts.environment, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures};
-//    _materialManager->scene_spheres(setLayouts);
-//    _materialManager->scene_damaged_helmet(setLayouts);
-
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
 }
 
 FrameData& VulkanEngine::get_current_frame() {
-    return _frames[_frameNumber % FRAME_OVERLAP];
+    return g_frames[_frameNumber % FRAME_OVERLAP];
 }
 
 void VulkanEngine::init_managers() {
@@ -265,14 +227,15 @@ void VulkanEngine::recreate_swap_chain() {
     }
 
     vkDeviceWaitIdle(_device->_logicalDevice);
+    _pipelineBuilder.reset();
     _frameBuffers.reset();
     _renderPass.reset();
     _swapchain.reset();
 
     // Command buffers
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        delete _frames[i]._commandBuffer;
-        _frames[i]._commandBuffer = new CommandBuffer(*_device, *_frames[i]._commandPool);
+        delete g_frames[i]._commandBuffer;
+        g_frames[i]._commandBuffer = new CommandBuffer(*_device, *g_frames[i]._commandPool);
     }
     delete _uploadContext._commandBuffer;
     _uploadContext._commandBuffer = new CommandBuffer(*_device, *_uploadContext._commandPool);
@@ -280,8 +243,10 @@ void VulkanEngine::recreate_swap_chain() {
     init_swapchain();
     init_default_renderpass();
     init_framebuffers();
+    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass); // todo: messy, rework
+    _materialManager->_pipelineBuilder = _pipelineBuilder.get();
 
-    if (_window->_windowExtent.width > 0.0f && _window->_windowExtent.height > 0.0f) {
+    if ((float)_window->_windowExtent.width > 0.0f && (float)_window->_windowExtent.height > 0.0f) {
         _camera->set_aspect((float)_window->_windowExtent.width / (float)_window->_windowExtent.height);
         update_uniform_buffers();
     }
@@ -349,13 +314,13 @@ void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
     // Objects : write into the buffer by copying the render matrices from our render objects into it
     // Object not moving : call only when change scene
     for (uint32_t i = 0; i < FRAME_OVERLAP; i++) {
-        FrameData frame = _frames[i]; // get_current_frame(); // if object moves, call each frame.
+        FrameData frame = g_frames[i]; // get_current_frame(); // if object moves, call each frame.
         void* objectData;
         vmaMapMemory(_device->_allocator, frame.objectBuffer._allocation, &objectData);
         GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
-        for (int i = 0; i < count; i++) {
-            RenderObject& object = first[i];
-            objectSSBO[i].model = object.transformMatrix;
+        for (int j = 0; j < count; j++) {
+            RenderObject& object = first[j];
+            objectSSBO[j].model = object.transformMatrix;
         }
         vmaUnmapMemory(_device->_allocator, frame.objectBuffer._allocation);
     }
@@ -364,8 +329,8 @@ void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
 void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
     std::shared_ptr<Model> lastModel = nullptr;
     std::shared_ptr<Material> lastMaterial = nullptr;
-    int frameIndex = _frameNumber % FRAME_OVERLAP;
-    int count = _scene->_renderables.size();
+    uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
+    uint32_t count = _scene->_renderables.size();
     RenderObject *first = _scene->_renderables.data();
 
     // === Update required uniform buffers
@@ -432,9 +397,8 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
         {
             // Scene
             if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
+                _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
                 _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-                _scene->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
-                // update_uniform_buffers(); // Re-initialize position after scene change = camera jumping.
                 this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
             }
             // Draw
@@ -527,7 +491,7 @@ void VulkanEngine::cleanup() {
     if (_isInitialized) {
         vkDeviceWaitIdle(_device->_logicalDevice);
         for (int i=0; i < FRAME_OVERLAP; i++) {
-            _frames[i]._renderFence->wait(1000000000);
+            g_frames[i]._renderFence->wait(1000000000);
         }
 
         _scene->_renderables.clear();
@@ -542,12 +506,15 @@ void VulkanEngine::cleanup() {
         _swapchain.reset();
         _mainDeletionQueue.flush();
 
-        if (_uploadContext._commandBuffer != nullptr) {
-            delete _uploadContext._commandBuffer;
-        }
-        if (_uploadContext._commandPool != nullptr) {
-            delete _uploadContext._commandPool;
-        }
+        delete _uploadContext._commandBuffer;
+        delete _uploadContext._commandPool;
+
+//        if (_uploadContext._commandBuffer != nullptr) {
+//            delete _uploadContext._commandBuffer;
+//        }
+//        if (_uploadContext._commandPool != nullptr) {
+//            delete _uploadContext._commandPool;
+//        }
 
         // todo find a way to move this into vk_device without breaking swapchain
         vmaDestroyAllocator(_device->_allocator);

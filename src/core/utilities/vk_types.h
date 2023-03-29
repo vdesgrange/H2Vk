@@ -2,15 +2,23 @@
 
 #include "glm/glm.hpp"
 #include "core/vk_shaders.h"
+#include "core/vk_buffer.h"
 
 #include <deque>
 #include <functional>
+
+class Model;
+class Semaphore;
+class Fence;
+class CommandPool;
+class CommandBuffer;
+class DescriptorLayoutCache;
+class DescriptorAllocator;
 
 struct GPUObjectData {
     glm::mat4 model;
 };
 
-class Model;
 struct RenderObject {
     std::shared_ptr<Model> model;
     std::shared_ptr<Material> material;
@@ -18,6 +26,27 @@ struct RenderObject {
 };
 
 typedef std::vector<RenderObject> Renderables;
+
+struct FrameData {
+    Semaphore* _presentSemaphore;
+    Semaphore* _renderSemaphore;
+    Fence* _renderFence;
+
+    CommandPool* _commandPool;
+    CommandBuffer* _commandBuffer;
+
+    VkDescriptorSet skyboxDescriptor;
+
+    AllocatedBuffer cameraBuffer;
+    AllocatedBuffer lightingBuffer;
+    VkDescriptorSet environmentDescriptor;
+
+    AllocatedBuffer objectBuffer;
+    VkDescriptorSet objectDescriptor;
+
+    AllocatedBuffer offscreenBuffer;
+    VkDescriptorSet offscreenDescriptor;
+};
 
 struct DeletionQueue
 {

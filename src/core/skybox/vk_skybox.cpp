@@ -5,8 +5,10 @@
 #include "core/vk_command_buffer.h"
 #include "core/manager/vk_mesh_manager.h"
 #include "core/manager/vk_material_manager.h"
-#include "core/utilities/vk_initializers.h"
 #include "core/model/vk_poly.h"
+#include "core/camera/vk_camera.h"
+#include "core/utilities/vk_initializers.h"
+#include "core/utilities/vk_global.h"
 #include "tools/vk_env_map.h"
 
 #include <stb_image.h>
@@ -172,16 +174,29 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture, VkFormat fo
 }
 
 void Skybox::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
-//    std::vector<VkDescriptorPoolSize> skyboxPoolSizes = {
-//            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
-//            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}
-//    };
-//
-//    DescriptorBuilder::begin(layoutCache, allocator)
-//            .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-//            .bind_image(this->_background._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-//            .layout(setLayout)
-//            .build(_frames[i].skyboxDescriptor, setLayout, skyboxPoolSizes);
+    std::vector<VkDescriptorPoolSize> skyboxPoolSizes = {
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}
+    };
+
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        g_frames[i].skyboxDescriptor = VkDescriptorSet();
+
+        // todo : cameraBuffer must be allocated once only. Need to handle allocation dependencies ordering.
+        // g_frames[i].cameraBuffer = Buffer::create_buffer(_device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+        VkDescriptorBufferInfo camBInfo{};
+        camBInfo.buffer = g_frames[i].cameraBuffer._buffer;
+        camBInfo.offset = 0;
+        camBInfo.range = sizeof(GPUCameraData);
+
+        DescriptorBuilder::begin(layoutCache, allocator)
+                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+                .bind_image(this->_background._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .layout(setLayout)
+                .build(g_frames[i].skyboxDescriptor, setLayout, skyboxPoolSizes);
+
+    }
 }
 
 void Skybox::setup_pipeline(MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts) {

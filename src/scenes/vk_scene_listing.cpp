@@ -100,7 +100,6 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     VkDescriptorSetLayout textures{};
     helmetModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, textures};
-
     engine->_materialManager->create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
 
     // == Init scene ==
