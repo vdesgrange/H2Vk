@@ -12,7 +12,7 @@ DescriptorAllocator::~DescriptorAllocator() {
 
 bool DescriptorAllocator::allocate(VkDescriptorSet* descriptor, VkDescriptorSetLayout* setLayout, std::vector<VkDescriptorPoolSize> sizes) {
     if (_currentPool == VK_NULL_HANDLE){
-        _currentPool = getPool(sizes, 0, 1000);  // todo clean up descriptorPool choice and size
+        _currentPool = getPool(sizes, 0, MAX_SETS);  // todo clean up descriptorPool choice and size
         usedPools.push_back(_currentPool);
     }
 
@@ -38,7 +38,7 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* descriptor, VkDescriptorSetL
     }
 
     if (reallocate) {
-        _currentPool = getPool(sizes, 0, 1000);  // todo : handle maxSets
+        _currentPool = getPool(sizes, 0, MAX_SETS);
         info.descriptorPool = _currentPool;
         usedPools.push_back(_currentPool);
         result = vkAllocateDescriptorSets(_device._logicalDevice, &info, descriptor);
@@ -75,7 +75,7 @@ VkDescriptorPool DescriptorAllocator::createPool(std::vector<VkDescriptorPoolSiz
     std::vector<VkDescriptorPoolSize> sizes;
     sizes.reserve(poolSizes.size());
     for (auto sz : poolSizes) {
-        sizes.push_back({ sz.type, uint32_t(sz.descriptorCount * count) });
+        sizes.push_back({ sz.type, uint32_t(sz.descriptorCount * count) }); // pool size * number of sets
     }
 
     VkDescriptorPoolCreateInfo info{};

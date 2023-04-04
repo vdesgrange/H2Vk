@@ -74,10 +74,11 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
     RenderPass renderPass = RenderPass(device);
     RenderPass::Attachment color = renderPass.color(format);
     color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-    VkSubpassDescription subpass = renderPass.subpass_description(&color.ref, nullptr);
+    std::vector<VkAttachmentReference> references = {color.ref};
     std::vector<VkAttachmentDescription> attachments = {color.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency};
-
+    VkSubpassDescription subpass = renderPass.subpass_description(references, nullptr);
+    
     renderPass.init(attachments, dependencies, subpass);
 
     std::array<VkClearValue, 2> clearValues{};
@@ -277,9 +278,10 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
     RenderPass::Attachment color = renderPass.color(format);
     color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     color.ref.layout = VK_IMAGE_LAYOUT_GENERAL;
-    VkSubpassDescription subpass = renderPass.subpass_description(&color.ref, nullptr);
+    std::vector<VkAttachmentReference> references = {color.ref};
     std::vector<VkAttachmentDescription> attachments = {color.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency};
+    VkSubpassDescription subpass = renderPass.subpass_description(references, nullptr);
 
     renderPass.init(attachments, dependencies, subpass);
 
@@ -512,10 +514,11 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
     RenderPass::Attachment color = renderPass.color(format);
     color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     color.ref.layout = VK_IMAGE_LAYOUT_GENERAL;
-    VkSubpassDescription subpass = renderPass.subpass_description(&color.ref, nullptr);
+    std::vector<VkAttachmentReference> references = {color.ref};
     std::vector<VkAttachmentDescription> attachments = {color.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency};
 
+    VkSubpassDescription subpass = renderPass.subpass_description(references, nullptr);
     renderPass.init(attachments, dependencies, subpass);
 
     std::array<VkClearValue, 2> clearValues{};

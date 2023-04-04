@@ -38,6 +38,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     };
 
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
+    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
     engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, pbr_modules);
 
     // === Add entities ===
@@ -100,6 +101,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     VkDescriptorSetLayout textures{};
     helmetModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, textures};
+    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
     engine->_materialManager->create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
 
     // == Init scene ==

@@ -7,6 +7,7 @@
 #include "core/vk_command_buffer.h"
 #include "core/vk_buffer.h"
 
-constexpr unsigned int FRAME_OVERLAP = 2;
+constexpr uint32_t FRAME_OVERLAP = 2;
+constexpr uint32_t MAX_OBJECTS = 10000;
 
 inline FrameData g_frames[FRAME_OVERLAP];

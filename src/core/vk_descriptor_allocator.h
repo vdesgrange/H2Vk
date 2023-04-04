@@ -6,9 +6,18 @@
 
 class Device;
 
+/**
+ * DescriptorAllocator
+ * This might not be the most optimal solution.
+ * - Maximal number of sets per pool is abstract. Pool size fixed by descriptor layout.
+ * - Descriptor pools are created when pool size does not suits the best (which depends on descriptor layout)
+ * while a single descriptor pool with large range of pool sizes might work instead.
+ * todo - Look for a proper solution?
+ */
 class DescriptorAllocator final {
 public:
     const class Device& _device;
+    const unsigned int MAX_SETS = 10; // Number of sets per pools (kind of abstract so far)
 
     DescriptorAllocator(const Device &device) : _device(device) {};
     ~DescriptorAllocator();

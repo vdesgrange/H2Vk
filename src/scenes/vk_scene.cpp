@@ -13,7 +13,6 @@ void Scene::load_scene(int sceneIndex, Camera& camera) {
 }
 
 void Scene::allocate_buffers(Device& device) {
-    const uint32_t MAX_OBJECTS = 10000;
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         g_frames[i].objectBuffer = Buffer::create_buffer(device, sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     }
@@ -28,7 +27,6 @@ void Scene::setup_transformation_descriptors(DescriptorLayoutCache& layoutCache,
     };
 
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        const uint32_t MAX_OBJECTS = 10000;
         g_frames[i].objectDescriptor = VkDescriptorSet();
 
         VkDescriptorBufferInfo objectsBInfo{};

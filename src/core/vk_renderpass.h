@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <iostream>
 
 #include "core/utilities/vk_resources.h"
 
@@ -17,14 +18,26 @@ public:
 
     VkRenderPass _renderPass;
 
-    RenderPass(const Device& device);
+    RenderPass(Device& device);
     ~RenderPass();
+
+    RenderPass(const RenderPass&) = default;
+    RenderPass& operator=(const RenderPass& other) {
+        if (this != &other) { // copy-and-swap idiom
+            _renderPass = other._renderPass;
+            std::swap(_device, other._device);
+
+        }
+        std::cout << "copy assigned" << std::endl;
+
+        return *this;
+    }
 
     void init(std::vector<VkAttachmentDescription> attachments, std::vector<VkSubpassDependency> dependencies, VkSubpassDescription subpass);
     RenderPass::Attachment color(VkFormat format);
     RenderPass::Attachment depth(VkFormat format);
-    VkSubpassDescription subpass_description(VkAttachmentReference* colorAttachmentRef, VkAttachmentReference* depthAttachmentRef);
+    VkSubpassDescription subpass_description(std::vector<VkAttachmentReference>& colorAttachmentRef, VkAttachmentReference* depthAttachmentRef);
 
 private:
-    const class Device& _device;
+    class Device& _device;
 };

@@ -41,6 +41,8 @@
 #include "scenes/vk_scene_listing.h"
 #include "scenes/vk_scene.h"
 
+#include "tools/vk_shadow_map.h"
+
 class Window;
 class Device;
 class SwapChain;
@@ -87,6 +89,7 @@ public:
     std::unique_ptr<Scene> _scene;
     std::unique_ptr<UInterface> _ui;
     std::unique_ptr<Skybox> _skybox;
+    std::unique_ptr<ShadowMapping> _shadow;
 
     std::unique_ptr<SystemManager> _systemManager;
     std::shared_ptr<MaterialManager> _materialManager;
@@ -102,6 +105,7 @@ public:
 
     struct {
         VkDescriptorSetLayout skybox;
+        VkDescriptorSetLayout offscreen;
         VkDescriptorSetLayout environment;
         VkDescriptorSetLayout matrices;
         VkDescriptorSetLayout textures;

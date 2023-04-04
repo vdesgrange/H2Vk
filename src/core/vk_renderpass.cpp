@@ -8,12 +8,14 @@
  * are rendered on a framebuffer).
  * @param device
  */
-RenderPass::RenderPass(const Device& device) : _device(device) { }
+RenderPass::RenderPass(Device& device) : _device(device), _renderPass(VK_NULL_HANDLE) {
+}
 
 RenderPass::~RenderPass() {
     vkDestroyRenderPass(_device._logicalDevice, _renderPass, nullptr);
 }
 
+// todo - reorganize : color and depth attachment are a mess
 void RenderPass::init(std::vector<VkAttachmentDescription> attachments, std::vector<VkSubpassDependency> dependencies, VkSubpassDescription subpass) {
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -80,11 +82,11 @@ RenderPass::Attachment RenderPass::depth(VkFormat format) {
     return RenderPass::Attachment {depthAttachment, depthAttachmentRef,depthDependency};
 }
 
-VkSubpassDescription RenderPass::subpass_description(VkAttachmentReference* colorAttachmentRef, VkAttachmentReference* depthAttachmentRef) {
+VkSubpassDescription RenderPass::subpass_description(std::vector<VkAttachmentReference>& colorAttachmentRef, VkAttachmentReference* depthAttachmentRef) {
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = colorAttachmentRef;
+    subpass.colorAttachmentCount = static_cast<uint32_t>(colorAttachmentRef.size());
+    subpass.pColorAttachments = colorAttachmentRef.data();
     subpass.pDepthStencilAttachment = depthAttachmentRef;
 
     return subpass;
