@@ -7,6 +7,9 @@
 #include "core/manager/vk_material_manager.h"
 #include "core/utilities/vk_initializers.h"
 #include "core/utilities/vk_global.h"
+#include "core/camera/vk_camera.h"
+#include "core/lighting/vk_light.h"
+#include "core/model/vk_model.h"
 #include <array>
 
 ShadowMapping::ShadowMapping(Device &device) : _device(device), _offscreen_pass(RenderPass(device)) {
@@ -20,101 +23,146 @@ ShadowMapping::~ShadowMapping() {
     vkDestroyFramebuffer(_device._logicalDevice, _offscreen_framebuffer, nullptr); // todo use FrameBuffer class
 }
 
-void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadContext) {
-    VkFormat format = VK_FORMAT_D16_UNORM;
-    // 1 - Render to depth map
-    // Prepare image
-    Texture outTexture{};
-    outTexture._width = SHADOW_WIDTH;
-    outTexture._height = SHADOW_HEIGHT;
+void ShadowMapping::prepare_offscreen_pass(Device& device) {
+    VkFormat format = VK_FORMAT_D32_SFLOAT; // VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
+
+    this->_offscreen_pass = RenderPass(device);
+    RenderPass::Attachment depth = this->_offscreen_pass.depth(format);
+    depth.description.format = format;
+    depth.description.flags = 0;
+    depth.description.samples = VK_SAMPLE_COUNT_1_BIT;
+    depth.description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depth.description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depth.description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depth.description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depth.description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depth.description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+    depth.ref.attachment = 0;
+    depth.ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    std::vector<VkSubpassDependency> dependencies;
+    dependencies.reserve(2);
+    dependencies.push_back({VK_SUBPASS_EXTERNAL, 0,VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_DEPENDENCY_BY_REGION_BIT});
+    dependencies.push_back({0, VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_DEPENDENCY_BY_REGION_BIT});
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 0;
+    subpass.pColorAttachments = nullptr;
+    subpass.pDepthStencilAttachment = &depth.ref;
+    std::vector<VkAttachmentDescription> attachments = {depth.description};
+
+    this->_offscreen_pass.init(attachments, dependencies, subpass);
+
+//    this->_offscreen_pass = RenderPass(device);
+//    RenderPass::Attachment color = this->_offscreen_pass.color(format);
+//    RenderPass::Attachment depth = this->_offscreen_pass.depth(VK_FORMAT_D32_SFLOAT);
+//    color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+//    color.ref.layout = VK_IMAGE_LAYOUT_GENERAL;
+//    std::vector<VkAttachmentReference> references = {color.ref};
+//    std::vector<VkAttachmentDescription> attachments = {color.description, depth.description};
+//    std::vector<VkSubpassDependency> dependencies = {color.dependency, depth.dependency};
+//    VkSubpassDescription subpass = this->_offscreen_pass.subpass_description(references, &depth.ref);
+//
+//    this->_offscreen_pass.init(attachments, dependencies, subpass);
+
+}
+
+void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadContext, RenderPass& renderPass) {
+    VkFormat format = VK_FORMAT_D32_SFLOAT; // VK_FORMAT_B8G8R8A8_SRGB;
+
+    this->_offscreen_shadow._descriptor = {};
+    this->_offscreen_shadow._width = SHADOW_WIDTH;
+    this->_offscreen_shadow._height = SHADOW_HEIGHT;
 
     VkExtent3D imageExtent;
     imageExtent.width = SHADOW_WIDTH;
     imageExtent.height = SHADOW_HEIGHT;
     imageExtent.depth = 1;
 
+    // VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
     VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, imageExtent);
-    imgInfo.arrayLayers = 1;
     imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    // imgAllocinfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; // VMA_MEMORY_USAGE_GPU_ONLY (deprecated);
-    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &outTexture._image, &outTexture._allocation, nullptr);
+    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &this->_offscreen_shadow._image, &this->_offscreen_shadow._allocation, nullptr);
 
-    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_DEPTH_BIT);
+    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, this->_offscreen_shadow._image, VK_IMAGE_ASPECT_DEPTH_BIT); // VK_IMAGE_ASPECT_COLOR_BIT
     imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &outTexture._imageView);
+    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &this->_offscreen_shadow._imageView);
 
-    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    VkSamplerCreateInfo samplerInfo {}; // = vkinit::sampler_create_info(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.pNext = nullptr;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 1.0f;
     samplerInfo.mipLodBias = 0.0f;
     samplerInfo.maxAnisotropy = 1.0f;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &outTexture._sampler);
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeV = samplerInfo.addressModeU;
+    samplerInfo.addressModeW = samplerInfo.addressModeU;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_NEVER;
+    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &this->_offscreen_shadow._sampler);
 
 //    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
 //        VkImageSubresourceRange range;
-//        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//        range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; // VK_IMAGE_ASPECT_COLOR_BIT; // VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 //        range.baseMipLevel = 0;
 //        range.levelCount = 1;
 //        range.baseArrayLayer = 0;
-//        range.layerCount = 6;
+//        range.layerCount = 1;
 //
 //        VkImageMemoryBarrier imageBarrier = {};
 //        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 //        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-//        imageBarrier.image = outTexture._image;
+//        imageBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+//        imageBarrier.image = this->_offscreen_shadow._image;
 //        imageBarrier.subresourceRange = range;
 //        imageBarrier.srcAccessMask = 0;
-//        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-//        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+//        imageBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; // VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+//        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 //
-//        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-//
-//        outTexture.updateDescriptor();
+//        this->_offscreen_shadow._imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // VK_IMAGE_LAYOUT_GENERAL; // VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+//        this->_offscreen_shadow.updateDescriptor();
 //    });
 
+    this->_offscreen_shadow._imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL; // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    this->_offscreen_shadow.updateDescriptor();
+
     // === Prepare render pass ===
+    this->prepare_offscreen_pass(device);
 
-    this->_offscreen_pass = RenderPass(device);
-    RenderPass::Attachment depth = this->_offscreen_pass.depth(format);
-    depth.ref.attachment = 0;
-    depth.description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+//    VkImageCreateInfo imageInfo = vkinit::image_create_info(VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,  {SHADOW_WIDTH,SHADOW_HEIGHT,1});
+//    VmaAllocationCreateInfo imageAllocInfo{};
+//    imageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+//    imageAllocInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+//    vmaCreateImage(device._allocator, &imageInfo, &imageAllocInfo, &_depthImage, &_depthAllocation, nullptr);
+//    VkImageViewCreateInfo viewInfo = vkinit::imageview_create_info(_depthFormat, _depthImage, VK_IMAGE_ASPECT_DEPTH_BIT);
+//    VK_CHECK(vkCreateImageView(device._logicalDevice, &viewInfo, nullptr, &_depthImageView));
 
-    std::vector<VkSubpassDependency> dependencies;
-    dependencies.reserve(2);
-    dependencies.push_back({VK_SUBPASS_EXTERNAL, 0,VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_DEPENDENCY_BY_REGION_BIT});
-    dependencies.push_back({0, VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_DEPENDENCY_BY_REGION_BIT});
-    std::vector<VkAttachmentReference> references = {};
-    VkSubpassDescription subpass = this->_offscreen_pass.subpass_description(references, &depth.ref);
-    std::vector<VkAttachmentDescription> attachments = {depth.description};
-
-    this->_offscreen_pass.init(attachments, dependencies, subpass);
+    // std::array<VkImageView, 2> attachments = {this->_offscreen_shadow._imageView, this->_depthImageView};
+    std::array<VkImageView, 1> attachments = {this->_offscreen_shadow._imageView};
 
     // Prepare framebuffer
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.pNext = nullptr;
     framebufferInfo.renderPass = this->_offscreen_pass._renderPass;
-    framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments = &outTexture._imageView;
+    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    framebufferInfo.pAttachments = attachments.data();
     framebufferInfo.width = SHADOW_WIDTH;
     framebufferInfo.height = SHADOW_HEIGHT;
     framebufferInfo.layers = 1;
 
-    VkFramebuffer framebuffer {};
     VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_offscreen_framebuffer));
-
-    // this->_offscreen_pass = renderPass;
-    this->_offscreen_shadow = outTexture;
-    // this->_offscreen_framebuffer = framebuffer;
-
-    // return { outTexture, framebuffer, renderPass};
 }
 
 void ShadowMapping::allocate_buffers(Device& device) {
@@ -124,123 +172,114 @@ void ShadowMapping::allocate_buffers(Device& device) {
 }
 
 void ShadowMapping::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) { // ShadowMapping::ImageMap shadowMap,
-//    DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device); // Maybe we don't need standalone layout manager?
-//    DescriptorAllocator allocator = DescriptorAllocator(device); // Re-use the main descriptor allocator (for now), or handle it somewhere else
-
     std::vector<VkDescriptorPoolSize> offscreenPoolSizes = {
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
     };
 
-//    Texture inTexture = shadowMap.texture;
-//    std::vector<VkDescriptorPoolSize> envPoolSizes = {
-//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-//            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-//            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
-//            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 },
-//            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
-//    };
-
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        // 1. Offscreen descriptor set
-
         VkDescriptorBufferInfo offscreenBInfo{};
         offscreenBInfo.buffer = g_frames[i].offscreenBuffer._buffer;
         offscreenBInfo.offset = 0;
         offscreenBInfo.range = sizeof(GPUDepthData);
 
+//        Texture tmp = this->_offscreen_shadow;
+//        tmp._imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+//        tmp.updateDescriptor();
+
+        this->_offscreen_shadow._descriptor.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        this->_offscreen_shadow.updateDescriptor();
+
+        // 1. Offscreen descriptor set
         DescriptorBuilder::begin(layoutCache, allocator)
                 .bind_buffer(offscreenBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  VK_SHADER_STAGE_FRAGMENT_BIT, 1) // useless
                 .layout(setLayout)
                 .build(g_frames[i].offscreenDescriptor, setLayout, offscreenPoolSizes);
 
-        // 2. Scene descriptor set
-//        DescriptorBuilder::begin(layoutCache, allocator)
-//                .bind_buffer(offscreenBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-//                .bind_image(inTexture._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-//                .layout(setLayout)
-//                .build(g_frames[i].environmentDescriptor, setLayout, offscreenPoolSizes);
+        this->_offscreen_shadow._descriptor.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        this->_offscreen_shadow.updateDescriptor();
 
-//        DescriptorBuilder::begin(layoutCache, allocator)
-//                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-//                .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-//                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-//                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-//                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
-//                .bind_image()
-//                .layout(_descriptorSetLayouts.environment)
-//                .build(g_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
+        // 2. Debug descriptor set
+        DescriptorBuilder::begin(layoutCache, allocator)
+                .bind_buffer(offscreenBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .bind_image(_offscreen_shadow._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .layout(setLayout)
+                .build(g_frames[i].debugDescriptor, setLayout, offscreenPoolSizes);
+
     }
 
 }
 
-void ShadowMapping::render_pass(RenderPass& renderPass, VkFramebuffer& framebuffer, CommandBuffer& cmd, VkDescriptorSet& descriptor, std::shared_ptr<Material> offscreenPass) {
+void ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass) {
+    GraphicPipeline offscreenPipeline = GraphicPipeline(device,this->_offscreen_pass); // this->_offscreen_pass);
+    offscreenPipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
+    offscreenPipeline._rasterizer.cullMode = VK_CULL_MODE_NONE;
+    offscreenPipeline._dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
-    VkClearValue clearValue;
-    clearValue.depthStencil = {1.0f, 0};
-
-    VkExtent2D extent;
-    extent.width = static_cast<uint32_t>(SHADOW_WIDTH);
-    extent.height = static_cast<uint32_t>(SHADOW_HEIGHT);
-
-    VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffer);
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearValue;
-
-    VkViewport viewport = vkinit::get_viewport((float) SHADOW_WIDTH, (float) SHADOW_HEIGHT);
-    vkCmdSetViewport(cmd._commandBuffer, 0, 1, &viewport);
-
-    VkRect2D scissor = vkinit::get_scissor((float) SHADOW_WIDTH, (float) SHADOW_HEIGHT);
-    vkCmdSetScissor(cmd._commandBuffer, 0, 1, &scissor);
-
-    vkCmdBeginRenderPass(cmd._commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    {
-        vkCmdSetDepthBias(cmd._commandBuffer, 1.25f, 0.0f, 1.75f);
-
-        vkCmdBindPipeline(cmd._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, offscreenPass->pipeline);
-        vkCmdBindDescriptorSets(cmd._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, offscreenPass->pipelineLayout, 0,1, &descriptor, 0, nullptr);
-        // todo draw scene
-
-        // cube->draw(cmd._commandBuffer, converterPass->pipelineLayout, 0, true);
-
-    }
-    vkCmdEndRenderPass(cmd._commandBuffer);
-}
-
-std::shared_ptr<Material> ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass) {
-    GraphicPipeline offscreenPipeline = GraphicPipeline(device, this->_offscreen_pass);
     offscreenPipeline._colorBlending.attachmentCount = 0;
     offscreenPipeline._colorBlending.pAttachments = nullptr;
-    offscreenPipeline._rasterizer.depthBiasEnable = VK_TRUE;
+    offscreenPipeline._depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    offscreenPipeline._rasterizer.depthBiasEnable = VK_FALSE;
     offscreenPipeline._dynamicStateEnables.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
 
     std::vector<std::pair<ShaderType, const char*>> offscreen_module {
-            {ShaderType::VERTEX, "../src/shaders/shadow_map/offscreen.vert.spv"},
+            {ShaderType::VERTEX, "../src/shaders/shadow_map/quad.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/offscreen.frag.spv"},
     };
 
     std::vector<PushConstant> constants {
-            {2 * sizeof(glm::mat4), ShaderType::VERTEX},
+            {sizeof(glm::mat4), ShaderType::VERTEX},
     };
 
     materialManager._pipelineBuilder = &offscreenPipeline;
     this->_offscreen_effect = materialManager.create_material("offscreen", setLayouts, constants, offscreen_module);
 
-    return this->_offscreen_effect;
+    GraphicPipeline debugPipeline = GraphicPipeline(device, renderPass);
+    debugPipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
+    debugPipeline._rasterizer.cullMode = VK_CULL_MODE_NONE;
+    debugPipeline._dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+
+    std::vector<std::pair<ShaderType, const char*>> debug_module {
+            {ShaderType::VERTEX, "../src/shaders/shadow_map/quad.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/quad.frag.spv"},
+    };
+
+    materialManager._pipelineBuilder = &debugPipeline;
+    this->_debug_effect = materialManager.create_material("debug", setLayouts, constants, debug_module);
 }
 
-std::shared_ptr<Material> ShadowMapping::setup_scene_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass) {
-    GraphicPipeline scenePipeline = GraphicPipeline(device, renderPass);
+void ShadowMapping::draw(Model& model, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind) {
+    if (bind) {
+        VkDeviceSize offsets[1] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &model._vertexBuffer._buffer, offsets);
+        vkCmdBindIndexBuffer(commandBuffer, model._indexBuffer.allocation._buffer, 0, VK_INDEX_TYPE_UINT32);
+    }
 
-    std::vector<std::pair<ShaderType, const char*>> shadow_modules {
-            {ShaderType::VERTEX, "../src/shaders/shadow_map/scene.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/scene.frag.spv"},
-    };
+    for (auto& node : model._nodes) {
+        draw_node(node, commandBuffer, pipelineLayout, instance);
+    }
+}
 
-    std::vector<PushConstant> constants {
-            {2 * sizeof(glm::mat4), ShaderType::VERTEX},
-    };
+void ShadowMapping::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance) {
+    if (!node->mesh.primitives.empty()) {
+        glm::mat4 nodeMatrix = node->matrix;
+        Node* parent = node->parent;
+        while (parent) {
+            nodeMatrix = parent->matrix * nodeMatrix;
+            parent = parent->parent;
+        }
 
-    materialManager._pipelineBuilder = &scenePipeline;
-    std::shared_ptr<Material> shadowEffect = materialManager.create_material("shadow", setLayouts, constants, shadow_modules);
+        // vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
 
-    return shadowEffect;
+        for (Primitive& primitive : node->mesh.primitives) {
+            if (primitive.indexCount > 0) {
+                vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance);
+            }
+        }
+    }
+
+    for (auto& child : node->children) {
+        draw_node(child, commandBuffer, pipelineLayout, instance);
+    }
 }

@@ -12,9 +12,11 @@ class MaterialManager;
 class RenderPass;
 class DescriptorAllocator;
 class DescriptorLayoutCache;
+class Model;
+class Node;
 
 struct GPUDepthData {
-    alignas(16) glm::mat4 depthMVP;
+    glm::mat4 depthMVP;
 };
 
 class ShadowMapping {
@@ -25,9 +27,12 @@ public:
     RenderPass _offscreen_pass;
     VkFramebuffer _offscreen_framebuffer;
     std::shared_ptr<Material> _offscreen_effect;
+    std::shared_ptr<Material> _debug_effect;
 
-//    std::shared_ptr<Material> _offscreen;
-//    std::shared_ptr<Material> _shadow;
+    VkFormat _depthFormat;
+    VkImageView _depthImageView;
+    VkImage _depthImage;
+    VmaAllocation _depthAllocation;
 
     struct ImageMap {
         Texture texture;
@@ -39,12 +44,13 @@ public:
     ShadowMapping(Device& device);
     ~ShadowMapping();
 
-    void prepare_depth_map(Device& device, UploadContext& uploadContext);
+    void prepare_depth_map(Device& device, UploadContext& uploadContext, RenderPass& renderPass);
+    void prepare_offscreen_pass(Device& device);
     static void allocate_buffers(Device& device);
-    void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout); // ShadowMapping::ImageMap shadowMap,
-    std::shared_ptr<Material> setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);
-    std::shared_ptr<Material> setup_scene_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);
-    static void render_pass(RenderPass& renderPass, VkFramebuffer& framebuffer, CommandBuffer& cmd, VkDescriptorSet& descriptor, std::shared_ptr<Material> offscreenPass);
+    void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
+    void setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);
+    void draw(Model& model, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);
+    void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);
 
 private:
     class Device& _device;

@@ -3,11 +3,12 @@
 #include <vector>
 
 #include "vk_shaders.h"
+#include "core/model/vk_model.h"
 #include "core/manager/vk_system_manager.h"
 
 class Device;
 class RenderPass;
-
+class VertexInputDescription;
 class PipelineBuilder {
 public:
     PipelineBuilder(const Device& device): _device(device) {};
@@ -31,7 +32,9 @@ public:
     VkPipelineColorBlendStateCreateInfo _colorBlending;
     VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineDepthStencilStateCreateInfo _depthStencil;
+    VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
     std::vector<VkDynamicState> _dynamicStateEnables;
+    VertexInputDescription _vertexDescription;
 
     GraphicPipeline(const Device& device, RenderPass& renderPass);
 

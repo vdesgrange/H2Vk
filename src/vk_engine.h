@@ -110,6 +110,7 @@ public:
         VkDescriptorSetLayout matrices;
         VkDescriptorSetLayout textures;
         VkDescriptorSetLayout gui;
+        VkDescriptorSetLayout debug;
     } _descriptorSetLayouts;
 
     DeletionQueue _mainDeletionQueue;

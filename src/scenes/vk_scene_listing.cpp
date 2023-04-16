@@ -81,7 +81,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
 
     // === Add entities ===
     engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("light", std::make_shared<Light>(Light::POINT, glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
+    engine->_lightingManager->add_entity("light", std::make_shared<Light>(Light::POINT, glm::vec4(0.f, 0.f, 10.f, 0.f), glm::vec4(1.f)));
 
     std::shared_ptr<ModelGLB> helmetModel = std::make_shared<ModelGLB>(engine->_device.get());
     helmetModel->load_model(*engine->_device, engine->_uploadContext, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");

@@ -46,6 +46,8 @@ struct FrameData {
 
     AllocatedBuffer offscreenBuffer;
     VkDescriptorSet offscreenDescriptor;
+
+    VkDescriptorSet debugDescriptor;
 };
 
 struct DeletionQueue

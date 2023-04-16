@@ -14,7 +14,7 @@ Device::Device(Window& window) {
             .request_validation_layers(true)
             .require_api_version(1, 1, 0)
             .use_default_debug_messenger()
-            // .add_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) // for shader debugging
+            .add_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) // for shader debugging
             .add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
             .build();
 

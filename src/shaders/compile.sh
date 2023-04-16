@@ -20,3 +20,7 @@ glslc env_map/converter.frag -o env_map/converter.frag.spv
 glslc env_map/irradiance.frag -o env_map/irradiance.frag.spv
 glslc env_map/irradiance.comp -o env_map/irradiance.comp.spv
 glslc env_map/brdf.comp -o env_map/brdf.comp.spv
+glslc shadow_map/offscreen.vert -o shadow_map/offscreen.vert.spv
+glslc shadow_map/offscreen.frag -o shadow_map/offscreen.frag.spv
+glslc shadow_map/quad.vert -o shadow_map/quad.vert.spv
+glslc shadow_map/quad.frag -o shadow_map/quad.frag.spv

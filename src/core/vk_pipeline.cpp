@@ -60,18 +60,20 @@ GraphicPipeline::GraphicPipeline(const Device& device, RenderPass& renderPass) :
     _colorBlendAttachment = vkinit::color_blend_attachment_state();
     _colorBlending = vkinit::color_blend_state_create_info(&_colorBlendAttachment);
     _dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    _vertexInputInfo = vkinit::vertex_input_state_create_info();
+    // VkPipelineVertexInputStateCreateInfo vertexInputInfo = vkinit::vertex_input_state_create_info();
+    _vertexDescription = Vertex::get_vertex_description();
+    _vertexInputInfo.pVertexAttributeDescriptions = _vertexDescription.attributes.data();
+    _vertexInputInfo.vertexAttributeDescriptionCount = _vertexDescription.attributes.size();
+    _vertexInputInfo.pVertexBindingDescriptions = _vertexDescription.bindings.data();
+    _vertexInputInfo.vertexBindingDescriptionCount = _vertexDescription.bindings.size();
+
 }
 
 VkPipeline GraphicPipeline::build_pipeline(VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) {
 
     VkPipeline pipeline;
 
-    VertexInputDescription vertexDescription = Vertex::get_vertex_description();
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo = vkinit::vertex_input_state_create_info();
-    vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
-    vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
-    vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -93,7 +95,7 @@ VkPipeline GraphicPipeline::build_pipeline(VkPipelineLayout& pipelineLayout, std
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.pNext = nullptr;
     pipelineInfo.pColorBlendState = &_colorBlending;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pVertexInputState = &_vertexInputInfo;
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.pInputAssemblyState = &_inputAssembly;
