@@ -24,11 +24,9 @@ ShadowMapping::~ShadowMapping() {
 }
 
 void ShadowMapping::prepare_offscreen_pass(Device& device) {
-    VkFormat format = VK_FORMAT_D32_SFLOAT; // VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
-
     this->_offscreen_pass = RenderPass(device);
-    RenderPass::Attachment depth = this->_offscreen_pass.depth(format);
-    depth.description.format = format;
+    RenderPass::Attachment depth = this->_offscreen_pass.depth(DEPTH_FORMAT);
+    depth.description.format = DEPTH_FORMAT;
     depth.description.flags = 0;
     depth.description.samples = VK_SAMPLE_COUNT_1_BIT;
     depth.description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -70,8 +68,6 @@ void ShadowMapping::prepare_offscreen_pass(Device& device) {
 }
 
 void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadContext, RenderPass& renderPass) {
-    VkFormat format = VK_FORMAT_D32_SFLOAT; // VK_FORMAT_B8G8R8A8_SRGB;
-
     this->_offscreen_shadow._descriptor = {};
     this->_offscreen_shadow._width = SHADOW_WIDTH;
     this->_offscreen_shadow._height = SHADOW_HEIGHT;
@@ -82,7 +78,7 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
     imageExtent.depth = 1;
 
     // VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
-    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, imageExtent);
+    VkImageCreateInfo imgInfo = vkinit::image_create_info(DEPTH_FORMAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, imageExtent);
     imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -90,7 +86,7 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &this->_offscreen_shadow._image, &this->_offscreen_shadow._allocation, nullptr);
 
-    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, this->_offscreen_shadow._image, VK_IMAGE_ASPECT_DEPTH_BIT); // VK_IMAGE_ASPECT_COLOR_BIT
+    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(DEPTH_FORMAT, this->_offscreen_shadow._image, VK_IMAGE_ASPECT_DEPTH_BIT); // VK_IMAGE_ASPECT_COLOR_BIT
     imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &this->_offscreen_shadow._imageView);
 
@@ -213,9 +209,9 @@ void ShadowMapping::setup_descriptors(DescriptorLayoutCache& layoutCache, Descri
 
 void ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass) {
     GraphicPipeline offscreenPipeline = GraphicPipeline(device,this->_offscreen_pass); // this->_offscreen_pass);
-    offscreenPipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
-    offscreenPipeline._rasterizer.cullMode = VK_CULL_MODE_NONE;
-    offscreenPipeline._dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+//    offscreenPipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
+//    offscreenPipeline._rasterizer.cullMode = VK_CULL_MODE_NONE;
+//    offscreenPipeline._dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
     offscreenPipeline._colorBlending.attachmentCount = 0;
     offscreenPipeline._colorBlending.pAttachments = nullptr;
@@ -224,8 +220,8 @@ void ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& ma
     offscreenPipeline._dynamicStateEnables.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
 
     std::vector<std::pair<ShaderType, const char*>> offscreen_module {
-            {ShaderType::VERTEX, "../src/shaders/shadow_map/quad.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/offscreen.frag.spv"},
+            {ShaderType::VERTEX, "../src/shaders/shadow_map/offscreen.vert.spv"},
+            // {ShaderType::FRAGMENT, "../src/shaders/shadow_map/offscreen.frag.spv"},
     };
 
     std::vector<PushConstant> constants {
@@ -249,6 +245,10 @@ void ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& ma
     this->_debug_effect = materialManager.create_material("debug", setLayouts, constants, debug_module);
 }
 
+void ShadowMapping::setup_debug_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass) {
+
+}
+
 void ShadowMapping::draw(Model& model, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind) {
     if (bind) {
         VkDeviceSize offsets[1] = {0};
@@ -270,7 +270,7 @@ void ShadowMapping::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipe
             parent = parent->parent;
         }
 
-        // vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
+        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
 
         for (Primitive& primitive : node->mesh.primitives) {
             if (primitive.indexCount > 0) {

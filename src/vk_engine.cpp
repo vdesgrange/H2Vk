@@ -203,7 +203,7 @@ void VulkanEngine::init_descriptors() {
 void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
-    _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen}, *_renderPass);
+    _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen, _descriptorSetLayouts.matrices}, *_renderPass);
 }
 
 FrameData& VulkanEngine::get_current_frame() {
@@ -323,7 +323,7 @@ void VulkanEngine::update_uniform_buffers() {
     GPUDepthData offscreenData{};
 //    for (auto& l : _lightingManager->_entities) { // Single light for now
 //        std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
-//        glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(120.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.1f, 100.0f); // change zNear/zFar
+//        glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(120.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.1f, 20.0f); // change zNear/zFar
 //        glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(light->get_position()), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 //        glm::mat4 depthModelMatrix = glm::mat4(1.0f);
 //
@@ -405,7 +405,6 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
     // Depth map offscreen pass
     {
         std::array<VkClearValue, 1> clearValues{};
-        // clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
         clearValues[0].depthStencil = {1.0f, 0};
 
         VkExtent2D extent;
@@ -427,19 +426,22 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
             vkCmdSetDepthBias(frame._commandBuffer->_commandBuffer, 1.25f, 0.0f, 1.75f);
 
             vkCmdBindPipeline(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _shadow->_offscreen_effect->pipeline);
-            vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,_shadow->_offscreen_effect->pipelineLayout, 0, 1,&get_current_frame().offscreenDescriptor, 0, nullptr);
-            vkCmdDraw(frame._commandBuffer->_commandBuffer, 3, 1, 0, 0);
-//            RenderObject *first = _scene->_renderables.data();
-//            for (int i = 0; i < _scene->_renderables.size(); i++) {
-//                std::shared_ptr<Model> lastModel = nullptr;
-//                RenderObject &object = first[i];
-//
-//                if (object.model) {
-//                    bool bind = object.model.get() != lastModel.get();
-//                    _shadow->draw( *object.model, frame._commandBuffer->_commandBuffer, object.material->pipelineLayout, i,object.model != lastModel);
-//                    lastModel = bind ? object.model : lastModel;
-//                }
-//            }
+//            vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,_shadow->_offscreen_effect->pipelineLayout, 0, 1,&get_current_frame().offscreenDescriptor, 0, nullptr);
+//            vkCmdDraw(frame._commandBuffer->_commandBuffer, 3, 1, 0, 0);
+            RenderObject *first = _scene->_renderables.data();
+            for (int i = 0; i < _scene->_renderables.size(); i++) {
+                std::shared_ptr<Model> lastModel = nullptr;
+                RenderObject &object = first[i];
+
+                if (object.model) {
+                    bool bind = object.model.get() != lastModel.get();
+                    vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,_shadow->_offscreen_effect->pipelineLayout, 0, 1,&get_current_frame().offscreenDescriptor, 0, nullptr);
+                    vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _shadow->_offscreen_effect->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
+
+                    _shadow->draw( *object.model, frame._commandBuffer->_commandBuffer, object.material->pipelineLayout, i,object.model != lastModel);
+                    lastModel = bind ? object.model : lastModel;
+                }
+            }
         }
         vkCmdEndRenderPass(frame._commandBuffer->_commandBuffer);
     }
@@ -478,7 +480,7 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 //
 //             this->render_objects(frame._commandBuffer->_commandBuffer);
 //
-            // this->ui_overlay();
+            this->ui_overlay();
         }
         vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);
 
