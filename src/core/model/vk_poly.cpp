@@ -198,15 +198,19 @@ std::shared_ptr<Model> ModelPOLY::create_plane(Device* device, const glm::vec3& 
     node->matrix = glm::mat4(1.f);
     node->parent = nullptr;
 
+    glm::vec3 u = glm::vec3(0.0f, p0.y - p1.y, p0.z - p1.z); // (p0.z + p1.z) / 2
+    glm::vec3 v = glm::vec3(p0.x - p1.x, 0.0f, p0.z - p1.z); //  (p0.z + p1.z) / 2
+    glm::vec3 normal = - glm::cross(u, v);
+
     std::vector<Vertex> vertices = {
-            {glm::vec3(p0.x, p0.y, p0.z), glm::vec3(0, 1, 0), glm::vec2(0, 0), color},
-            {glm::vec3(p0.x, p0.y, p1.z), glm::vec3(0, 1, 0), glm::vec2(0, 1), color},
-            {glm::vec3(p1.x, p1.y, p0.z), glm::vec3(0, 1, 0), glm::vec2(1, 0), color},
-            {glm::vec3(p1.x, p1.y, p1.z), glm::vec3(0, 1, 0), glm::vec2(1, 1), color},
+            {glm::vec3(p0.x, p0.y, p0.z), normal, glm::vec2(0, 0), color},
+            {glm::vec3(p0.x, p1.y, p1.z), normal, glm::vec2(0, 1), color},
+            {glm::vec3(p1.x, p0.y, p0.z), normal, glm::vec2(1, 0), color},
+            {glm::vec3(p1.x, p1.y, p1.z), normal, glm::vec2(1, 1), color},
     };
 
     std::vector<uint32_t> indices = {
-            0, 2, 1, 1, 2, 3,
+            0, 1, 2, 1, 2, 3,
     };
 
     for (auto vertex: vertices) {
