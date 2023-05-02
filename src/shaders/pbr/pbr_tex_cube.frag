@@ -10,9 +10,9 @@ layout(std140, set = 0, binding = 1) uniform LightingData {
 } lightingData;
 
 
-layout(set = 0, binding = 2) uniform samplerCube irradianceMap; // aka. environment map
-layout(set = 0, binding = 3) uniform samplerCube prefilteredMap; // aka. prefiltered map
-layout(set = 0, binding = 4) uniform sampler2D brdfMap; // aka. prefilter map
+layout(set = 0, binding = 3) uniform samplerCube irradianceMap; // aka. environment map
+layout(set = 0, binding = 4) uniform samplerCube prefilteredMap; // aka. prefiltered map
+layout(set = 0, binding = 5) uniform sampler2D brdfMap; // aka. prefilter map
 
 layout(set = 2, binding = 0) uniform sampler2D samplerAlbedoMap;
 layout(set = 2, binding = 1) uniform sampler2D samplerNormalMap;

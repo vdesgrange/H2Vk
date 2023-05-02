@@ -158,6 +158,8 @@ VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags f
     info.mipLevels = 1;
     info.samples = VK_SAMPLE_COUNT_1_BIT;
     info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     return info;
 }
@@ -233,7 +235,7 @@ VkWriteDescriptorSet vkinit::write_descriptor_set(VkDescriptorType type, VkDescr
     return setWrite;
 }
 
-VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageFlags flags /*= 0*/) {
+VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageFlags flags) {
     VkCommandBufferBeginInfo info{};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     info.pNext = nullptr;
@@ -266,6 +268,15 @@ VkSamplerCreateInfo vkinit::sampler_create_info(VkFilter filters, VkSamplerAddre
     info.addressModeU = samplerAddressMode;
     info.addressModeV = samplerAddressMode;
     info.addressModeW = samplerAddressMode;
+    info.minLod = 0.0f;
+    info.maxLod = 0.0f;
+    info.mipLodBias = 0.0f;
+    info.maxAnisotropy = 0.0f;
+    info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    info.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+    info.compareEnable = VK_FALSE;
+    info.compareOp = VK_COMPARE_OP_NEVER;
+
     return info;
 }
 

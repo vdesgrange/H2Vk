@@ -159,12 +159,18 @@ void VulkanEngine::setup_environment_descriptors() {
         lightingBInfo.buffer = g_frames[i].lightingBuffer._buffer;
         lightingBInfo.range = sizeof(GPULightData);
 
+        VkDescriptorBufferInfo offscreenBInfo{};
+        offscreenBInfo.buffer = g_frames[i].offscreenBuffer._buffer;
+        offscreenBInfo.range = sizeof(GPUDepthData);
+
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
                 .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
                 .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
+                .bind_buffer(offscreenBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3) // 2
+                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4) // 3
+                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 5) // 4
+                .bind_image(_shadow->_offscreen_shadow._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  VK_SHADER_STAGE_FRAGMENT_BIT, 6)
                 .layout(_descriptorSetLayouts.environment)
                 .build(g_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 
@@ -180,11 +186,11 @@ void VulkanEngine::init_descriptors() {
     Scene::allocate_buffers(*_device);
     ShadowMapping::allocate_buffers(*_device);
 
-    this->setup_environment_descriptors();
     _skybox->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.skybox);
     _scene->setup_transformation_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.matrices);
     _shadow->prepare_depth_map(*_device, _uploadContext, *_renderPass);
     _shadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.offscreen);
+    this->setup_environment_descriptors();
 
     // === Clean up === // Why keep this here if buffered allocated in their respective related class?
     _mainDeletionQueue.push_function([&]() {
@@ -286,7 +292,7 @@ void VulkanEngine::ui_overlay() {
     bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
     if (updated) {
         // Skybox
-        _skybox->_display = _ui->p_open[SKYBOX_EDITOR]; // _skyboxDisplay = _ui->p_open[SKYBOX_EDITOR];
+        _skybox->_display = _ui->p_open[SKYBOX_EDITOR];
     }
 
     // Move camera when key press
@@ -321,15 +327,15 @@ void VulkanEngine::update_uniform_buffers() {
 
     // Shadow : WIP
     GPUDepthData offscreenData{};
-//    for (auto& l : _lightingManager->_entities) { // Single light for now
-//        std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
-//        glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(120.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.1f, 20.0f); // change zNear/zFar
-//        glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(light->get_position()), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-//        glm::mat4 depthModelMatrix = glm::mat4(1.0f);
-//
-//        offscreenData.depthMVP = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
-//    }
-     offscreenData.depthMVP =  camData.proj *  camData.view;
+    for (auto& l : _lightingManager->_entities) { // Single light for now
+        std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
+        glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(45.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.1f, 100.0f); // change zNear/zFar
+        glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(light->get_position()), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 depthModelMatrix = glm::mat4(1.0f);
+
+        offscreenData.depthMVP = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
+    }
+//     offscreenData.depthMVP =  camData.proj *  camData.view;
 
     void *data3;
     vmaMapMemory(_device->_allocator, frame.offscreenBuffer._allocation, &data3);
@@ -360,16 +366,17 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
     uint32_t count = _scene->_renderables.size();
     RenderObject *first = _scene->_renderables.data();
 
-    // Moved update_uniform_buffers and skybox in build_command_buffers.
-
     for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
         RenderObject& object = first[i]; // Take the scene/object
 
         if (object.material != lastMaterial) { // Same material = (shaders/pipeline/descriptors) for multiple objects part of the same scene (e.g. monkey + triangles)
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
             lastMaterial = object.material;
-            uint32_t dynOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex; // GPUSceneData
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, &dynOffset);
+            uint32_t lightOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex;
+            uint32_t depthOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPUDepthData)) * frameIndex;
+            std::vector<uint32_t> dynOffsets = {lightOffset, 0};
+
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 2, dynOffsets.data());
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
         }
 
@@ -382,71 +389,14 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
 }
 
 void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
-    // === Render pass ====
     // Collection of attachments, subpasses, and dependencies between the subpasses
-
-    VkCommandBufferBeginInfo cmdBeginInfo{};
-    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmdBeginInfo.pNext = nullptr;
-    cmdBeginInfo.pInheritanceInfo = nullptr;
-    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    // Scene
-    if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
-        _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
-        _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-        this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
-    }
-
-    update_uniform_buffers();
-
+    VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     VK_CHECK(vkBeginCommandBuffer(frame._commandBuffer->_commandBuffer, &cmdBeginInfo));
 
-    // Depth map offscreen pass
-    {
-        std::array<VkClearValue, 1> clearValues{};
-        clearValues[0].depthStencil = {1.0f, 0};
+    // === Depth map render pass ===
+    _shadow->run_offscreen_pass(frame, _scene->_renderables);
 
-        VkExtent2D extent;
-        extent.width = static_cast<uint32_t>(ShadowMapping::SHADOW_WIDTH);
-        extent.height = static_cast<uint32_t>(ShadowMapping::SHADOW_HEIGHT);
-
-        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(_shadow->_offscreen_pass._renderPass, extent, _shadow->_offscreen_framebuffer);
-        offscreenPassInfo.clearValueCount = clearValues.size();
-        offscreenPassInfo.pClearValues = clearValues.data();
-
-        VkViewport viewport = vkinit::get_viewport((float) ShadowMapping::SHADOW_WIDTH, (float) ShadowMapping::SHADOW_HEIGHT);
-        vkCmdSetViewport(frame._commandBuffer->_commandBuffer, 0, 1, &viewport);
-
-        VkRect2D scissor = vkinit::get_scissor((float) ShadowMapping::SHADOW_WIDTH, (float) ShadowMapping::SHADOW_HEIGHT);
-        vkCmdSetScissor(frame._commandBuffer->_commandBuffer, 0, 1, &scissor);
-
-        vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &offscreenPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        {
-            vkCmdSetDepthBias(frame._commandBuffer->_commandBuffer, 1.25f, 0.0f, 1.75f);
-
-            vkCmdBindPipeline(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _shadow->_offscreen_effect->pipeline);
-//            vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,_shadow->_offscreen_effect->pipelineLayout, 0, 1,&get_current_frame().offscreenDescriptor, 0, nullptr);
-//            vkCmdDraw(frame._commandBuffer->_commandBuffer, 3, 1, 0, 0);
-            RenderObject *first = _scene->_renderables.data();
-            for (int i = 0; i < _scene->_renderables.size(); i++) {
-                std::shared_ptr<Model> lastModel = nullptr;
-                RenderObject &object = first[i];
-
-                if (object.model) {
-                    bool bind = object.model.get() != lastModel.get();
-                    vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,_shadow->_offscreen_effect->pipelineLayout, 0, 1,&get_current_frame().offscreenDescriptor, 0, nullptr);
-                    vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _shadow->_offscreen_effect->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
-
-                    _shadow->draw( *object.model, frame._commandBuffer->_commandBuffer, object.material->pipelineLayout, i,object.model != lastModel);
-                    lastModel = bind ? object.model : lastModel;
-                }
-            }
-        }
-        vkCmdEndRenderPass(frame._commandBuffer->_commandBuffer);
-    }
-
-    // Scene pass
+    // === Scene render pass ===
     {
         // Record command buffers
         std::array<VkClearValue, 2> clearValues{};
@@ -465,21 +415,18 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
-//            this->_shadow->_offscreen_shadow._imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-//            this->_shadow->_offscreen_shadow.updateDescriptor();
 
             // Debug shadow map
-            vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _shadow->_debug_effect->pipelineLayout, 0, 1, &get_current_frame().debugDescriptor, 0, nullptr);
-            vkCmdBindPipeline(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _shadow->_debug_effect->pipeline);
-            vkCmdDraw(frame._commandBuffer->_commandBuffer, 3, 1, 0, 0);
+            _shadow->run_debug(frame);
+
 //            // Draw
 //            // === Update required uniform buffers
-//            update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
-//
-//              this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
-//
-//             this->render_objects(frame._commandBuffer->_commandBuffer);
-//
+            update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
+
+//            this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
+
+            this->render_objects(frame._commandBuffer->_commandBuffer);
+
             this->ui_overlay();
         }
         vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);
@@ -490,6 +437,16 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 }
 
 void VulkanEngine::render(int imageIndex) {
+
+    // === Scene ===
+    if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
+        _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
+        _scene->load_scene(_ui->get_settings().scene_index, *_camera);
+        this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
+    }
+
+    update_uniform_buffers();
+
     // === Command Buffer ===
     VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, 0));
     this->build_command_buffers(get_current_frame(), imageIndex);
@@ -511,7 +468,7 @@ void VulkanEngine::render(int imageIndex) {
     VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, get_current_frame()._renderFence->_fence));
 }
 
-void VulkanEngine::draw() { // todo : what need to be called at each frame? draw()? commandBuffers?
+void VulkanEngine::draw() { // todo : what need to be called at each frame? draw()? commandBuffers might not need to be re-build
     // === Prepare frame ===
     // Wait GPU to render latest frame. Timeout of 1 second
      VK_CHECK(get_current_frame()._renderFence->wait(1000000000));

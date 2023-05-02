@@ -9,9 +9,9 @@ layout(std140, set = 0, binding = 1) uniform LightingData {
     vec4 color[MAX_LIGHT];
 } lightingData;
 
-layout(set = 0, binding = 2) uniform samplerCube irradianceMap; // aka. environment map
-layout(set = 0, binding = 3) uniform samplerCube prefilteredMap; // aka. prefiltered map
-layout(set = 0, binding = 4) uniform sampler2D brdfMap; // aka. prefilter map
+layout(set = 0, binding = 3) uniform samplerCube irradianceMap; // aka. environment map
+layout(set = 0, binding = 4) uniform samplerCube prefilteredMap; // aka. prefiltered map
+layout(set = 0, binding = 5) uniform sampler2D brdfMap; // aka. prefilter map
 
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;

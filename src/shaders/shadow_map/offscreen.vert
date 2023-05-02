@@ -1,5 +1,5 @@
 #version 460
-#extension GL_EXT_debug_printf : enable
+#extension GL_EXT_debug_printf : disable
 
 layout (location = 0) in vec3 vPosition;
 layout (location = 1) in vec3 vNormal;
@@ -30,4 +30,5 @@ void main() {
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * nodeData.model;
     mat4 transformMatrix = ubo.depthMVP * modelMatrix;
     gl_Position =  transformMatrix * vec4(vPosition, 1.0);
+    // gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }

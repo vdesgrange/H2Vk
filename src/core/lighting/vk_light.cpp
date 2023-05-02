@@ -54,6 +54,7 @@ GPULightData LightingManager::gpu_format() {
 void LightingManager::allocate_buffers(Device& device) {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         const size_t lightBufferSize = FRAME_OVERLAP * helper::pad_uniform_buffer_size(device, sizeof(GPULightData));
+        // const size_t lightBufferSize = helper::pad_uniform_buffer_size(device, sizeof(GPULightData)); // It doesn't work while we have 2 g_frames. Why?
         g_frames[i].lightingBuffer = Buffer::create_buffer(device, lightBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     }
 }

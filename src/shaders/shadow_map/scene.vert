@@ -6,22 +6,11 @@ layout (location = 2) in vec2 vUV;
 layout (location = 3) in vec3 vColor;
 layout (location = 4) in vec4 vTangent;
 
-//layout (binding = 0) uniform UBO
-//{
-//    mat4 projection;
-//    mat4 view;
-//    mat4 model;
-//    mat4 lightSpace;
-//    vec4 lightPos;
-//    float zNear;
-//    float zFar;
-//} ubo;
-
 layout(set = 0, binding = 0) uniform  CameraBuffer
 {
     mat4 view;
     mat4 proj;
-    vec3 pos; // used for light post as test
+    vec3 pos; // used for light position as a test
     bool flip;
 } cameraData;
 
@@ -57,18 +46,17 @@ const mat4 biasMat = mat4(
 
 void main()
 {
+    mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * nodeData.model;
+    mat4 cameraMVP = (cameraData.proj * cameraData.view * modelMatrix);
+    mat4 depthMVP = biasMat * depthData.depthMVP * modelMatrix;
+    vec4 pos = modelMatrix * vec4(vPosition.xyz, 1.0f);
+
+    gl_Position = cameraMVP * vec4(vPosition.xyz, 1.0f);
+
     outColor = vColor;
     outUV = vUV;
-    outNormal = vNormal;
-
-    mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * nodeData.model;
-    mat4 transformMatrix = (cameraData.proj * cameraData.view * modelMatrix);
-    gl_Position = transformMatrix * vec4(vPosition.xyz, 1.0f);
-
-    vec4 pos = modelMatrix * vec4(vPosition.xyz, 1.0f);
-    outNormal = mat3(modelMatrix) * inNormal;
-
+    outNormal = mat3(modelMatrix) * vNormal;
     outViewVec = -pos.xyz;
     outLightVec = normalize(cameraData.pos - vPosition);
-    outShadowCoord = ( biasMat * depthData.depthMVP * modelMatrix ) * vec4(vPosition, 1.0);
+    outShadowCoord = depthMVP * vec4(vPosition.xyz, 1.0);
 }
