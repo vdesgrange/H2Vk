@@ -1,6 +1,6 @@
 ﻿#include "vk_initializers.h"
 
-VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule) {
+VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule, VkSpecializationInfo* pShaderSpe) {
     /**
      * Hold information about a single shader stage for the pipeline.
      * Build from a shader stage and a shader module.
@@ -11,6 +11,8 @@ VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShad
     info.stage = stage;
     info.module = shaderModule;
     info.pName = "main";
+    info.pSpecializationInfo = pShaderSpe;
+
     return info;
 }
 

@@ -13,18 +13,6 @@ layout (location = 5) in vec4 inShadowCoord;
 
 layout (location = 0) out vec4 outFragColor;
 
-
-float textureDefault(vec4 shadowCoord, vec2 off) {
-    float shadow = 1.0;
-    float dist = texture( shadowMap, shadowCoord.xy ).z;
-
-    if (dist < shadowCoord.z) {
-        shadow = 0.5;
-    }
-
-    return shadow;
-}
-
 float textureProj(vec4 shadowCoord, vec2 off) {
     float shadow = 1.0;
     if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 )
@@ -62,9 +50,8 @@ float filterPCF(vec4 sc) {
 
 void main()
 {
-    int enablePCF = 0;
+    int enablePCF = 1;
     float shadow = (enablePCF == 1) ? filterPCF(inShadowCoord / inShadowCoord.w) : textureProj(inShadowCoord / inShadowCoord.w, vec2(0.0));
-    // float shadow = textureDefault(inShadowCoord  / inShadowCoord.w, vec2(0.0));
     vec3 N = normalize(inNormal);
     vec3 L = normalize(inLightVec);
     vec3 V = normalize(inViewVec);

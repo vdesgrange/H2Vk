@@ -18,6 +18,7 @@ std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescri
         if (!Shader::load_shader_module(_device, module.second, &shader)) {
             std::cout << "Error when building the shader module" << std::string(module.second) << std::endl;
         }
+
         effect->shaderStages.push_back(ShaderEffect::ShaderStage{module.first, shader});
     }
 
@@ -30,8 +31,8 @@ std::shared_ptr<ShaderPass> PipelineBuilder::build_pass(std::shared_ptr<ShaderEf
     pass->pipelineLayout = this->build_layout(effect->setLayouts, effect->pushConstants);
 
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages{};
-    for (const auto& stage : pass->effect->shaderStages) {
-        shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(stage.flags, stage.shaderModule));
+    for (auto& stage : pass->effect->shaderStages) {
+        shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(stage.flags, stage.shaderModule, &stage.specializationConstants));
     }
 
     pass->pipeline =  this->build_pipeline(pass->pipelineLayout, shaderStages);
@@ -61,13 +62,11 @@ GraphicPipeline::GraphicPipeline(const Device& device, RenderPass& renderPass) :
     _colorBlending = vkinit::color_blend_state_create_info(&_colorBlendAttachment);
     _dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     _vertexInputInfo = vkinit::vertex_input_state_create_info();
-    // VkPipelineVertexInputStateCreateInfo vertexInputInfo = vkinit::vertex_input_state_create_info();
     _vertexDescription = Vertex::get_vertex_description();
     _vertexInputInfo.pVertexAttributeDescriptions = _vertexDescription.attributes.data();
     _vertexInputInfo.vertexAttributeDescriptionCount = _vertexDescription.attributes.size();
     _vertexInputInfo.pVertexBindingDescriptions = _vertexDescription.bindings.data();
     _vertexInputInfo.vertexBindingDescriptionCount = _vertexDescription.bindings.size();
-
 }
 
 VkPipeline GraphicPipeline::build_pipeline(VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) {
@@ -83,7 +82,6 @@ VkPipeline GraphicPipeline::build_pipeline(VkPipelineLayout& pipelineLayout, std
     viewportState.scissorCount = 1;
     viewportState.pScissors = nullptr;//&_scissor;
 
-    // std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamicState{};
     dynamicState.pNext = nullptr;
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;

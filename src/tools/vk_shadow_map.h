@@ -24,15 +24,14 @@ class ShadowMapping final {
 public:
     bool debug = false;
     static const VkFormat DEPTH_FORMAT = VK_FORMAT_D16_UNORM;
-    static const uint32_t SHADOW_WIDTH = 1024;
-    static const uint32_t SHADOW_HEIGHT = 1024;
+    static const uint32_t SHADOW_WIDTH = 2048;
+    static const uint32_t SHADOW_HEIGHT = 2048;
 
     Texture _offscreen_shadow;
     RenderPass _offscreen_pass;
     VkFramebuffer _offscreen_framebuffer;
     std::shared_ptr<Material> _offscreen_effect;
     std::shared_ptr<Material> _debug_effect;
-    std::shared_ptr<Material> _scene_effect;
 
     ShadowMapping() = delete;
     ShadowMapping(Device& device);

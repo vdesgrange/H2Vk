@@ -146,18 +146,14 @@ void ShadowMapping::setup_descriptors(DescriptorLayoutCache& layoutCache, Descri
 }
 
 void ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass) {
-    GraphicPipeline offscreenPipeline = GraphicPipeline(device,this->_offscreen_pass); // this->_offscreen_pass);
-//    offscreenPipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
+    GraphicPipeline offscreenPipeline = GraphicPipeline(device,this->_offscreen_pass);
     offscreenPipeline._dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_DEPTH_BIAS };
-    offscreenPipeline._rasterizer.cullMode = VK_CULL_MODE_NONE;
     offscreenPipeline._colorBlending.attachmentCount = 0;
     offscreenPipeline._colorBlending.pAttachments = nullptr;
-    offscreenPipeline._depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     offscreenPipeline._rasterizer.depthBiasEnable = VK_TRUE;
 
     std::vector<std::pair<ShaderType, const char*>> offscreen_module {
             {ShaderType::VERTEX, "../src/shaders/shadow_map/offscreen.vert.spv"},
-            // {ShaderType::FRAGMENT, "../src/shaders/shadow_map/offscreen.frag.spv"},
     };
 
     std::vector<PushConstant> constants {
@@ -169,7 +165,6 @@ void ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& ma
 
     GraphicPipeline debugPipeline = GraphicPipeline(device, renderPass);
     debugPipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
-    debugPipeline._rasterizer.cullMode = VK_CULL_MODE_NONE;
     debugPipeline._dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
     std::vector<std::pair<ShaderType, const char*>> debug_module {

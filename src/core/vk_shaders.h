@@ -28,6 +28,7 @@ struct ShaderEffect {
     struct ShaderStage {
         VkShaderStageFlagBits flags;
         VkShaderModule shaderModule;
+        VkSpecializationInfo specializationConstants;
     };
 
     std::vector<VkDescriptorSetLayout> setLayouts;

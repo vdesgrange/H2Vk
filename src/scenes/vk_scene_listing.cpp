@@ -55,7 +55,6 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     engine->_lightingManager->add_entity("light", std::make_shared<Light>(Light::POINT, glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 
     PBRProperties blank = {{1.0f,  1.0f, 1.0, 1.0f}, 0.0f,  1.0f, 1.0f};
-//    std::shared_ptr<Model> wallModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -6.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f});
 
     std::shared_ptr<Model> floorModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, 4.0f, -6.0f}, {4.0f, 4.0f, 1.0f}, {1.0f, 1.0f, 1.0f}); // , {1.0f, 1.0f, 1.0f}
     engine->_meshManager->upload_mesh(*floorModel);
