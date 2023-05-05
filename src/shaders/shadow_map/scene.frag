@@ -13,12 +13,21 @@ layout (location = 5) in vec4 inShadowCoord;
 
 layout (location = 0) out vec4 outFragColor;
 
+float pseudo_random(vec4 co) {
+    float dot_product = dot(co, vec4(12.9898, 78.233, 45.164, 94.673));
+    return fract(sin(dot_product) * 43758.5453);
+}
+
 float textureProj(vec4 shadowCoord, vec2 off) {
-    float shadow = 1.0;
-    if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 )
+    float cosTheta = clamp(dot(inNormal, inViewVec), 0.0, 1.0);
+    float bias = 0.005 * tan(acos(cosTheta));
+    bias = clamp(bias, 0, 0.01);
+
+    float shadow = 1.0; // default coefficient, bias handled outside.
+    if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) // depth in valid [-1, 1] interval
     {
-        float dist = texture( shadowMap, shadowCoord.st + off ).r;
-        if ( shadowCoord.w > 0.0 && dist < shadowCoord.z )
+        float dist = texture( shadowMap, shadowCoord.st + off ).r; // get depth map distance to light at coord st + off
+        if ( shadowCoord.w > 0.0 && dist < shadowCoord.z - bias) // if opaque & current depth > than closest obstacle
         {
             shadow = ambient;
         }
@@ -27,20 +36,21 @@ float textureProj(vec4 shadowCoord, vec2 off) {
 }
 
 float filterPCF(vec4 sc) {
-    ivec2 texDim = textureSize(shadowMap, 0);
-    float scale = 1.5;
-    float dx = scale * 1.0 / float(texDim.x);
-    float dy = scale * 1.0 / float(texDim.y);
+    ivec2 texDim = textureSize(shadowMap, 0); // get depth map dimension
+    float scale = 1.0;
+    float dx = scale * 1.0 / float(texDim.x); // x offset = (1 / width) * scale
+    float dy = scale * 1.0 / float(texDim.y); // y offset = (1 / height) * scale
 
     float shadowFactor = 0.0;
     int count = 0;
     int range = 1;
 
-    for (int x = -range; x <= range; x++)
+    for (int x = -range; x <= range; x++) // -1, 0, 1
     {
-        for (int y = -range; y <= range; y++)
+        for (int y = -range; y <= range; y++) // -1, 0, 1
         {
-            shadowFactor += textureProj(sc, vec2(dx*x, dy*y));
+            // float index = pseudo_random(vec4(gl_FragCoord.xy, x, y));
+            shadowFactor += textureProj(sc, vec2(dx * x, dy * y)); // coord + offset = samples center + 8 neighbours
             count++;
         }
 
