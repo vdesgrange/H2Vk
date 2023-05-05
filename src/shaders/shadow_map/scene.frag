@@ -2,7 +2,7 @@
 
 #define ambient 0.1
 
-layout (set = 0, binding = 6) uniform sampler2D shadowMap;
+layout (set = 0, binding = 6) uniform sampler2DArray shadowMap;
 
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
@@ -26,7 +26,7 @@ float textureProj(vec4 shadowCoord, vec2 off) {
     float shadow = 1.0; // default coefficient, bias handled outside.
     if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) // depth in valid [-1, 1] interval
     {
-        float dist = texture( shadowMap, shadowCoord.st + off ).r; // get depth map distance to light at coord st + off
+        float dist = texture( shadowMap, vec3(shadowCoord.st + off, 0) ).r; // get depth map distance to light at coord st + off
         if ( shadowCoord.w > 0.0 && dist < shadowCoord.z - bias) // if opaque & current depth > than closest obstacle
         {
             shadow = ambient;
@@ -36,7 +36,7 @@ float textureProj(vec4 shadowCoord, vec2 off) {
 }
 
 float filterPCF(vec4 sc) {
-    ivec2 texDim = textureSize(shadowMap, 0); // get depth map dimension
+    ivec2 texDim = textureSize(shadowMap, 0).xy; // get depth map dimension
     float scale = 1.0;
     float dx = scale * 1.0 / float(texDim.x); // x offset = (1 / width) * scale
     float dy = scale * 1.0 / float(texDim.y); // y offset = (1 / height) * scale

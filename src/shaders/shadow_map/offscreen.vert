@@ -9,9 +9,17 @@ layout (location = 4) in vec4 vTangent;
 
 layout (location = 0) out vec2 outUV;
 
-layout (std140, set = 0, binding = 0) uniform UBO {
-    mat4 depthMVP;
-} ubo;
+const int MAX_SHADOW_LIGHT = 8;
+const int MAX_LIGHT = 8;
+
+//layout (std140, set = 0, binding = 0) uniform UBO {
+//    mat4 depthMVP;
+//} ubo;
+
+layout (std140, set = 0, binding = 0) uniform ShadowData {
+    layout(offset = 0) uint  num_lights;
+    layout(offset = 16) mat4 directionalMVP[MAX_SHADOW_LIGHT];
+} shadowData;
 
 struct ObjectData {
     mat4 model;
@@ -28,7 +36,7 @@ layout (push_constant) uniform NodeModel {
 
 void main() {
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * nodeData.model;
-    mat4 transformMatrix = ubo.depthMVP * modelMatrix;
+    // mat4 transformMatrix = ubo.depthMVP * modelMatrix;
+    mat4 transformMatrix = shadowData.directionalMVP[0] * modelMatrix;
     gl_Position =  transformMatrix * vec4(vPosition, 1.0);
-    // gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }

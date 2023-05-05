@@ -161,7 +161,7 @@ void VulkanEngine::setup_environment_descriptors() {
 
         VkDescriptorBufferInfo offscreenBInfo{};
         offscreenBInfo.buffer = g_frames[i].offscreenBuffer._buffer;
-        offscreenBInfo.range = sizeof(GPUDepthData);
+        offscreenBInfo.range = sizeof(GPUShadowData); // GPUDepthData
 
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
                 .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
@@ -326,20 +326,24 @@ void VulkanEngine::update_uniform_buffers() {
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
 
     // Shadow : WIP
-    GPUDepthData offscreenData{};
+    // GPUDepthData offscreenData{};
+    GPUShadowData offscreenData{};
+    uint32_t  dirLightCount = 0;
     for (auto& l : _lightingManager->_entities) { // Single light for now
         std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
         glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(45.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.1f, 100.0f); // change zNear/zFar
         glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(light->get_position()), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 depthModelMatrix = glm::mat4(1.0f);
 
-        offscreenData.depthMVP = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
+        offscreenData.directionalMVP[dirLightCount] = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
+        dirLightCount++;
     }
+    offscreenData.num_lights = dirLightCount;
 //     offscreenData.depthMVP =  camData.proj *  camData.view;
 
     void *data3;
     vmaMapMemory(_device->_allocator, frame.offscreenBuffer._allocation, &data3);
-    memcpy(data3, &offscreenData, sizeof(GPUDepthData));
+    memcpy(data3, &offscreenData, sizeof(GPUShadowData)); // GPUDepthData
     vmaUnmapMemory(_device->_allocator, frame.offscreenBuffer._allocation);
 }
 
@@ -373,7 +377,7 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
             lastMaterial = object.material;
             uint32_t lightOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex;
-            uint32_t depthOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPUDepthData)) * frameIndex;
+            uint32_t depthOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPUShadowData)) * frameIndex; // GPUDepthData
             std::vector<uint32_t> dynOffsets = {lightOffset, 0};
 
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 2, dynOffsets.data());
@@ -417,7 +421,7 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
         {
 
             // Debug shadow map
-            _shadow->run_debug(frame);
+//            _shadow->run_debug(frame);
 
 //            // Draw
 //            // === Update required uniform buffers

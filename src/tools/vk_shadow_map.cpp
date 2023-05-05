@@ -15,7 +15,7 @@
 #include <array>
 
 ShadowMapping::ShadowMapping(Device &device) : _device(device), _offscreen_pass(RenderPass(device)) {
-    this->_offscreen_pass = RenderPass(device);
+    this->prepare_offscreen_pass(device); //    this->_offscreen_pass = RenderPass(device);
     this->_offscreen_shadow = Texture();
 }
 
@@ -25,12 +25,20 @@ ShadowMapping::~ShadowMapping() {
     this->_debug_effect.reset();
 
     vkDestroyFramebuffer(_device._logicalDevice, _offscreen_framebuffer, nullptr); // todo use FrameBuffer class
+
+//        for (auto& shadow : this->_offscreen_shadow) {
+//        shadow.destroy(_device);
+//    }
+
+//    for (auto& framebuffer : this->_offscreen_framebuffer) {
+//        vkDestroyFramebuffer(_device._logicalDevice, framebuffer, nullptr);
+//    }
 }
 
 void ShadowMapping::allocate_buffers(Device& device) {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         // const size_t depthBufferSize = FRAME_OVERLAP * helper::pad_uniform_buffer_size(device, sizeof(GPUDepthData));
-        const size_t depthBufferSize =  helper::pad_uniform_buffer_size(device, sizeof(GPUDepthData)); // It doesn't work while we have 2 g_frames. Why?
+        const size_t depthBufferSize =  helper::pad_uniform_buffer_size(device, sizeof(GPUShadowData)); // It doesn't work while we have 2 g_frames. Why?
         g_frames[i].offscreenBuffer = Buffer::create_buffer(device, depthBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU); // memoryUsage type deprecated
     }
 }
@@ -74,12 +82,15 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
     // Prepare image
     VkExtent3D imageExtent { SHADOW_WIDTH, SHADOW_HEIGHT, 1 };
     VkImageCreateInfo imgInfo = vkinit::image_create_info(DEPTH_FORMAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, imageExtent);
+    imgInfo.arrayLayers = MAX_SHADOW_LIGHT;
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &this->_offscreen_shadow._image, &this->_offscreen_shadow._allocation, nullptr);
 
     VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(DEPTH_FORMAT, this->_offscreen_shadow._image, VK_IMAGE_ASPECT_DEPTH_BIT);
+    imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+    imageViewInfo.subresourceRange.layerCount = MAX_SHADOW_LIGHT;
     vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &this->_offscreen_shadow._imageView);
 
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
@@ -93,7 +104,7 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
     this->_offscreen_shadow.updateDescriptor();
 
     // Prepare offscreen render pass
-    this->prepare_offscreen_pass(device);
+    // this->prepare_offscreen_pass(device);
 
     // Prepare framebuffer
     VkFramebufferCreateInfo framebufferInfo{};
@@ -119,7 +130,7 @@ void ShadowMapping::setup_descriptors(DescriptorLayoutCache& layoutCache, Descri
         VkDescriptorBufferInfo offscreenBInfo{};
         offscreenBInfo.buffer = g_frames[i].offscreenBuffer._buffer;
         offscreenBInfo.offset = 0;
-        offscreenBInfo.range = sizeof(GPUDepthData);
+        offscreenBInfo.range = sizeof(GPUShadowData); // GPUDepthData
 
         this->_offscreen_shadow._descriptor.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         this->_offscreen_shadow.updateDescriptor();

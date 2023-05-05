@@ -3,7 +3,7 @@
 
 layout (location = 0) in vec2 inUV;
 
-layout(set = 0, binding = 1) uniform sampler2D samplerDepth;
+layout(set = 0, binding = 1) uniform sampler2DArray samplerDepth;
 
 layout (location = 0) out vec4 outFragColor;
 
@@ -17,6 +17,6 @@ float linearize_depth(float depth)
 
 void main()
 {
-    float x = texture(samplerDepth, inUV).r;
+    float x = texture(samplerDepth, vec3(inUV, 0)).r;
     outFragColor = vec4(vec3(linearize_depth(x)), 1.0); // orthographic
 }

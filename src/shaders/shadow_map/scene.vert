@@ -14,8 +14,21 @@ layout(set = 0, binding = 0) uniform  CameraBuffer
     bool flip;
 } cameraData;
 
-layout(set = 0, binding = 2) uniform DepthBuffer {
-    mat4 depthMVP;
+//layout(set = 0, binding = 2) uniform DepthBuffer {
+//    mat4 depthMVP;
+//} depthData;
+const int MAX_SHADOW_LIGHT = 8;
+const int MAX_LIGHT = 8;
+
+layout(std140, set = 0, binding = 1) uniform LightingData {
+    layout(offset = 0) uint num_lights;
+    layout(offset = 16) vec4 position[MAX_LIGHT];
+    vec4 color[MAX_LIGHT];
+} lightingData;
+
+layout (std140, set = 0, binding = 2) uniform ShadowData {
+    layout(offset = 0) uint  num_lights;
+    layout(offset = 16) mat4 directionalMVP[MAX_SHADOW_LIGHT];
 } depthData;
 
 struct ObjectData {
@@ -48,7 +61,7 @@ void main()
 {
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * nodeData.model;
     mat4 cameraMVP = (cameraData.proj * cameraData.view * modelMatrix);
-    mat4 depthMVP = biasMat * depthData.depthMVP * modelMatrix;
+    mat4 depthMVP = biasMat * depthData.directionalMVP[0] * modelMatrix;
     vec4 pos = modelMatrix * vec4(vPosition.xyz, 1.0f);
 
     gl_Position = cameraMVP * vec4(vPosition.xyz, 1.0f);
@@ -57,6 +70,6 @@ void main()
     outUV = vUV;
     outNormal = mat3(modelMatrix) * vNormal;
     outViewVec = -pos.xyz;
-    outLightVec = normalize(cameraData.pos - vPosition);
+    outLightVec = normalize(lightingData.position[0].xyz - vPosition);
     outShadowCoord = depthMVP * vec4(vPosition.xyz, 1.0);
 }

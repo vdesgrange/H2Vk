@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 #include "glm/gtc/matrix_transform.hpp"
 
 #include "core/vk_texture.h"
@@ -20,9 +21,16 @@ struct GPUDepthData {
     glm::mat4 depthMVP;
 };
 
+uint32_t const MAX_SHADOW_LIGHT = 8;
+
+struct GPUShadowData {
+    alignas(uint32_t) uint32_t num_lights;
+    alignas(16) glm::mat4 directionalMVP[MAX_SHADOW_LIGHT];
+};
+
 class ShadowMapping final {
 public:
-    bool debug = false;
+    bool debug = true;
     static const VkFormat DEPTH_FORMAT = VK_FORMAT_D16_UNORM;
     static const uint32_t SHADOW_WIDTH = 2048;
     static const uint32_t SHADOW_HEIGHT = 2048;
