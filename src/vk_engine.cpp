@@ -326,7 +326,6 @@ void VulkanEngine::update_uniform_buffers() {
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
 
     // Shadow : WIP
-    // GPUDepthData offscreenData{};
     GPUShadowData offscreenData{};
     uint32_t  dirLightCount = 0;
     for (auto& l : _lightingManager->_entities) { // Single light for now
@@ -398,7 +397,7 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
     VK_CHECK(vkBeginCommandBuffer(frame._commandBuffer->_commandBuffer, &cmdBeginInfo));
 
     // === Depth map render pass ===
-    _shadow->run_offscreen_pass(frame, _scene->_renderables);
+    _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
 
     // === Scene render pass ===
     {
@@ -427,7 +426,7 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 //            // === Update required uniform buffers
             update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
 
-//            this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
+            this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
 
             this->render_objects(frame._commandBuffer->_commandBuffer);
 

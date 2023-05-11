@@ -14,10 +14,6 @@ layout(set = 0, binding = 0) uniform  CameraBuffer
     bool flip;
 } cameraData;
 
-//layout(set = 0, binding = 2) uniform DepthBuffer {
-//    mat4 depthMVP;
-//} depthData;
-const int MAX_SHADOW_LIGHT = 8;
 const int MAX_LIGHT = 8;
 
 layout(std140, set = 0, binding = 1) uniform LightingData {
@@ -28,7 +24,7 @@ layout(std140, set = 0, binding = 1) uniform LightingData {
 
 layout (std140, set = 0, binding = 2) uniform ShadowData {
     layout(offset = 0) uint  num_lights;
-    layout(offset = 16) mat4 directionalMVP[MAX_SHADOW_LIGHT];
+    layout(offset = 16) mat4 directionalMVP[MAX_LIGHT];
 } depthData;
 
 struct ObjectData {

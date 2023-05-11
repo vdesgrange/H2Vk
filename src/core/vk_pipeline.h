@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <unordered_map>
 
 #include "vk_shaders.h"
 #include "core/model/vk_model.h"
@@ -13,7 +14,7 @@ class PipelineBuilder {
 public:
     PipelineBuilder(const Device& device): _device(device) {};
 
-    std::shared_ptr<ShaderEffect> build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::vector<std::pair<VkShaderStageFlagBits, const char*>> shaderModules);
+    std::shared_ptr<ShaderEffect> build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::vector<std::tuple<VkShaderStageFlagBits, const char*, VkSpecializationInfo>> shaderModules);
     std::shared_ptr<ShaderPass> build_pass(std::shared_ptr<ShaderEffect> effect);
 
 protected:

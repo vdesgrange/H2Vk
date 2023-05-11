@@ -8,18 +8,20 @@
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
 
-std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::vector<std::pair<VkShaderStageFlagBits, const char*>> shaderModules) {
+std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::vector<std::tuple<VkShaderStageFlagBits, const char*, VkSpecializationInfo>> shaderModules) {
     std::shared_ptr<ShaderEffect> effect = std::make_shared<ShaderEffect>();
     effect->setLayouts = setLayouts;
     effect->pushConstants = pushConstants;
 
     for (auto const& module: shaderModules) {
+        const auto [ first, second, third ] = module;
+
         VkShaderModule shader;
-        if (!Shader::load_shader_module(_device, module.second, &shader)) {
-            std::cout << "Error when building the shader module" << std::string(module.second) << std::endl;
+        if (!Shader::load_shader_module(_device, second, &shader)) {
+            std::cout << "Error when building the shader module" << std::string(second) << std::endl;
         }
 
-        effect->shaderStages.push_back(ShaderEffect::ShaderStage{module.first, shader});
+        effect->shaderStages.push_back(ShaderEffect::ShaderStage{first, shader, third});
     }
 
     return effect;

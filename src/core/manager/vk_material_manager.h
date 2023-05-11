@@ -18,7 +18,7 @@ public:
     ~MaterialManager();
 
     std::shared_ptr<Material> get_material(const std::string &name);
-    std::shared_ptr<Material> create_material(std::string name, std::vector<VkDescriptorSetLayout> setLayouts, std::vector<PushConstant> constants, std::vector<std::pair<ShaderType, const char*>> shaders);
+    std::shared_ptr<Material> create_material(std::string name, std::vector<VkDescriptorSetLayout> setLayouts, std::vector<PushConstant> constants, std::vector<std::pair<ShaderType, const char*>> shaders, std::unordered_map<ShaderType, VkSpecializationInfo> shaderSpecialization = {});
 
 private:
     const class Device* _device;

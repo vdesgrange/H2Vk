@@ -20,7 +20,7 @@ std::shared_ptr<Material> MaterialManager::get_material(const std::string &name)
     return std::static_pointer_cast<Material>(this->get_entity(name));
 }
 
-std::shared_ptr<Material> MaterialManager::create_material(std::string name, std::vector<VkDescriptorSetLayout> setLayouts, std::vector<PushConstant> constants, std::vector<std::pair<ShaderType, const char*>> shaders) {
+std::shared_ptr<Material> MaterialManager::create_material(std::string name, std::vector<VkDescriptorSetLayout> setLayouts, std::vector<PushConstant> constants, std::vector<std::pair<ShaderType, const char*>> shaders, std::unordered_map<ShaderType, VkSpecializationInfo> shaderSpecialization) {
 
     std::vector<VkPushConstantRange> pushConstants {};
     uint32_t offset = 0;
@@ -34,10 +34,11 @@ std::shared_ptr<Material> MaterialManager::create_material(std::string name, std
         offset += p.size;
     }
 
-    std::vector<std::pair<VkShaderStageFlagBits, const char*>> modules {};
+    std::vector<std::tuple<VkShaderStageFlagBits, const char*, VkSpecializationInfo>> modules {};
     modules.reserve(shaders.size());
     for (const auto& it: shaders) {
-        modules.emplace_back(std::make_pair(Shader::get_shader_stage(it.first), it.second));
+        VkSpecializationInfo third = shaderSpecialization[it.first];
+        modules.emplace_back(std::make_tuple(Shader::get_shader_stage(it.first), it.second, third));
     }
 
     std::shared_ptr<ShaderEffect> effect = _pipelineBuilder->build_effect(setLayouts, pushConstants, modules);

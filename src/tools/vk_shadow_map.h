@@ -4,6 +4,7 @@
 #include <vector>
 #include "glm/gtc/matrix_transform.hpp"
 
+#include "core/lighting/vk_light.h"
 #include "core/vk_texture.h"
 #include "core/vk_renderpass.h"
 #include "core/vk_shaders.h"
@@ -17,15 +18,9 @@ class DescriptorLayoutCache;
 class Model;
 class Node;
 
-struct GPUDepthData {
-    glm::mat4 depthMVP;
-};
-
-uint32_t const MAX_SHADOW_LIGHT = 8;
-
 struct GPUShadowData {
     alignas(uint32_t) uint32_t num_lights;
-    alignas(16) glm::mat4 directionalMVP[MAX_SHADOW_LIGHT];
+    alignas(16) glm::mat4 directionalMVP[MAX_LIGHT];
 };
 
 class ShadowMapping final {
@@ -37,7 +32,9 @@ public:
 
     Texture _offscreen_shadow;
     RenderPass _offscreen_pass;
-    VkFramebuffer _offscreen_framebuffer;
+
+    std::vector<VkFramebuffer> _offscreen_framebuffer;
+    std::vector<VkImageView> _offscreen_imageview;
     std::shared_ptr<Material> _offscreen_effect;
     std::shared_ptr<Material> _debug_effect;
 
@@ -50,7 +47,7 @@ public:
     void prepare_offscreen_pass(Device& device);
     void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
     void setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);
-    void run_offscreen_pass(FrameData& frame, Renderables& entities);
+    void run_offscreen_pass(FrameData& frame, Renderables& entities, LightingManager& lighting);
     void run_debug(FrameData& frame);
 private:
     class Device& _device;
