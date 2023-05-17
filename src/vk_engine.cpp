@@ -338,7 +338,6 @@ void VulkanEngine::update_uniform_buffers() {
         dirLightCount++;
     }
     offscreenData.num_lights = dirLightCount;
-//     offscreenData.depthMVP =  camData.proj *  camData.view;
 
     void *data3;
     vmaMapMemory(_device->_allocator, frame.offscreenBuffer._allocation, &data3);

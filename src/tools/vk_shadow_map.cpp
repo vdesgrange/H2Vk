@@ -286,6 +286,8 @@ void ShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& entities, 
             }
         }
         vkCmdEndRenderPass(cmd);
+
+        lightIndex++;
     }
 }
 

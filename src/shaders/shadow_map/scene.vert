@@ -10,22 +10,9 @@ layout(set = 0, binding = 0) uniform  CameraBuffer
 {
     mat4 view;
     mat4 proj;
-    vec3 pos; // used for light position as a test
+    vec3 pos;
     bool flip;
 } cameraData;
-
-const int MAX_LIGHT = 8;
-
-layout(std140, set = 0, binding = 1) uniform LightingData {
-    layout(offset = 0) uint num_lights;
-    layout(offset = 16) vec4 position[MAX_LIGHT];
-    vec4 color[MAX_LIGHT];
-} lightingData;
-
-layout (std140, set = 0, binding = 2) uniform ShadowData {
-    layout(offset = 0) uint  num_lights;
-    layout(offset = 16) mat4 directionalMVP[MAX_LIGHT];
-} depthData;
 
 struct ObjectData {
     mat4 model;
@@ -42,10 +29,8 @@ layout (push_constant) uniform NodeModel {
 layout (location = 0) out vec3 outColor;
 layout (location = 1) out vec2 outUV;
 layout (location = 2) out vec3 outNormal;
-
-layout (location = 3) out vec3 outViewVec;
-layout (location = 4) out vec3 outLightVec;
-layout (location = 5) out vec4 outShadowCoord;
+layout (location = 3) out vec3 outFragPos;
+layout (location = 4) out vec3 outCameraPos;
 
 const mat4 biasMat = mat4(
 0.5, 0.0, 0.0, 0.0,
@@ -57,7 +42,6 @@ void main()
 {
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * nodeData.model;
     mat4 cameraMVP = (cameraData.proj * cameraData.view * modelMatrix);
-    mat4 depthMVP = biasMat * depthData.directionalMVP[0] * modelMatrix;
     vec4 pos = modelMatrix * vec4(vPosition.xyz, 1.0f);
 
     gl_Position = cameraMVP * vec4(vPosition.xyz, 1.0f);
@@ -65,7 +49,6 @@ void main()
     outColor = vColor;
     outUV = vUV;
     outNormal = mat3(modelMatrix) * vNormal;
-    outViewVec = -pos.xyz;
-    outLightVec = normalize(lightingData.position[0].xyz - vPosition);
-    outShadowCoord = depthMVP * vec4(vPosition.xyz, 1.0);
+    outFragPos = pos.xyz;
+    outCameraPos = cameraData.pos;
 }
