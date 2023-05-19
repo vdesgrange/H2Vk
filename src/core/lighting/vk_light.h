@@ -10,9 +10,12 @@
 uint32_t const MAX_LIGHT = 8;
 
 struct GPULightData {
-    alignas(uint32_t) uint32_t num_lights;
-    alignas(16) glm::vec4 position[MAX_LIGHT];
-    alignas(16) glm::vec4 color[MAX_LIGHT];
+    alignas(8) glm::vec2 num_lights;
+    alignas(16) glm::vec4 directionalPosition[MAX_LIGHT];
+    alignas(16) glm::vec4 directionalColor[MAX_LIGHT];
+    alignas(16) glm::vec4 spotPosition[MAX_LIGHT];
+    alignas(16) glm::vec4 spotTarget[MAX_LIGHT];
+    alignas(16) glm::vec4 spotColor[MAX_LIGHT];
     // float cut_off;
 };
 
@@ -39,17 +42,20 @@ public:
 
     Type get_type();
     glm::vec4 get_position();
+    glm::vec4 get_target();
     glm::vec4 get_color();
 
     void set_type(Type type);
     void set_position(glm::vec4 p);
+    void set_target(glm::vec4 t);
     void set_color(glm::vec4 c);
 
 private:
 
     Type _type = Type::POINT;
     glm::vec4 _position = {0.0f, 0.0f, 0.0f, 0.0f};
-    glm::vec4 _color {1.0f, 1.0f, 1.0f, 1.0f};
+    glm::vec4 _target = {0.0f, 0.0f, 0.0f, 0.0f};
+    glm::vec4 _color = {1.0f, 1.0f, 1.0f, 1.0f};
 };
 
 class LightingManager final : public System {

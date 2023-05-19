@@ -10,11 +10,12 @@ layout (location = 4) in vec4 vTangent;
 
 layout (location = 0) out vec2 outUV;
 
-layout (constant_id = 0) const int MAX_LIGHT = 8;
+const int MAX_LIGHT = 8; // layout (constant_id = 0)
 
 layout (std140, set = 0, binding = 0) uniform ShadowData {
-    layout(offset = 0) uint  num_lights;
-    layout(offset = 16) mat4 directionalMVP[MAX_LIGHT];
+    layout(offset = 0) vec2  num_lights;
+    layout(offset = 16) mat4 directional_mvp[MAX_LIGHT];
+    layout(offset = 528) mat4 spot_mvp[MAX_LIGHT];
 } shadowData;
 
 struct ObjectData {
@@ -33,7 +34,14 @@ layout (push_constant) uniform PushConstants {
 
 void main() {
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * pushData.model;
+    mat4 transformMatrix = mat4(0.0);
     // debugPrintfEXT("light details : %i %i", pushData.lightIndex, pushData.lightType);
-    mat4 transformMatrix = shadowData.directionalMVP[pushData.lightIndex] * modelMatrix;
+
+    if (pushData.lightType == 1) {
+        transformMatrix = shadowData.spot_mvp[pushData.lightIndex] * modelMatrix;
+    } else if (pushData.lightType == 2) {
+        transformMatrix = shadowData.directional_mvp[pushData.lightIndex] * modelMatrix;
+    }
+
     gl_Position =  transformMatrix * vec4(vPosition, 1.0);
 }

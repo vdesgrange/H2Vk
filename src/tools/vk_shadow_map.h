@@ -19,8 +19,9 @@ class Model;
 class Node;
 
 struct GPUShadowData {
-    alignas(uint32_t) uint32_t num_lights;
+    alignas(8) glm::vec2 num_lights;
     alignas(16) glm::mat4 directionalMVP[MAX_LIGHT];
+    glm::mat4 spotMVP[MAX_LIGHT];
 };
 
 class ShadowMapping final {

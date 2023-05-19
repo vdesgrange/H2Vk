@@ -14,14 +14,18 @@ layout (location = 4) in vec3 inCameraPos;
 layout (location = 0) out vec4 outFragColor;
 
 layout(std140, set = 0, binding = 1) uniform LightingData {
-    layout(offset = 0) uint num_lights;
-    layout(offset = 16) vec4 position[MAX_LIGHT];
-    vec4 color[MAX_LIGHT];
+    layout(offset = 0) vec2 num_lights;
+    layout(offset = 16) vec4 dir_position[MAX_LIGHT];
+    layout(offset = 144) vec4 dir_color[MAX_LIGHT];
+    layout(offset = 272) vec4 spot_position[MAX_LIGHT];
+    layout(offset = 400) vec4 spot_target[MAX_LIGHT];
+    layout(offset = 528) vec4 spot_color[MAX_LIGHT];
 } lightingData;
 
 layout (std140, set = 0, binding = 2) uniform ShadowData {
-    layout(offset = 0) uint  num_lights;
-    layout(offset = 16) mat4 directionalMVP[MAX_LIGHT];
+    layout(offset = 0) vec2  num_lights;
+    layout(offset = 16) mat4 directional_mvp[MAX_LIGHT];
+    layout(offset = 528) mat4 spot_mvp[MAX_LIGHT];
 } depthData;
 
 layout (set = 0, binding = 6) uniform sampler2DArray shadowMap;
@@ -47,7 +51,7 @@ float textureProj(vec4 P, vec2 off, float layer) {
     float shadow = 1.0; // default coefficient, bias handled outside.
     if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) // depth in valid [-1, 1] interval
     {
-        float dist = texture( shadowMap, vec3(shadowCoord.st + off, layer) ).r; // get depth map distance to light at coord st + off
+        float dist = texture(shadowMap, vec3(shadowCoord.st + off, layer) ).r; // get depth map distance to light at coord st + off
         if ( shadowCoord.w > 0.0 && dist < shadowCoord.z - bias) // if opaque & current depth > than closest obstacle
         {
             shadow = ambient;
@@ -79,30 +83,34 @@ float filterPCF(vec4 sc, float layer) {
     return shadowFactor / count;
 }
 
-vec3 shadow(vec3 color) {
-    for (int i=0; i < depthData.num_lights; i++) {
-        vec4 shadowCoord = biasMat * depthData.directionalMVP[i] * vec4(inFragPos, 1.0);
+vec3 shadow(vec3 color, int type) {
+    mat4 mvp[MAX_LIGHT];
+
+    if (type == 0) {
+        mvp = depthData.spot_mvp;
+    } else if (type == 1) {
+        mvp = depthData.directional_mvp;
+    }
+
+    for (int i=0; i < depthData.num_lights[type]; i++) {
+        vec4 shadowCoord = biasMat * depthData.spot_mvp[i] * vec4(inFragPos, 1.0);
         float shadowFactor = (enablePCF == 1) ? filterPCF(shadowCoord, i) : textureProj(shadowCoord, vec2(0.0), i);
         color *= shadowFactor;
     }
     return color;
 }
 
-void main()
-{
-    vec3 N = normalize(inNormal);
-    vec3 V = normalize(inCameraPos - inFragPos);
-    vec3 color = inColor * ambient;
-
+vec3 spot_light(vec3 color, vec3 N, vec3 V) {
     float lightCosInnerAngle = cos(radians(15.0));
     float lightCosOuterAngle = cos(radians(25.0));
     float lightRange = 100.0;
 
-    for (int i=0; i < lightingData.num_lights; i++) {
-        vec3 L = lightingData.position[i].xyz - inFragPos;
+    for (int i=0; i < lightingData.num_lights[0]; i++) {
+        vec3 L = lightingData.spot_position[i].xyz - inFragPos;
         float dist = length(L);
         L = normalize(L);
-        vec3 dir = normalize(lightingData.position[i].xyz - vec3(0.0f, 0.0f, 0.0f));
+
+        vec3 dir = normalize(lightingData.spot_position[i].xyz - lightingData.spot_target[i].xyz);
 
         float cosDir = dot(L, dir);
         float spotEffect = smoothstep(lightCosOuterAngle, lightCosInnerAngle, cosDir);
@@ -114,10 +122,20 @@ void main()
         float NdotR = max(0.0, dot(R, V));
         vec3 spec = vec3(pow(NdotR, 16.0) * 2.5);
 
-        color += ((diffuse + spec) * spotEffect * heightAttenuation) * lightingData.color[i].rgb * inColor;
+        color += ((diffuse + spec) * spotEffect * heightAttenuation) * lightingData.spot_color[i].rgb * inColor;
     }
 
-    color = shadow(color);
+    return color;
+}
+
+void main()
+{
+    vec3 N = normalize(inNormal);
+    vec3 V = normalize(inCameraPos - inFragPos);
+    vec3 color = inColor * ambient;
+
+    color = spot_light(color, N, V);
+    color = shadow(color, 0);
 
     outFragColor = vec4(color, 1.0);
 }

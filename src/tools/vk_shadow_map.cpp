@@ -81,7 +81,7 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
     this->_offscreen_shadow._descriptor = {};
     this->_offscreen_shadow._width = SHADOW_WIDTH;
     this->_offscreen_shadow._height = SHADOW_HEIGHT;
-    this->_offscreen_framebuffer.reserve(MAX_LIGHT);
+    this->_offscreen_framebuffer.reserve(MAX_LIGHT); // DANGER - ne gere que 1 type de lumiere
     this->_offscreen_imageview.reserve(MAX_LIGHT);
     for (int i=0; i < MAX_LIGHT; i++) {
         this->_offscreen_framebuffer.push_back({});
@@ -207,18 +207,18 @@ void ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& ma
             {ShaderType::VERTEX, "../src/shaders/shadow_map/offscreen.vert.spv"},
     };
 
-    VkSpecializationMapEntry speMapEntry = {0, 0, sizeof(uint32_t)};
-    VkSpecializationInfo speInfo = {1, &speMapEntry, sizeof(uint32_t), &MAX_LIGHT};
-    std::unordered_map<ShaderType, VkSpecializationInfo> offscreen_specialization {
-            {ShaderType::VERTEX, speInfo},
-    };
+//    VkSpecializationMapEntry speMapEntry = {0, 0, sizeof(uint32_t)};
+//    VkSpecializationInfo speInfo = {1, &speMapEntry, sizeof(uint32_t), &MAX_LIGHT};
+//    std::unordered_map<ShaderType, VkSpecializationInfo> offscreen_specialization {
+//            {ShaderType::VERTEX, speInfo},
+//    };
 
     std::vector<PushConstant> constants {
             {sizeof(glm::mat4) + 2 * sizeof(uint32_t), ShaderType::VERTEX},
     };
 
     materialManager._pipelineBuilder = &offscreenPipeline;
-    this->_offscreen_effect = materialManager.create_material("offscreen", setLayouts, constants, offscreen_module, offscreen_specialization);
+    this->_offscreen_effect = materialManager.create_material("offscreen", setLayouts, constants, offscreen_module); // offscreen_specialization
 
     GraphicPipeline debugPipeline = GraphicPipeline(device, renderPass);
     debugPipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
@@ -252,8 +252,10 @@ void ShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& entities, 
     vkCmdSetDepthBias(cmd, 1.25f, 0.0f, 1.75f);
 
     uint32_t lightIndex = 0;
-    for (auto const& light : lighting._entities) {
-        uint32_t lightType = 1;
+    for (auto const& l : lighting._entities) {
+        std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
+
+        uint32_t lightType = 1; // light->get_type()
 
         VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(this->_offscreen_pass._renderPass, extent, this->_offscreen_framebuffer[lightIndex]);
         offscreenPassInfo.clearValueCount = clearValues.size();
