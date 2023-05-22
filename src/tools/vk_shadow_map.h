@@ -26,7 +26,7 @@ struct GPUShadowData {
 
 class ShadowMapping final {
 public:
-    bool debug = true;
+    bool debug = false;
     static const VkFormat DEPTH_FORMAT = VK_FORMAT_D16_UNORM;
     static const uint32_t SHADOW_WIDTH = 2048;
     static const uint32_t SHADOW_HEIGHT = 2048;

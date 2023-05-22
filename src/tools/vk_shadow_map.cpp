@@ -255,7 +255,7 @@ void ShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& entities, 
     for (auto const& l : lighting._entities) {
         std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
 
-        uint32_t lightType = 1; // light->get_type()
+        uint32_t lightType = light->get_type();
 
         VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(this->_offscreen_pass._renderPass, extent, this->_offscreen_framebuffer[lightIndex]);
         offscreenPassInfo.clearValueCount = clearValues.size();

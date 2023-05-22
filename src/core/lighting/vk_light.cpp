@@ -5,13 +5,30 @@ std::atomic<uint32_t> Light::nextID {0};
 
 Light::Light() : _uid(++nextID) {}
 
-Light::Light(Type type, glm::vec4 pos, glm::vec4 color) {
+Light::Light(Type type, glm::vec4 p, glm::vec4 r, glm::vec4 c) {
     _uid = ++nextID;
     _type = type;
-    _position = pos;
-    _target = glm::vec4(0.0f);
-    _color = color;
+    _position = p;
+    _rotation = r;
+    _color = c;
 }
+
+Light::Light(glm::vec4 p, glm::vec4 r, glm::vec4 c) {
+    _uid = ++nextID;
+    _type = Light::SPOT;
+    _position = p;
+    _rotation = r;
+    _color = c;
+}
+
+Light::Light(glm::vec4 r, glm::vec4 c) {
+    _uid = ++nextID;
+    _type = Light::DIRECTIONAL;
+    _position = glm::vec4(0.0f);
+    _rotation = r;
+    _color = c;
+}
+
 
 Light::Type Light::get_type() {
     return this->_type;
@@ -21,8 +38,8 @@ glm::vec4 Light::get_position() {
     return this->_position;
 }
 
-glm::vec4 Light::get_target() {
-    return this->_target;
+glm::vec4 Light::get_rotation() {
+    return this->_rotation;
 }
 
 glm::vec4 Light::get_color() {
@@ -37,8 +54,8 @@ void Light::set_position(glm::vec4 p) {
     this->_position = p;
 }
 
-void Light::set_target(glm::vec4 t) {
-    this->_target = t;
+void Light::set_rotation(glm::vec4 r) {
+    this->_rotation = r;
 }
 
 void Light::set_color(glm::vec4 c) {
@@ -55,14 +72,14 @@ GPULightData LightingManager::gpu_format() {
         std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
 
         if (light->get_type() == Light::Type::DIRECTIONAL) {
-            lightingData.directionalPosition[dirLightCount] = light->get_position();
-            lightingData.directionalColor[dirLightCount] = light->get_color();
+            lightingData.dirDirection[dirLightCount] =  light->get_position(); // light->get_rotation();
+            lightingData.dirColor[dirLightCount] = light->get_color();
             dirLightCount++;
         }
 
        if (light->get_type() == Light::Type::SPOT) {
            lightingData.spotPosition[spotLightCount] = light->get_position();
-           lightingData.spotTarget[spotLightCount] = light->get_target();
+           lightingData.spotDirection[spotLightCount] = light->get_rotation();
            lightingData.spotColor[spotLightCount] = light->get_color();
            spotLightCount++;
        }

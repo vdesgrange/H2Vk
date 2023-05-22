@@ -43,5 +43,5 @@ void main() {
         transformMatrix = shadowData.directional_mvp[pushData.lightIndex] * modelMatrix;
     }
 
-    gl_Position =  transformMatrix * vec4(vPosition, 1.0);
+    gl_Position = transformMatrix * vec4(vPosition, 1.0);
 }

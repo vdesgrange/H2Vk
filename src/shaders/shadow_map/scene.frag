@@ -3,7 +3,7 @@
 #define ambient 0.1
 
 const int MAX_LIGHT = 8;
-const int enablePCF = 1;
+const int enablePCF = 0;
 
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
@@ -15,7 +15,7 @@ layout (location = 0) out vec4 outFragColor;
 
 layout(std140, set = 0, binding = 1) uniform LightingData {
     layout(offset = 0) vec2 num_lights;
-    layout(offset = 16) vec4 dir_position[MAX_LIGHT];
+    layout(offset = 16) vec4 dir_direction[MAX_LIGHT];
     layout(offset = 144) vec4 dir_color[MAX_LIGHT];
     layout(offset = 272) vec4 spot_position[MAX_LIGHT];
     layout(offset = 400) vec4 spot_target[MAX_LIGHT];
@@ -42,7 +42,7 @@ float pseudo_random(vec4 co) {
 }
 
 float textureProj(vec4 P, vec2 off, float layer) {
-    vec4 shadowCoord = P / P.w;
+    vec4 shadowCoord = P / P.w; //  w = 1 for orthographic. Divide by w to emulate perspective.
     float cosTheta = clamp(dot(inNormal, -inFragPos), 0.0, 1.0);
     float bias = 0.005 * tan(acos(cosTheta));
 
@@ -84,17 +84,21 @@ float filterPCF(vec4 sc, float layer) {
 }
 
 vec3 shadow(vec3 color, int type) {
-    mat4 mvp[MAX_LIGHT];
+    float layer_offset = 0;
+    vec4 shadowCoord;
 
-    if (type == 0) {
-        mvp = depthData.spot_mvp;
-    } else if (type == 1) {
-        mvp = depthData.directional_mvp;
+    if (type == 1) {
+        layer_offset = depthData.num_lights[0];
     }
 
     for (int i=0; i < depthData.num_lights[type]; i++) {
-        vec4 shadowCoord = biasMat * depthData.spot_mvp[i] * vec4(inFragPos, 1.0);
-        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowCoord, i) : textureProj(shadowCoord, vec2(0.0), i);
+        if (type == 0) {
+            shadowCoord = biasMat * depthData.spot_mvp[i] * vec4(inFragPos, 1.0);
+        } else if (type == 1) {
+            shadowCoord = biasMat * depthData.directional_mvp[i] * vec4(inFragPos, 1.0);
+        }
+
+        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowCoord, layer_offset + i) : textureProj(shadowCoord, vec2(0.0), layer_offset + i);
         color *= shadowFactor;
     }
     return color;
@@ -106,7 +110,7 @@ vec3 spot_light(vec3 color, vec3 N, vec3 V) {
     float lightRange = 100.0;
 
     for (int i=0; i < lightingData.num_lights[0]; i++) {
-        vec3 L = lightingData.spot_position[i].xyz - inFragPos;
+        vec3 L = lightingData.spot_position[i].xyz - inFragPos; // direction vector = light source - fragment's position
         float dist = length(L);
         L = normalize(L);
 
@@ -128,6 +132,20 @@ vec3 spot_light(vec3 color, vec3 N, vec3 V) {
     return color;
 }
 
+vec3 directional_light(vec3 color, vec3 N, vec3 V) {
+    for (int i=0; i < lightingData.num_lights[1]; i++) {
+        vec3 L = normalize(- lightingData.dir_direction[i].xyz);
+        vec3 diffuse = max(dot(N, L), ambient) * inColor;
+        vec3 R = normalize(-reflect(L, N));
+        float NdotR = max(0.0, dot(R, V));
+        vec3 spec = vec3(pow(NdotR, 16.0) * 2.5);
+
+        color += (diffuse + spec) * lightingData.dir_color[i].rgb * inColor;
+    }
+
+    return color;
+}
+
 void main()
 {
     vec3 N = normalize(inNormal);
@@ -135,7 +153,9 @@ void main()
     vec3 color = inColor * ambient;
 
     color = spot_light(color, N, V);
+    color = directional_light(color, N, V);
     color = shadow(color, 0);
+    color = shadow(color, 1);
 
     outFragColor = vec4(color, 1.0);
 }

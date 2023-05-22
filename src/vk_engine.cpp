@@ -333,9 +333,9 @@ void VulkanEngine::update_uniform_buffers() {
         std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
 
         if (light->get_type() == Light::Type::DIRECTIONAL) {
-            glm::vec3 eye = light->get_position(); // a changer
-            glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(45.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.1f, 100.0f);
-            glm::mat4 depthViewMatrix = glm::lookAt(eye + _camera->get_position_vector(), _camera->get_position_vector(),glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::vec3 eye = light->get_rotation();
+            glm::mat4 depthProjectionMatrix = glm::ortho<float>(-10,10,-10,10,-10,10); // entire scene must be visible
+            glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(-light->get_position()), glm::vec3(0.0f),glm::vec3(0.0f, 1.0f, 0.0f));
             glm::mat4 depthModelMatrix = glm::mat4(1.0f);
             offscreenData.directionalMVP[dirLightCount] = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
             dirLightCount++;
@@ -343,7 +343,7 @@ void VulkanEngine::update_uniform_buffers() {
 
         if (light->get_type() == Light::Type::SPOT) {
             glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(45.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.1f, 100.0f); // change zNear/zFar
-            glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(light->get_position()), glm::vec3(light->get_target()), glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(light->get_position()), glm::vec3(light->get_rotation()), glm::vec3(0.0f, 1.0f, 0.0f));
             glm::mat4 depthModelMatrix = glm::mat4(1.0f);
             offscreenData.spotMVP[spotLightCount] = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
             spotLightCount++;
