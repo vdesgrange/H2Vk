@@ -41,7 +41,6 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
     engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, pbr_modules);
 
-
     std::vector<std::pair<ShaderType, const char*>> scene_modules {
             {ShaderType::VERTEX, "../src/shaders/shadow_map/scene.vert.spv"},
             {ShaderType::FRAGMENT, "../src/shaders/shadow_map/scene.frag.spv"},
@@ -52,29 +51,29 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
     // === Add entities ===
     engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("main_light", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.0f, 0.f),glm::vec4(1.f)));
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.0f, 0.f),glm::vec4(1.f)));
     // engine->_lightingManager->add_entity("spot", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.f, 0.f), glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 //    engine->_lightingManager->add_entity("light2", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(2.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 
     PBRProperties blank = {{1.0f,  1.0f, 1.0, 1.0f}, 0.0f,  1.0f, 1.0f};
 
-    std::shared_ptr<Model> floorModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, 4.0f, -6.0f}, {4.0f, 4.0f, 1.0f}, {1.0f, 1.0f, 1.0f}); // , {1.0f, 1.0f, 1.0f}
+    std::shared_ptr<Model> floorModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, 4.0f, -6.0f}, {4.0f, 4.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, blank); // , {1.0f, 1.0f, 1.0f}
     engine->_meshManager->upload_mesh(*floorModel);
     engine->_meshManager->add_entity("floor", std::static_pointer_cast<Entity>(floorModel));
 
-    std::shared_ptr<Model> wallModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, -4.0f, -6.0f}, {4.0f, 4.0f, -6.0f}, {1.0f, 1.0f, 1.0f}); // , {1.0f, 1.0f, 1.0f}
+    std::shared_ptr<Model> wallModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, -4.0f, -6.0f}, {4.0f, 4.0f, -6.0f}, {1.0f, 1.0f, 1.0f}, blank); // , {1.0f, 1.0f, 1.0f}
     engine->_meshManager->upload_mesh(*wallModel);
     engine->_meshManager->add_entity("wall", std::static_pointer_cast<Entity>(wallModel));
 
     RenderObject floor;
     floor.model = engine->_meshManager->get_model("floor");
-    floor.material = engine->_materialManager->get_material("shadowScene");
+    floor.material = engine->_materialManager->get_material("pbrMaterial");
     floor.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(floor);
 
     RenderObject wall;
     wall.model = engine->_meshManager->get_model("wall");
-    wall.material = engine->_materialManager->get_material("shadowScene");
+    wall.material = engine->_materialManager->get_material("pbrMaterial");
     wall.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(wall);
 
@@ -91,7 +90,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
             RenderObject sphere;
             sphere.model = engine->_meshManager->get_model(name);
-            sphere.material = engine->_materialManager->get_material("shadowScene"); // pbrMaterial
+            sphere.material = engine->_materialManager->get_material("pbrMaterial"); // pbrMaterial
             glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x - 3, y - 3, 0));
             glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.5, 0.5, 0.5));
             sphere.transformMatrix = translation * scale;
@@ -114,7 +113,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
 
     // === Add entities ===
     engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("light", std::make_shared<Light>(glm::vec4(0.f, 0.f, -10.f, 0.f), glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
     std::shared_ptr<ModelGLB> helmetModel = std::make_shared<ModelGLB>(engine->_device.get());
     helmetModel->load_model(*engine->_device, engine->_uploadContext, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");

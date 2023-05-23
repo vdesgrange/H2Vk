@@ -15,7 +15,7 @@
 #include <array>
 
 ShadowMapping::ShadowMapping(Device &device) : _device(device), _offscreen_pass(RenderPass(device)) {
-    this->prepare_offscreen_pass(device); //    this->_offscreen_pass = RenderPass(device);
+    this->prepare_offscreen_pass(device);
     this->_offscreen_shadow = Texture();
 }
 
@@ -31,11 +31,6 @@ ShadowMapping::~ShadowMapping() {
     for (auto& imageview: this->_offscreen_imageview) {
         vkDestroyImageView(_device._logicalDevice, imageview, nullptr);
     }
-//    vkDestroyFramebuffer(_device._logicalDevice, _offscreen_framebuffer, nullptr);
-
-//        for (auto& shadow : this->_offscreen_shadow) {
-//        shadow.destroy(_device);
-//    }
 }
 
 void ShadowMapping::allocate_buffers(Device& device) {
@@ -77,13 +72,16 @@ void ShadowMapping::prepare_offscreen_pass(Device& device) {
     this->_offscreen_pass.init(attachments, dependencies, subpass);
 }
 
-void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadContext, RenderPass& renderPass) {
+void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadContext, RenderPass& renderPass, LightingManager& lighting) {
+    uint num_lights = 2 * MAX_LIGHT; // lighting._entities.size();
     this->_offscreen_shadow._descriptor = {};
     this->_offscreen_shadow._width = SHADOW_WIDTH;
     this->_offscreen_shadow._height = SHADOW_HEIGHT;
-    this->_offscreen_framebuffer.reserve(MAX_LIGHT); // DANGER - ne gere que 1 type de lumiere
-    this->_offscreen_imageview.reserve(MAX_LIGHT);
-    for (int i=0; i < MAX_LIGHT; i++) {
+    this->_offscreen_framebuffer.reserve(num_lights);
+    this->_offscreen_imageview.reserve(num_lights);
+
+
+    for (int i=0; i < num_lights; i++) {
         this->_offscreen_framebuffer.push_back({});
         this->_offscreen_imageview.push_back({});
     }
@@ -91,7 +89,7 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
     // Prepare image
     VkExtent3D imageExtent { SHADOW_WIDTH, SHADOW_HEIGHT, 1 };
     VkImageCreateInfo imgInfo = vkinit::image_create_info(DEPTH_FORMAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, imageExtent);
-    imgInfo.arrayLayers = MAX_LIGHT;
+    imgInfo.arrayLayers = num_lights;
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -99,7 +97,7 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
 
     VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(DEPTH_FORMAT, this->_offscreen_shadow._image, VK_IMAGE_ASPECT_DEPTH_BIT);
     imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-    imageViewInfo.subresourceRange.layerCount = MAX_LIGHT;
+    imageViewInfo.subresourceRange.layerCount = num_lights;
     vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &this->_offscreen_shadow._imageView);
 
     CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
@@ -108,7 +106,7 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
         range.baseMipLevel = 0;
         range.levelCount = 1;
         range.baseArrayLayer = 0;
-        range.layerCount = MAX_LIGHT;
+        range.layerCount = num_lights;
 
         VkImageMemoryBarrier imageBarrier = {};
         imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -140,9 +138,9 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
     framebufferInfo.pAttachments = &this->_offscreen_shadow._imageView;
     framebufferInfo.width = SHADOW_WIDTH;
     framebufferInfo.height = SHADOW_HEIGHT;
-    framebufferInfo.layers = 1; // MAX_LIGHT
+    framebufferInfo.layers = 1;
 
-    for (int l = 0; l < MAX_LIGHT; l++) {
+    for (int l = 0; l < num_lights; l++) {
         // Create image view
         VkImageViewCreateInfo info = vkinit::imageview_create_info(DEPTH_FORMAT, this->_offscreen_shadow._image, VK_IMAGE_ASPECT_DEPTH_BIT);
         info.subresourceRange.baseArrayLayer = l; // sampler 2D array layer
@@ -156,8 +154,6 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
         framebufferInfo.pAttachments = attachments.data();  // framebuffer used for image modification
         VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_offscreen_framebuffer[l]));
     }
-
-    // VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_offscreen_framebuffer));
 }
 
 void ShadowMapping::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
@@ -218,7 +214,7 @@ void ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& ma
     };
 
     materialManager._pipelineBuilder = &offscreenPipeline;
-    this->_offscreen_effect = materialManager.create_material("offscreen", setLayouts, constants, offscreen_module); // offscreen_specialization
+    this->_offscreen_effect = materialManager.create_material("offscreen", setLayouts, constants, offscreen_module);
 
     GraphicPipeline debugPipeline = GraphicPipeline(device, renderPass);
     debugPipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
@@ -268,8 +264,6 @@ void ShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& entities, 
         vkCmdBeginRenderPass(cmd, &offscreenPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         {
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipeline);
-//            vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,_shadow->_offscreen_effect->pipelineLayout, 0, 1,&get_current_frame().offscreenDescriptor, 0, nullptr);
-//            vkCmdDraw(frame._commandBuffer->_commandBuffer, 3, 1, 0, 0);
 
             uint32_t i = 0;
             std::shared_ptr<Model> lastModel = nullptr;

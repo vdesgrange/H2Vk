@@ -188,7 +188,7 @@ void VulkanEngine::init_descriptors() {
 
     _skybox->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.skybox);
     _scene->setup_transformation_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.matrices);
-    _shadow->prepare_depth_map(*_device, _uploadContext, *_renderPass);
+    _shadow->prepare_depth_map(*_device, _uploadContext, *_renderPass, *_lightingManager); // problem : fixed number of shadows. Implement ECS first.
     _shadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.offscreen);
     this->setup_environment_descriptors();
 

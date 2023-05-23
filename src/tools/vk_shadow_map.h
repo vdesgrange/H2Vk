@@ -44,7 +44,7 @@ public:
     ~ShadowMapping();
 
     static void allocate_buffers(Device& device);
-    void prepare_depth_map(Device& device, UploadContext& uploadContext, RenderPass& renderPass);
+    void prepare_depth_map(Device& device, UploadContext& uploadContext, RenderPass& renderPass, LightingManager& lighting);
     void prepare_offscreen_pass(Device& device);
     void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
     void setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);

@@ -1,18 +1,30 @@
 #version 460
 
-const float PI = 3.14159265359;
+#define shadow_ambient 0.1
 
+const float PI = 3.14159265359;
 const int MAX_LIGHT = 8;
+const int enablePCF = 0;
+
 layout(std140, set = 0, binding = 1) uniform LightingData {
-    layout(offset = 0) uint num_lights;
-    layout(offset = 16) vec4 position[MAX_LIGHT];
-    vec4 color[MAX_LIGHT];
+    layout(offset = 0) vec2 num_lights;
+    layout(offset = 16) vec4 dir_direction[MAX_LIGHT];
+    layout(offset = 144) vec4 dir_color[MAX_LIGHT];
+    layout(offset = 272) vec4 spot_position[MAX_LIGHT];
+    layout(offset = 400) vec4 spot_target[MAX_LIGHT];
+    layout(offset = 528) vec4 spot_color[MAX_LIGHT];
 } lightingData;
 
+layout (std140, set = 0, binding = 2) uniform ShadowData {
+    layout(offset = 0) vec2  num_lights;
+    layout(offset = 16) mat4 directional_mvp[MAX_LIGHT];
+    layout(offset = 528) mat4 spot_mvp[MAX_LIGHT];
+} depthData;
 
 layout(set = 0, binding = 3) uniform samplerCube irradianceMap; // aka. environment map
 layout(set = 0, binding = 4) uniform samplerCube prefilteredMap; // aka. prefiltered map
 layout(set = 0, binding = 5) uniform sampler2D brdfMap; // aka. prefilter map
+layout(set = 0, binding = 6) uniform sampler2DArray shadowMap;
 
 layout(set = 2, binding = 0) uniform sampler2D samplerAlbedoMap;
 layout(set = 2, binding = 1) uniform sampler2D samplerNormalMap;
@@ -28,6 +40,76 @@ layout (location = 4) in vec3 inCameraPos; // camera/view position
 layout (location = 5) in vec4 inTangent;
 
 layout (location = 0) out vec4 outFragColor;
+
+const mat4 biasMat = mat4(
+0.5, 0.0, 0.0, 0.0,
+0.0, 0.5, 0.0, 0.0,
+0.0, 0.0, 1.0, 0.0,
+0.5, 0.5, 0.0, 1.0 );
+
+
+float textureProj(vec4 P, vec2 off, float layer) {
+    vec4 shadowCoord = P / P.w; //  w = 1 for orthographic. Divide by w to emulate perspective.
+    float cosTheta = clamp(dot(inNormal, -inFragPos), 0.0, 1.0);
+    float bias = 0.005 * tan(acos(cosTheta));
+
+    bias = clamp(bias, 0, 0.01);
+
+    float shadow = 1.0; // default coefficient, bias handled outside.
+    if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) // depth in valid [-1, 1] interval
+    {
+        float dist = texture(shadowMap, vec3(shadowCoord.st + off, layer) ).r; // get depth map distance to light at coord st + off
+        if ( shadowCoord.w > 0.0 && dist < shadowCoord.z - bias) // if opaque & current depth > than closest obstacle
+        {
+            shadow = shadow_ambient;
+        }
+    }
+    return shadow;
+}
+
+float filterPCF(vec4 sc, float layer) {
+    ivec2 texDim = textureSize(shadowMap, 0).xy; // get depth map dimension
+    float scale = 1.0;
+    float dx = scale * 1.0 / float(texDim.x); // x offset = (1 / width) * scale
+    float dy = scale * 1.0 / float(texDim.y); // y offset = (1 / height) * scale
+
+    float shadowFactor = 0.0;
+    int count = 0;
+    int range = 1;
+
+    for (int x = -range; x <= range; x++) // -1, 0, 1
+    {
+        for (int y = -range; y <= range; y++) // -1, 0, 1
+        {
+            // float index = pseudo_random(vec4(gl_FragCoord.xy, x, y));
+            shadowFactor += textureProj(sc, vec2(dx * x, dy * y), layer); // coord + offset = samples center + 8 neighbours
+            count++;
+        }
+
+    }
+    return shadowFactor / count;
+}
+
+vec3 shadow(vec3 color, int type) {
+    float layer_offset = 0;
+    vec4 shadowCoord;
+
+    if (type == 1) {
+        layer_offset = depthData.num_lights[0];
+    }
+
+    for (int i=0; i < depthData.num_lights[type]; i++) {
+        if (type == 0) {
+            shadowCoord = biasMat * depthData.spot_mvp[i] * vec4(inFragPos, 1.0);
+        } else if (type == 1) {
+            shadowCoord = biasMat * depthData.directional_mvp[i] * vec4(inFragPos, 1.0);
+        }
+
+        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowCoord, layer_offset + i) : textureProj(shadowCoord, vec2(0.0), layer_offset + i);
+        color *= shadowFactor;
+    }
+    return color;
+}
 
 vec3 uncharted_to_tonemap(vec3 x) {
     float A = 0.15;
@@ -121,11 +203,31 @@ vec3 calculateNormal() {
     return TN;
 }
 
+vec3 spot_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, float metallic) {
+    for (int i = 0; i < lightingData.num_lights[0]; i++) {
+        vec3 L = normalize(lightingData.spot_position[i].xyz - inFragPos);
+        vec3 C = lightingData.spot_color[i].rgb;
+
+        Lo += BRDF(L, V, N, C, albedo, roughness, metallic);
+    };
+
+    return Lo;
+}
+
+vec3 directional_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, float metallic) {
+    for (int i = 0; i < lightingData.num_lights[1]; i++) {
+        vec3 L = normalize(- lightingData.dir_direction[i].xyz);
+        vec3 C = lightingData.dir_color[i].rgb;
+
+        Lo += BRDF(L, V, N, C, albedo, roughness, metallic);
+    };
+
+    return Lo;
+}
 
 void main()
 {
-    vec3 albedo = pow(texture(samplerAlbedoMap, inUV).rgb, vec3(2.2));
-    // vec3 albedo = texture(samplerAlbedoMap, inUV).rgb; // no gamma correction pow 2.2
+    vec3 albedo = pow(texture(samplerAlbedoMap, inUV).rgb, vec3(2.2)); // gamma correction
     vec3 normal = texture(samplerNormalMap, inUV).rgb;
     float metallic = texture(samplerMetalRoughnessMap, inUV).r;
     float roughness = texture(samplerMetalRoughnessMap, inUV).g;
@@ -133,18 +235,14 @@ void main()
     vec3 emissive = texture(samplerEmissiveMap, inUV).rgb;
 
     vec3 V = normalize(inCameraPos - inFragPos);
-    vec3 N = calculateNormal(); // normalize(inNormal);
+    vec3 N = calculateNormal();
     vec3 R = reflect(-V, N);
 
     vec2 uv = sample_spherical_map(N);
 
     vec3 Lo = vec3(0.0);
-    for (int i = 0; i < lightingData.num_lights; i++) {
-        vec3 L = normalize(lightingData.position[i].xyz - inFragPos);
-        vec3 C = lightingData.color[i].rgb;
-
-        Lo += BRDF(L, V, N, C, albedo, roughness, metallic);
-    };
+    Lo = spot_light(Lo, N, V, albedo, roughness, metallic);
+    Lo = directional_light(Lo, N, V, albedo, roughness, metallic);
 
     vec2 brdf = texture(brdfMap, vec2(max(dot(N, V), 0.01), roughness)).rg;
     vec3 reflection = prefiltered_reflection(R, roughness).rgb;
@@ -163,6 +261,9 @@ void main()
 
     color = uncharted_to_tonemap(color);
     color = color / (color + vec3(1.0)); // Reinhard operator
+    color = shadow(color, 0);
+    color = shadow(color, 1);
+
     // color = color * (1.0f / uncharted_to_tonemap(vec3(11.2f)));
 
     outFragColor = vec4(color, 1.0);
