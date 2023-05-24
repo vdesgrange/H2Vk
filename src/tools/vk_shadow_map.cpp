@@ -221,8 +221,8 @@ void ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& ma
     debugPipeline._dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
     std::vector<std::pair<ShaderType, const char*>> debug_module {
-            {ShaderType::VERTEX, "../src/shaders/shadow_map/quad.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/quad.frag.spv"},
+            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_quad.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/depth_debug_quad.frag.spv"},
     };
 
     materialManager._pipelineBuilder = &debugPipeline;
