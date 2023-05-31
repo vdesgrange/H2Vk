@@ -45,7 +45,7 @@ void VulkanEngine::init_window() {
 
 void VulkanEngine::init_vulkan() {
     _device = std::make_unique<Device>(*_window);
-    std::cout << "GPU has a minimum buffer alignment = " << _device->_gpuProperties.limits.minUniformBufferOffsetAlignment << std::endl;
+    // std::cout << "GPU has a minimum buffer alignment = " << _device->_gpuProperties.limits.minUniformBufferOffsetAlignment << std::endl;
 }
 
 void VulkanEngine::init_interface() {
@@ -103,7 +103,6 @@ void VulkanEngine::init_default_renderpass() {
 
     RenderPass::Attachment color = _renderPass->color(_swapchain->_swapChainImageFormat);
     RenderPass::Attachment depth = _renderPass->depth(_swapchain->_depthFormat);
-    // VkSubpassDescription subpass = _renderPass->subpass_description(&color.ref, &depth.ref);
     std::vector<VkAttachmentDescription> attachments = {color.description, depth.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency, depth.dependency};
     std::vector<VkAttachmentReference> references = {color.ref};
@@ -304,11 +303,7 @@ void VulkanEngine::update_uniform_buffers() {
     uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
 
     // === Camera & Objects & Environment ===
-    GPUCameraData camData{};
-    camData.proj = _camera->get_projection_matrix();
-    camData.view = _camera->get_view_matrix();
-    camData.pos = _camera->get_position_vector();
-    camData.flip = _camera->get_flip();
+    GPUCameraData camData = _camera->gpu_format();
 
     // Camera : write into the buffer by copying the render matrices from camera object into it
     void *data;
@@ -325,32 +320,8 @@ void VulkanEngine::update_uniform_buffers() {
     memcpy(data2, &lightingData, sizeof(GPULightData));
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
 
-    // Shadow : WIP
-    GPUShadowData offscreenData{};
-    uint32_t  dirLightCount = 0;
-    uint32_t  spotLightCount = 0;
-    for (auto& l : _lightingManager->_entities) { // Single light for now
-        std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
-
-        if (light->get_type() == Light::Type::DIRECTIONAL) {
-            glm::vec3 eye = light->get_rotation();
-            glm::mat4 depthProjectionMatrix = glm::ortho<float>(-10,10,-10,10,-10,10); // entire scene must be visible
-            glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(-light->get_position()), glm::vec3(0.0f),glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::mat4 depthModelMatrix = glm::mat4(1.0f);
-            offscreenData.directionalMVP[dirLightCount] = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
-            dirLightCount++;
-        }
-
-        if (light->get_type() == Light::Type::SPOT) {
-            glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(45.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.1f, 100.0f); // change zNear/zFar
-            glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(light->get_position()), glm::vec3(light->get_rotation()), glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::mat4 depthModelMatrix = glm::mat4(1.0f);
-            offscreenData.spotMVP[spotLightCount] = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
-            spotLightCount++;
-        }
-
-    }
-    offscreenData.num_lights = glm::vec2(spotLightCount, dirLightCount);
+    // Shadow
+    GPUShadowData offscreenData = _shadow->gpu_format(_lightingManager.get());
 
     void *data3;
     vmaMapMemory(_device->_allocator, frame.offscreenBuffer._allocation, &data3);
@@ -380,7 +351,6 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
     uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
     uint32_t count = _scene->_renderables.size();
     RenderObject *first = _scene->_renderables.data();
-
     for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
         RenderObject& object = first[i]; // Take the scene/object
 
@@ -397,7 +367,7 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
 
         if (object.model) {
             bool bind = object.model.get() != lastModel.get(); // degueulasse sortir de la boucle de rendu
-            object.model->draw(commandBuffer, object.material->pipelineLayout, i, object.model != lastModel);
+            object.model->draw(commandBuffer, object.material->pipelineLayout, i, bind); // object.model != lastModel
             lastModel = bind ? object.model : lastModel;
         }
     }
@@ -432,12 +402,9 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
         {
 
             // Debug shadow map
-//            _shadow->run_debug(frame);
+            this->_shadow->run_debug(frame);
 
-//            // Draw
-//            // === Update required uniform buffers
-            update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
-
+            // Draw
             this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
 
             this->render_objects(frame._commandBuffer->_commandBuffer);
@@ -460,7 +427,8 @@ void VulkanEngine::render(int imageIndex) {
         this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
     }
 
-    update_uniform_buffers();
+    // === Update required uniform buffers
+    update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
 
     // === Command Buffer ===
     VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, 0));
@@ -526,6 +494,12 @@ void VulkanEngine::draw() { // todo : what need to be called at each frame? draw
 
 void VulkanEngine::run()
 {
+//
+//    for (uint8_t i=0; i < 3; i++) {
+//        VK_CHECK(vkResetCommandBuffer(g_frames[i]._commandBuffer->_commandBuffer, 0));
+//        this->build_command_buffers(g_frames[i], i);
+//    }
+//
     while(!glfwWindowShouldClose(_window->_window)) {
         glfwPollEvents();
         Window::glfw_get_key(_window->_window);

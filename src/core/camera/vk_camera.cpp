@@ -227,3 +227,13 @@ void Camera::allocate_buffers(Device& device) {
         g_frames[i].cameraBuffer = Buffer::create_buffer(device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     }
 }
+
+GPUCameraData Camera::gpu_format() {
+    GPUCameraData camData{};
+    camData.proj = this->get_projection_matrix();
+    camData.view = this->get_view_matrix();
+    camData.pos = this->get_position_vector();
+    camData.flip = this->get_flip();
+
+    return camData;
+}

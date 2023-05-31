@@ -35,8 +35,7 @@ ShadowMapping::~ShadowMapping() {
 
 void ShadowMapping::allocate_buffers(Device& device) {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        // const size_t depthBufferSize = FRAME_OVERLAP * helper::pad_uniform_buffer_size(device, sizeof(GPUDepthData));
-        const size_t depthBufferSize =  helper::pad_uniform_buffer_size(device, sizeof(GPUShadowData)); // It doesn't work while we have 2 g_frames. Why?
+        const size_t depthBufferSize =  helper::pad_uniform_buffer_size(device, sizeof(GPUShadowData));
         g_frames[i].offscreenBuffer = Buffer::create_buffer(device, depthBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU); // memoryUsage type deprecated
     }
 }
@@ -203,12 +202,6 @@ void ShadowMapping::setup_offscreen_pipeline(Device& device, MaterialManager& ma
             {ShaderType::VERTEX, "../src/shaders/shadow_map/offscreen.vert.spv"},
     };
 
-//    VkSpecializationMapEntry speMapEntry = {0, 0, sizeof(uint32_t)};
-//    VkSpecializationInfo speInfo = {1, &speMapEntry, sizeof(uint32_t), &MAX_LIGHT};
-//    std::unordered_map<ShaderType, VkSpecializationInfo> offscreen_specialization {
-//            {ShaderType::VERTEX, speInfo},
-//    };
-
     std::vector<PushConstant> constants {
             {sizeof(glm::mat4) + 2 * sizeof(uint32_t), ShaderType::VERTEX},
     };
@@ -267,19 +260,16 @@ void ShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& entities, 
 
             uint32_t i = 0;
             std::shared_ptr<Model> lastModel = nullptr;
-            vkCmdPushConstants(cmd, this->_offscreen_effect->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
-                               sizeof(glm::mat4), 2 * sizeof(uint32_t), &shadowPushConstant);
+            vkCmdPushConstants(cmd, this->_offscreen_effect->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4), 2 * sizeof(uint32_t), &shadowPushConstant);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipelineLayout,0, 1, &frame.offscreenDescriptor, 0, nullptr);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipelineLayout, 1, 1, &frame.objectDescriptor, 0, nullptr);
 
             for (auto const &object: entities) {
-                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipelineLayout,
-                                        0, 1, &frame.offscreenDescriptor, 0, nullptr);
-                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipelineLayout,
-                                        1, 1, &frame.objectDescriptor, 0, nullptr);
-                this->draw(*object.model, cmd, object.material->pipelineLayout, i,
-                           object.model.get() != lastModel.get());
+                this->draw(*object.model, cmd, object.material->pipelineLayout, i,object.model.get() != lastModel.get());
                 lastModel = object.model;
                 i++;
             }
+
         }
         vkCmdEndRenderPass(cmd);
 
@@ -328,4 +318,34 @@ void ShadowMapping::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipe
     for (auto& child : node->children) {
         draw_node(child, commandBuffer, pipelineLayout, instance);
     }
+}
+
+GPUShadowData ShadowMapping::gpu_format(const LightingManager* lightingManager) {
+    GPUShadowData offscreenData{};
+    uint32_t  dirLightCount = 0;
+    uint32_t  spotLightCount = 0;
+    for (auto& l : lightingManager->_entities) {
+        std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
+
+        if (light->get_type() == Light::Type::DIRECTIONAL) {
+            glm::vec3 eye = light->get_rotation();
+            glm::mat4 depthProjectionMatrix = glm::ortho<float>(-10,10,-10,10,-10,10); // entire scene must be visible
+            glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(-light->get_position()), glm::vec3(0.0f),glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 depthModelMatrix = glm::mat4(1.0f);
+            offscreenData.directionalMVP[dirLightCount] = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
+            dirLightCount++;
+        }
+
+        if (light->get_type() == Light::Type::SPOT) {
+            glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(45.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.1f, 100.0f); // change zNear/zFar
+            glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(light->get_position()), glm::vec3(light->get_rotation()), glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 depthModelMatrix = glm::mat4(1.0f);
+            offscreenData.spotMVP[spotLightCount] = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
+            spotLightCount++;
+        }
+
+    }
+    offscreenData.num_lights = glm::vec2(spotLightCount, dirLightCount);
+
+    return offscreenData;
 }

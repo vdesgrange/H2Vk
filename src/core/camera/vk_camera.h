@@ -57,6 +57,7 @@ public:
 
     bool update_camera(float delta);
     static void allocate_buffers(Device& device);
+    GPUCameraData gpu_format();
 
 private:
     glm::vec3 position = glm::vec3();

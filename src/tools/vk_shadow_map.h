@@ -50,6 +50,8 @@ public:
     void setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);
     void run_offscreen_pass(FrameData& frame, Renderables& entities, LightingManager& lighting);
     void run_debug(FrameData& frame);
+    GPUShadowData gpu_format(const LightingManager* lightingManager);
+
 private:
     class Device& _device;
 
