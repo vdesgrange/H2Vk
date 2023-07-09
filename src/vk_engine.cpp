@@ -231,6 +231,8 @@ void VulkanEngine::init_scene() {
 
     _shadow = std::make_unique<ShadowMapping>(*_device);
 
+    _atmosphere = std::make_unique<Atmosphere>(*_device, _uploadContext);
+
     _sceneListing = std::make_unique<SceneListing>();
     _scene = std::make_unique<Scene>(*this);
 }
@@ -381,6 +383,8 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
     // === Depth map render pass ===
     _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
 
+    // Debug transmittance
+
     // === Scene render pass ===
     {
         // Record command buffers
@@ -402,14 +406,14 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
         {
 
             // Debug shadow map
-            this->_shadow->run_debug(frame);
-
-            // Draw
-            this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
-
-            this->render_objects(frame._commandBuffer->_commandBuffer);
-
-            this->ui_overlay();
+//            this->_shadow->run_debug(frame);
+//
+//            // Draw
+//            this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
+//
+//            this->render_objects(frame._commandBuffer->_commandBuffer);
+//
+//            this->ui_overlay();
         }
         vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);
 

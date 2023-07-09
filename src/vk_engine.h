@@ -42,6 +42,7 @@
 #include "scenes/vk_scene.h"
 
 #include "tools/vk_shadow_map.h"
+#include "tools/vk_atmosphere.h"
 
 class Window;
 class Device;
@@ -90,6 +91,7 @@ public:
     std::unique_ptr<UInterface> _ui;
     std::unique_ptr<Skybox> _skybox;
     std::unique_ptr<ShadowMapping> _shadow;
+    std::unique_ptr<Atmosphere> _atmosphere;
 
     std::unique_ptr<SystemManager> _systemManager;
     std::shared_ptr<MaterialManager> _materialManager;

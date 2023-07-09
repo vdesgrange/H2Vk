@@ -1,5 +1,7 @@
 #version 460
 #extension GL_EXT_debug_printf : disable
+#extension GL_GOOGLE_include_directive : enable
+// #extension GL_ARB_shading_language_include : enable
 
 #include "./functions.glsl"
 
@@ -19,12 +21,8 @@ void main() {
   float d_max = rho + h; // maximum
   float d = d_min + x_mu * (d_max - d_min); // actual distance
 
-  float u_mu = (d == 0.0) * m ? 1.0 : (h * h - rho * rho - d * d) / (2.0 * r * d);
-  u_mu = clamp(u_mu, -1.0, 1.0);
-
-  float rayleigh_density = 0.0;
-  float mie_density = 0.0;
-  float absorption_density = 0.0;
+  float mu = (d == 0.0) ? 1.0 : (h * h - rho * rho - d * d) / (2.0 * r * d);
+  mu = clamp(mu, -1.0, 1.0);
   
   vec3 transmittance = exp(-(
     rayleigh_extinction * getOpticalLength(rayleigh_density, r, mu) + 
@@ -33,4 +31,5 @@ void main() {
   );
 
   outFragColor = vec4(transmittance, 1.0);
+  // outFragColor = vec4(uv.x, uv.y, 0.0, 1.0);
 }
