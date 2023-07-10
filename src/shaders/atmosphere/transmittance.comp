@@ -1,0 +1,37 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+
+#include "./functions.glsl"
+
+layout(binding = 0, rgba16f) writeonly uniform image2D outputImage;
+
+layout(local_size_x = 32, local_size_y = 32) in;
+
+void main() {
+    ivec2 outSize = imageSize(outputImage);
+    vec2 texSize = vec2(outSize);
+    ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 uv =  vec2(gl_GlobalInvocationID.xy) / texSize;
+
+    float x_mu = uv.x;
+    float x_r = uv.y;
+
+    float h = sqrt(r_top * r_top - r_ground * r_ground); // d_H distance to atmosphere boundary for horizontal ray
+    float rho = h * x_r; // distance to horizon
+    float r = sqrt(rho * rho + r_ground * r_ground);
+    // distance to top atmosphere boundary for a ray (r, mu)
+    float d_min = r_top - r; // minimum
+    float d_max = rho + h; // maximum
+    float d = d_min + x_mu * (d_max - d_min); // actual distance
+
+    float mu = (d == 0.0) ? 1.0 : (h * h - rho * rho - d * d) / (2.0 * r * d);
+    mu = clamp(mu, -1.0, 1.0);
+
+    vec3 transmittance = exp(-(
+        rayleigh_extinction * getOpticalLength(rayleigh_density, r, mu) +
+        mie_extinction * getOpticalLength(mie_density, r, mu) +
+        ozone_extinction * getOpticalLength(ozone_density, r, mu))
+    );
+
+    imageStore(outputImage, texCoord, vec4(transmittance, 1.0));
+}

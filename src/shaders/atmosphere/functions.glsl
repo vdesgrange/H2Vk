@@ -31,7 +31,7 @@ float getProfileDensity(float altitude, DensityProfile profiles) {
 }
 
 float getOpticalLength(DensityProfile profiles, float r, float mu) {
-  const int SAMPLE_COUNT = 150; // Number of interval in numerical integration
+  const int SAMPLE_COUNT = 50; // Number of interval in numerical integration
   float discriminant = r * r * (mu * mu - 1.0) + r_top * r_top;
   float d = -r * mu + max(0.0, sqrt(discriminant)); // distance to top atmosphere boundary
   float dy = d / SAMPLE_COUNT; // Integration step

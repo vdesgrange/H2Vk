@@ -19,6 +19,7 @@ public:
     const uint32_t TRANSMITTANCE_HEIGHT = 64;
 
     Texture _transmittanceLUT;
+    Texture _transmittanceLUT2;
     VkFramebuffer _transmittanceFramebuffer;
 
     Atmosphere() =  delete;
@@ -27,6 +28,7 @@ public:
 
     void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
     Texture compute_transmittance(Device& device, UploadContext& uploadContext);
+    Texture compute_transmittance_2(Device& device, UploadContext& uploadContext);
     void run_debug(FrameData& frame);
 
 private:
