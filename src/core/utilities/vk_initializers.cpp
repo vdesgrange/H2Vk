@@ -1,4 +1,12 @@
-﻿#include "vk_initializers.h"
+/*
+*  H2Vk - A Vulkan based rendering engine
+*
+* Copyright (C) 2022-2023 by Viviane Desgrange
+*
+* This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
+*/
+
+#include "vk_initializers.h"
 
 VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule, VkSpecializationInfo* pShaderSpe) {
     /**
