@@ -1,0 +1,123 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+
+#include "./functions.glsl"
+
+layout(set = 0, binding = 0) uniform sampler2D transmittanceLUT;
+layout(set = 0, binding = 1, rgba16f) writeonly uniform image2D outputImage;
+
+layout(local_size_x = 32, local_size_y = 32) in;
+
+const int SAMPLE_DIR = 8;
+const int SAMPLE_COUNT = 50;
+float albedo = 0.3; // L0(p, v) = 0.3
+
+void single_scattering(vec3 x, vec3 dir, vec3 sun_dir, float i, float j, out vec3 Lprime, out vec3 Lf) {
+    float p_u = 1.0 / (4.0 * PI); // unused ?
+    Lprime = vec3(0.0);
+    Lf = vec3(0.0);
+
+    // Compute ray direction
+    float theta = PI * (i + 0.5) / float(SAMPLE_DIR);
+    float phi = clamp(acos(1.0 - 2.0 * (j + 0.5) / float(SAMPLE_DIR)), -1.0, 1.0);
+    vec3 ray_dir = get_spherical_direction(theta, phi); // ray direction omega
+
+    float t_atmo = get_ray_intersection_length(x, dir, r_top);
+    float t_ground = get_ray_intersection_length(x, dir, r_ground);
+    float t_max = t_atmo; // a revoir
+    if (t_ground > 0.0) {
+        t_max = t_ground;
+    }
+
+    float nu = dot(sun_dir, ray_dir); // nu, cosinus of angle between sun and ray direction
+    float p_r = get_rayleigh_phase(-nu);
+    float p_m = get_mie_phase(0.8, nu);
+    vec3 T = vec3(1.0);
+    float t = 0.0;
+    float dt = t_max / SAMPLE_COUNT;
+
+    for (int k = 0; k < SAMPLE_COUNT; k++) {
+        float new_t = t_max * (k + albedo) / SAMPLE_COUNT;
+        dt = new_t - t;
+        t = new_t;
+
+        vec3 x_tv = x + t * ray_dir; // x - tv
+
+        vec3 beta_s = vec3(0.0);
+        vec3 beta_a = vec3(0.0);
+        vec3 beta_e = vec3(0.0);
+        get_beta_coefficients(x_tv, beta_s, beta_a, beta_e);
+
+        vec3 sample_T = - exp(beta_e * dt); // T(x, x-tv), transmittance a revoir
+
+        vec3 beta_s_r = get_rayleigh_scattering_coefficient(x_tv);
+        vec3 sigma_s_r = beta_s_r * vec3(p_r); // rayleight scattering * density * phase function
+
+        vec3 beta_s_m = get_mie_scattering_coefficient(x_tv);
+        vec3 sigma_s_m = beta_s_m * vec3(p_m); // mie scattering * density * phase function
+
+        vec3 sigma_no_phase = (beta_s_r + beta_s_m) * p_u; // Scattering (no phase)
+
+        Lf += T * sigma_no_phase;
+
+        vec2 sun_uv = get_uv_for_TLUT(x_tv, sun_dir);
+        vec3 T_sun = texture(transmittanceLUT, sun_uv).xyz; // or lutTransmittanceToUV
+
+        vec3 sigma_s = (sigma_s_r + sigma_s_m) * T_sun; // In-scattering (with phase)
+        vec3 sigma_s_integral = (sigma_s - sigma_s * sample_T) / beta_e;
+
+        Lprime += sigma_s_integral * T;
+        T *= sample_T; // exp(a+b) = exp(a) * exp(b)
+    }
+
+    if (t_ground > 0.0) {
+        vec3 x_hit = x + t_ground * ray_dir;
+        if (dot(x, sun_dir) > 0.0) {
+            x_hit = normalize(x_hit) * r_ground;
+            vec2 hit_uv = get_uv_for_TLUT(x_hit, sun_dir);
+            Lprime += T * vec3(albedo) * texture(transmittanceLUT, hit_uv).xyz;
+        }
+    }
+}
+
+void main() {
+    ivec2 outSize = imageSize(outputImage);
+    vec2 texSize = vec2(outSize);
+    ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 uv =  vec2(gl_GlobalInvocationID.xy) / texSize;
+
+    vec3 dir = vec3(0.0, 1.0, 0.0);
+    vec3 zenith_dir = vec3(0.0, 1.0, 0.0);
+
+    float zenithSunCosTheta = 2.0 * uv.x - 1.0; // mu_s cosinus zenith and sun angle
+    float zenithSunSinTheta = sqrt(clamp(1.0 - zenithSunCosTheta * zenithSunCosTheta, 0.0, 1.0));
+    vec3 sun_dir = vec3(0.0, zenithSunCosTheta, zenithSunSinTheta);
+
+    float height = uv.y * (r_top - r_ground) + r_ground;
+
+    vec3 x = vec3(0.0, height, 0.0); // world position
+
+    float p_u = 1.0 / (4.0 * PI);
+    float inv_samples = 1.0 / (SAMPLE_DIR * SAMPLE_DIR);
+
+    vec3 L2 = vec3(0.0);
+    vec3 f_ms = vec3(0.0);
+
+    for (int i=0; i <= SAMPLE_DIR; i++ ) {
+        for (int j=0; j <= SAMPLE_DIR; j++ ) {
+            vec3 Lprime = vec3(0.0);
+            vec3 Lf = vec3(0.0);
+
+            single_scattering(x, dir, sun_dir, float(i), float(j), Lprime, Lf);
+
+            L2 += inv_samples * Lprime * p_u;
+            f_ms += inv_samples * Lf;
+        }
+    }
+
+    vec3 F_ms = 1 / (1 - f_ms); // Equation 9 : Infinite multiple scattering light transfer function.
+
+    vec3 Psi_ms = L2 * F_ms; // Equation 10 : Total contribution = Second order scattering * Multiple scattering light
+
+    imageStore(outputImage, texCoord, vec4(Psi_ms, 1.0));
+}

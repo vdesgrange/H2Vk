@@ -408,12 +408,12 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
             // Debug shadow map
 //            this->_shadow->run_debug(frame);
 //
-//            // Draw
-//            this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
-//
-//            this->render_objects(frame._commandBuffer->_commandBuffer);
-//
-//            this->ui_overlay();
+            // Draw
+            this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
+
+            this->render_objects(frame._commandBuffer->_commandBuffer);
+
+            this->ui_overlay();
         }
         vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);
 

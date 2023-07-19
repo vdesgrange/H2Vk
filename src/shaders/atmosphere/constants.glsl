@@ -16,6 +16,10 @@ const float PI = 3.14159265358979323846f;
 const float r_ground = 6360.0; // km
 const float r_top = 6420.0;
 
+const vec2 TRANSMITTANCE_LUT_RES = vec2(256, 64);
+const vec2 MULTISCATTER_LUT_RES = vec2(32, 32);
+// --- Transmittance ---
+//
 // Rayleight
 const float rayleight_scale = 8.0; // km
 const vec3 rayleigh_scattering = vec3(0.0058, 0.0135, 0.0331); // km^-1 / * 1e-3 for m-1
