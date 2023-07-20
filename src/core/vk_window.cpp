@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - Window class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -12,6 +12,9 @@
 
 #include "vk_window.h"
 
+/**
+ *  Default Window constructor
+ */
 Window::Window() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -25,10 +28,17 @@ Window::Window() {
     glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
 }
 
+
 Window::~Window() {
     glfwDestroyWindow(_window);
 }
 
+/**
+ * Framebuffer resized callback function
+ * @param window Encapsulates window and context
+ * @param width
+ * @param height
+ */
 void Window::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
     auto app = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
     app->_framebufferResized = true;
@@ -38,12 +48,20 @@ double Window::get_time() {
     return glfwGetTime();
 }
 
+/**
+ * Return window extent
+ * @return VkExtent2D
+ */
 VkExtent2D Window::get_framebuffer_size() {
     int width, height;
     glfwGetFramebufferSize(_window, &width, &height);
     return VkExtent2D{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
 }
 
+/**
+ * Key callback called when the cursor is moved.
+ * @note Unused: We should avoid call back for continue action like key press
+ */
 void Window::glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     auto* const _this = static_cast<Window*>(glfwGetWindowUserPointer(window));
     if (_this->on_key) {
@@ -51,6 +69,13 @@ void Window::glfw_key_callback(GLFWwindow* window, int key, int scancode, int ac
     }
 }
 
+/**
+ * Cursor position callback called when the cursor is moved.
+ * Use the position in screen coordinates, relative to the upper-left corner of the content area of the window.
+ * @param window
+ * @param xpos x axis position
+ * @param ypos y axis position
+ */
 void Window::glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
     auto* const _this = static_cast<Window*>(glfwGetWindowUserPointer(window));
     if (_this->on_cursor_position) {
@@ -58,6 +83,10 @@ void Window::glfw_cursor_position_callback(GLFWwindow* window, double xpos, doub
     }
 }
 
+/**
+ * Callback function invoked when a mouse button is pressed or released.
+ * @param window Encapsulates GLFW window and context
+ */
 void Window::glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     auto* const _this = static_cast<Window*>(glfwGetWindowUserPointer(window));
     if (_this->on_mouse_button) {
@@ -65,6 +94,11 @@ void Window::glfw_mouse_button_callback(GLFWwindow* window, int button, int acti
     }
 }
 
+/**
+ * Invoke lambda when a key is pressed or released.
+ * Call with key's id pressed and key's action id.
+ * @param window Encapsulates GLFW window and context
+ */
 void Window::glfw_get_key(GLFWwindow* window) {
     auto* const _this = static_cast<Window*>(glfwGetWindowUserPointer(window));
     if (_this->on_get_key) {
