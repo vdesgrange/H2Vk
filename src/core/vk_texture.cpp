@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - Texture structure
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -15,6 +15,11 @@
 #include "vk_buffer.h"
 #include "core/utilities/vk_initializers.h"
 
+/**
+ * Release texture resources.
+ * Destroy image, view, sampler and allocated memory.
+ * @param device Vulkan device wrapper
+ */
 void Texture::destroy(const Device& device) {
     if (this->_imageView) {
         vkDestroyImageView(device._logicalDevice, this->_imageView, nullptr);
@@ -29,6 +34,13 @@ void Texture::destroy(const Device& device) {
     }
 }
 
+/**
+ * Load image from file
+ * @param device vulkan device wrapper
+ * @param ctx command buffer context
+ * @param file image path
+ * @return
+ */
 bool Texture::load_image_from_file(const Device& device, const UploadContext& ctx, const char* file) {
     int texWidth, texHeight, texChannels;
 
@@ -123,6 +135,17 @@ bool Texture::load_image_from_file(const Device& device, const UploadContext& ct
     return true;
 }
 
+/**
+ * Load image from buffer
+ * @param device vulkan device wrapper
+ * @param ctx command buffer context
+ * @param buffer temporary data storage
+ * @param bufferSize size of buffer
+ * @param format vulkan image format (ex. VK_FORMAT_R16G16_SFLOAT)
+ * @param texWidth image width
+ * @param texHeight image height
+ * @return
+ */
 bool Texture::load_image_from_buffer(const Device& device, const UploadContext& ctx, void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
 
     AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);

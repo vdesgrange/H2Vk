@@ -465,7 +465,7 @@ void VulkanEngine::draw() { // todo : what need to be called at each frame? draw
      VK_CHECK(get_current_frame()._renderFence->wait(1000000000));
      VK_CHECK(get_current_frame()._renderFence->reset());
 
-    // Acquire next image
+    // Acquire next presentable image. Use occur only after the image is returned by vkAcquireNextImageKHR and before vkQueuePresentKHR.
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, get_current_frame()._presentSemaphore->_semaphore, nullptr, &imageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {

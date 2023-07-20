@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - Swapchain class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -67,6 +67,9 @@ SwapChain::SwapChain(Window& window, const Device& device) : _device(device) {
     });
 }
 
+/**
+ * Release swapchain resources
+ */
 SwapChain::~SwapChain() {
     // Clean up
     for (int i = 0; i < _swapChainImages.size(); i++) {
@@ -77,6 +80,12 @@ SwapChain::~SwapChain() {
     _swapChainDeletionQueue.flush();
 }
 
+/**
+ * Select swapchain extent based on surface capabilities
+ * @param window
+ * @param capabilities
+ * @return
+ */
 VkExtent2D SwapChain::choose_swap_extent(Window& window, const VkSurfaceCapabilitiesKHR& capabilities) {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
