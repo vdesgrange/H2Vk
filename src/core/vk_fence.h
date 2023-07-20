@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - Fence class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -12,8 +12,14 @@
 
 class Device;
 
+/**
+ * Synchronization primitive used to insert a dependency from a queue to the host
+ * @brief Fence wrapper
+ * @note Wrapper is unnecessary. Should be removed.
+ */
 class Fence final {
 public:
+    /** @brief  Fence object */
     VkFence _fence;
 
     Fence(const Device& device);
@@ -24,5 +30,6 @@ public:
     VkResult reset();
 
 private:
+    /** @brief vulkan device wrapper */
     const class Device& _device;
 };

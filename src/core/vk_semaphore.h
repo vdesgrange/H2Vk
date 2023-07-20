@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - Semaphore class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -12,8 +12,14 @@
 
 class Device;
 
+/**
+ * Synchronization primitive used to insert a dependency between queue operations
+ * @brief Semaphore wrapper
+ * @note Wrapper is unnecessary. Should be removed.
+ */
 class Semaphore final {
 public:
+    /** @brief Semaphore object */
     VkSemaphore _semaphore;
 
     Semaphore(const Device& device);
