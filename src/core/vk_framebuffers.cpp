@@ -20,10 +20,10 @@
  * A framebuffer is associated to a render pass.
  * A framebuffer must be created for every images in the swap chain (ie. color + depth).
  * @brief framebuffers constructor
- * @param window
- * @param device
- * @param swapchain
- * @param renderPass
+ * @param window surface window wrapper
+ * @param device vulkan device wrapper
+ * @param swapchain swap chain wrapper
+ * @param renderPass render pass wrapper
  */
 FrameBuffers::FrameBuffers(const Window& window, const Device& device, const SwapChain& swapchain, RenderPass& renderPass) : _device(device), _swapchain(swapchain) {
     VkFramebufferCreateInfo framebufferInfo{};

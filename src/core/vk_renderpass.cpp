@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - RenderPass class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -14,16 +14,29 @@
  * Framebuffers are created for a specific render pass, so RenderPass must be created first.
  * Framebuffer attachments : description of the image which will be written into the rendering commands (iow. pixels
  * are rendered on a framebuffer).
- * @param device
+ * @brief constructor
+ * @param device vulkan device wrapper
  */
 RenderPass::RenderPass(Device& device) : _device(device), _renderPass(VK_NULL_HANDLE) {
 }
 
+/**
+ * Destroy render pass
+ * @brief default destructor
+ */
 RenderPass::~RenderPass() {
     vkDestroyRenderPass(_device._logicalDevice, _renderPass, nullptr);
 }
 
-// todo - reorganize : color and depth attachment are a mess
+
+/**
+ * Initialize a render pass and a single sub-pass with a collection of attachments and dependencies
+ * @brief initialize render pass with unique sub-pass
+ * @note todo - reorganize : color and depth attachment are a mess
+ * @param attachments collection of sub-pass descriptions
+ * @param dependencies collection of sub-pass dependencies
+ * @param subpass single sub-pass of the render pass
+ */
 void RenderPass::init(std::vector<VkAttachmentDescription> attachments, std::vector<VkSubpassDependency> dependencies, VkSubpassDescription subpass) {
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -37,6 +50,12 @@ void RenderPass::init(std::vector<VkAttachmentDescription> attachments, std::vec
     VK_CHECK(vkCreateRenderPass(_device._logicalDevice, &renderPassInfo, nullptr, &_renderPass));
 }
 
+/**
+ * Create structure for color attachment, description of the image which will be writing into with rendering commands
+ * @brief Initialize color attachment objects
+ * @param format color attachment format
+ * @return structure for sub-pass color attachment related objects
+ */
 RenderPass::Attachment RenderPass::color(VkFormat format) {
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = format;
@@ -63,6 +82,12 @@ RenderPass::Attachment RenderPass::color(VkFormat format) {
     return RenderPass::Attachment {colorAttachment, colorAttachmentRef, dependency};
 }
 
+/**
+ * Create structure for depth buffer which will allow z-testing for rendering of 3d assets.
+ * @brief Initialize depth attachment objects
+ * @param format depth format
+ * @return structure for sub-pass depth attachment related objects
+ */
 RenderPass::Attachment RenderPass::depth(VkFormat format) {
     VkAttachmentDescription depthAttachment{};
     depthAttachment.format = format;
@@ -90,13 +115,18 @@ RenderPass::Attachment RenderPass::depth(VkFormat format) {
     return RenderPass::Attachment {depthAttachment, depthAttachmentRef,depthDependency};
 }
 
+/**
+ * @brief Create sub-pass attachment description
+ * @param colorAttachmentRef collection of color attachments, images which will be written into by rendering commands
+ * @param depthAttachmentRef one depth attachment
+ * @return sub-pass description
+ */
 VkSubpassDescription RenderPass::subpass_description(std::vector<VkAttachmentReference>& colorAttachmentRef, VkAttachmentReference* depthAttachmentRef) {
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = static_cast<uint32_t>(colorAttachmentRef.size());
-    subpass.pColorAttachments = colorAttachmentRef.data();
-    subpass.pDepthStencilAttachment = depthAttachmentRef;
+    subpass.pColorAttachments = colorAttachmentRef.data(); // link color attachments to sub-pass (fragment can write to multiple color attachments)
+    subpass.pDepthStencilAttachment = depthAttachmentRef; // link depth attachment to sub-pass
 
     return subpass;
-
 }
