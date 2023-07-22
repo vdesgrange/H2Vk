@@ -58,6 +58,10 @@ struct FrameData {
     VkDescriptorSet debugDescriptor;
 };
 
+/**
+ * @brief deletion queue used for final engine clean up
+ * @note early development work. Might need to be removed.
+ */
 struct DeletionQueue
 {
     std::deque<std::function<void()>> deletors;

@@ -80,6 +80,10 @@ class Statistics;
 
 const bool enableValidationLayers = true;
 
+/**
+ * @brief Main engine class
+ * Manage all resources used by the rendering engine.
+ */
 class VulkanEngine {
 public:
 	bool _isInitialized = false;

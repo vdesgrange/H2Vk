@@ -27,6 +27,9 @@
 
 using namespace std;
 
+/**
+ * @brief Initialize the engine
+ */
 void VulkanEngine::init()
 {
     init_window();
@@ -47,21 +50,35 @@ void VulkanEngine::init()
 	_isInitialized = true;
 }
 
+/**
+ * @brief Initialize window surface (glfw)
+ */
 void VulkanEngine::init_window() {
     _window = std::make_unique<Window>();
 }
 
+/**
+ * @brief Handle physical devices and their logical representation used by vulkan.
+ */
 void VulkanEngine::init_vulkan() {
     _device = std::make_unique<Device>(*_window);
     // std::cout << "GPU has a minimum buffer alignment = " << _device->_gpuProperties.limits.minUniformBufferOffsetAlignment << std::endl;
 }
 
+/**
+ * @brief Initialize user interface
+ * @note - todo - messy, need rework once ECS implemented
+ */
 void VulkanEngine::init_interface() {
     auto settings = Settings{.scene_index=0};
     _ui = std::make_unique<UInterface>(*this, settings);
     _ui->init_imgui();
 }
 
+/**
+ * @brief Initialize camera
+ * @note - todo - should consider entity-component system
+ */
 void VulkanEngine::init_camera() {
     _camera = std::make_unique<Camera>();
     _camera->inverse(false);
@@ -89,10 +106,18 @@ void VulkanEngine::init_camera() {
     };
 }
 
+/**
+ * @brief Initialize swapchain
+ * Array of presentable images that are associated with the surface.
+ */
 void VulkanEngine::init_swapchain() {
     _swapchain = std::make_unique<SwapChain>(*_window, *_device);
 }
 
+/**
+ * @brief Initialize command pool and buffers for each frame
+ * Set up upload context structure used for some pre-computation
+ */
 void VulkanEngine::init_commands() {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         g_frames[i]._commandPool = new CommandPool(*_device);
@@ -106,6 +131,10 @@ void VulkanEngine::init_commands() {
     _uploadContext._commandBuffer = new CommandBuffer(*_device, *_uploadContext._commandPool);
 }
 
+/**
+ * @brief Initialize render pass used for presentation
+ * Collection of attachments, subpasses, dependencies between the subpasses, etc.
+ */
 void VulkanEngine::init_default_renderpass() {
     _renderPass = std::make_unique<RenderPass>(*_device);
 
@@ -119,10 +148,17 @@ void VulkanEngine::init_default_renderpass() {
     _renderPass->init(attachments, dependencies, subpass);
 }
 
+/**
+ * @brief Initialize framebuffers
+ * A collection of memory attachments that a render pass instance uses.
+ */
 void VulkanEngine::init_framebuffers() {
     _frameBuffers = std::make_unique<FrameBuffers>(*_window, *_device, *_swapchain, *_renderPass);
 }
 
+/**
+ * @brief Initialize synchronisation structures used by frames (fence, semaphore).
+ */
 void VulkanEngine::init_sync_structures() {
     //  Used for GPU -> GPU synchronisation
     for (int i = 0; i < FRAME_OVERLAP; i++) {
@@ -143,6 +179,10 @@ void VulkanEngine::init_sync_structures() {
     });
 }
 
+/**
+ * @brief Initialize environment descriptors
+ * @note Environment descriptor sets need to be initialized one time before run loop.
+ */
 void VulkanEngine::setup_environment_descriptors() {
     // Generic pool sizes : Try to maximize usage of a single Descriptor Pool by default.
     // Opposite: for optimality, just specify exact descriptor layout per shaders.
@@ -184,6 +224,10 @@ void VulkanEngine::setup_environment_descriptors() {
     }
 }
 
+/**
+ * @brief Initialize descriptor objects
+ * @note Initialize descriptors used by skybox, scene, shadow. Create caching and allocation system.
+ */
 void VulkanEngine::init_descriptors() {
     _layoutCache = new DescriptorLayoutCache(*_device);
     _allocator = new DescriptorAllocator(*_device);
@@ -219,10 +263,18 @@ void VulkanEngine::init_materials() {
     _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen, _descriptorSetLayouts.matrices}, *_renderPass);
 }
 
+/**
+ * @brief Determine current processed frame from its index.
+ * @return current frame data structure
+ */
 FrameData& VulkanEngine::get_current_frame() {
     return g_frames[_frameNumber % FRAME_OVERLAP];
 }
 
+/**
+ * @brief Initialize system managers
+ * @note material, assets, lighting managers.
+ */
 void VulkanEngine::init_managers() {
     _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass);
 
@@ -232,6 +284,9 @@ void VulkanEngine::init_managers() {
     _lightingManager = _systemManager->register_system<LightingManager>();
 }
 
+/**
+ * @brief Initialize the scene
+ */
 void VulkanEngine::init_scene() {
     _skybox = std::make_unique<Skybox>(*_device, *_meshManager, _uploadContext);
     _skybox->_type = Skybox::Type::box;
@@ -243,6 +298,10 @@ void VulkanEngine::init_scene() {
     _scene = std::make_unique<Scene>(*this);
 }
 
+/**
+ * @brief Recreate swap-chain and affiliated objects.
+ * @note Necessary for some action such as resizing the window.
+ */
 void VulkanEngine::recreate_swap_chain() {
     int width = 0, height = 0;
     glfwGetFramebufferSize(_window->_window, &width, &height);
@@ -278,6 +337,10 @@ void VulkanEngine::recreate_swap_chain() {
 
 }
 
+/**
+ * @brief Basic FPS monitoring
+ * @return
+ */
 Statistics VulkanEngine::monitoring() {
     // Record delta time between calls to Render.
     const auto prevTime = _time;
@@ -293,6 +356,10 @@ Statistics VulkanEngine::monitoring() {
     return stats;
 }
 
+/**
+ * @brief Update user interface
+ * Handle object which need update per frame (ie. camera movement)
+ */
 void VulkanEngine::ui_overlay() {
     Statistics stats = monitoring();
 
@@ -306,6 +373,10 @@ void VulkanEngine::ui_overlay() {
     _camera->update_camera(1.0f / stats.FrameRate);
 }
 
+/**
+ * @brief update uniform buffer
+ * @note handle camera, lighting, shadow uniform buffer data.
+ */
 void VulkanEngine::update_uniform_buffers() {
     FrameData frame =  get_current_frame();
     uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
@@ -337,6 +408,11 @@ void VulkanEngine::update_uniform_buffers() {
     vmaUnmapMemory(_device->_allocator, frame.offscreenBuffer._allocation);
 }
 
+/**
+ * @brief update buffer objects
+ * @param first
+ * @param count
+ */
 void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
     // Objects : write into the buffer by copying the render matrices from our render objects into it
     // Object not moving : call only when change scene
@@ -353,6 +429,10 @@ void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
     }
 }
 
+/**
+ * @brief render assets
+ * @param commandBuffer
+ */
 void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
     std::shared_ptr<Model> lastModel = nullptr;
     std::shared_ptr<Material> lastMaterial = nullptr;
@@ -381,6 +461,11 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
     }
 }
 
+/**
+ * @brief build command buffer
+ * @param frame
+ * @param imageIndex
+ */
 void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
     // Collection of attachments, subpasses, and dependencies between the subpasses
     VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -426,6 +511,11 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 
 }
 
+/**
+ * Perform computation for the next frame to be rendered
+ * @brief Render the next frame
+ * @param imageIndex current frame index
+ */
 void VulkanEngine::render(int imageIndex) {
 
     // === Scene ===
@@ -459,6 +549,9 @@ void VulkanEngine::render(int imageIndex) {
     VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, get_current_frame()._renderFence->_fence));
 }
 
+/**
+ * @brief Draw the latest rendered frame
+ */
 void VulkanEngine::draw() { // todo : what need to be called at each frame? draw()? commandBuffers might not need to be re-build
     // === Prepare frame ===
     // Wait GPU to render latest frame. Timeout of 1 second
@@ -500,6 +593,9 @@ void VulkanEngine::draw() { // todo : what need to be called at each frame? draw
     _frameNumber++;
 }
 
+/**
+ * @brief Main engine running loop
+ */
 void VulkanEngine::run()
 {
 //
@@ -517,6 +613,9 @@ void VulkanEngine::run()
     vkDeviceWaitIdle(_device->_logicalDevice);
 }
 
+/**
+ * @brief clean-up all resources before ending program
+ */
 void VulkanEngine::cleanup() {
     if (_isInitialized) {
         vkDeviceWaitIdle(_device->_logicalDevice);

@@ -24,10 +24,10 @@ VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShad
     return info;
 }
 
+/**
+ * @brief Information for vertex buffers and vertex formats
+ */
 VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
-    /**
-     * Information for vertex buffers and vertex formats
-     */
     VkPipelineVertexInputStateCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     info.pNext = nullptr;
@@ -39,13 +39,12 @@ VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
     return info;
 }
 
+/**
+ *  @brief Configuration for the kind of topology which will be drawn
+ *  @param topology triangle, lines, points drawing
+ *  VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_PRIMITIVE_TOPOLOGY_LINE_LIST, VK_PRIMITIVE_TOPOLOGY_POINT_LIST
+ */
 VkPipelineInputAssemblyStateCreateInfo vkinit::input_assembly_create_info(VkPrimitiveTopology topology) {
-    /**
-     *  Configuration for the kind of topology which will be drawn
-     *  VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST : triangle drawing
-     *  VK_PRIMITIVE_TOPOLOGY_POINT_LIST : points
-     *  VK_PRIMITIVE_TOPOLOGY_LINE_LIST : lines
-     */
     VkPipelineInputAssemblyStateCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     info.topology = topology;
@@ -53,11 +52,12 @@ VkPipelineInputAssemblyStateCreateInfo vkinit::input_assembly_create_info(VkPrim
     return info;
 }
 
+/**
+ *  @brief Configuration for the fixed-function rasterization
+ *  Enable or disable backface culling, set line width or wireframe drawing.
+ *  @param polygonMode
+ */
 VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(VkPolygonMode polygonMode) {
-    /**
-     *  Configuration for the fixed-function rasterization
-     *  Enable or disable backface culling, set line width or wireframe drawing.
-     */
     VkPipelineRasterizationStateCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     info.pNext = nullptr;
@@ -76,11 +76,11 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
     return info;
 }
 
+/**
+ *  @brief Allows to configure multisample anti-aliasing (MSAA) for the pipeline
+ *  no multisampling = 1 sample per pixel
+ */
 VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info() {
-    /**
-     *  Allows to configure multisample anti-aliasing (MSAA) for the pipeline
-     *  no multisampling = 1 sample per pixel
-     */
     VkPipelineMultisampleStateCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     info.pNext = nullptr;
@@ -94,12 +94,12 @@ VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info() {
     return info;
 }
 
+/**
+ * @brief Controls how the pipeline blends into a given attachment
+ * Rendering to 1 attachment = 1 color blend attachment state
+ * blend disabled = override
+ */
 VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
-    /**
-     * Controls how the pipeline blends into a given attachment
-     * Rendering to 1 attachment = 1 color blend attachment state
-     * blend disabled = override
-     */
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_FALSE;
@@ -118,10 +118,13 @@ VkPipelineColorBlendStateCreateInfo vkinit::color_blend_state_create_info(VkPipe
     return colorBlending;
 }
 
+/**
+ * @brief create fence info structure
+ * @note Used for CPU -> GPU communication
+ * @param flags
+ * @return
+ */
 VkFenceCreateInfo vkinit::fence_create_info(VkFenceCreateFlags flags) {
-    /**
-     * Used for CPU -> GPU communication
-     */
     VkFenceCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     info.pNext = nullptr;
@@ -130,10 +133,13 @@ VkFenceCreateInfo vkinit::fence_create_info(VkFenceCreateFlags flags) {
     return info;
 }
 
+/**
+ * @brief create semaphore info structure
+ * @note Used for GPU -> GPU synchronisation
+ * @param flags
+ * @return
+ */
 VkSemaphoreCreateInfo vkinit::semaphore_create_info(VkSemaphoreCreateFlags flags) {
-    /**
-     * Used for GPU -> GPU synchronisation
-     */
     VkSemaphoreCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     info.pNext = nullptr;
@@ -232,6 +238,14 @@ VkDescriptorSetLayoutBinding vkinit::descriptor_set_layout_binding(VkDescriptorT
     return setBind;
 }
 
+/**
+ * initialize VkWriteDescriptorSet structure
+ * @param type descriptor type
+ * @param dstSet destination
+ * @param binfo pointer to buffer info
+ * @param binding index of binding
+ * @return
+ */
 VkWriteDescriptorSet vkinit::write_descriptor_set(VkDescriptorType type, VkDescriptorSet dstSet, VkDescriptorBufferInfo* binfo, uint32_t binding) {
     VkWriteDescriptorSet setWrite = {};
     setWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -281,6 +295,12 @@ VkSubmitInfo vkinit::submit_info(VkCommandBuffer* cmd) {
     return info;
 }
 
+/**
+ * @brief initialize VkSamplerCreateInfo structure
+ * @param filters which filter applies for lookup (minification & magnification)
+ * @param samplerAddressMode how UVW (XYZ) outside coordinates are handled
+ * @return
+ */
 VkSamplerCreateInfo vkinit::sampler_create_info(VkFilter filters, VkSamplerAddressMode samplerAddressMode)
 {
     VkSamplerCreateInfo info{};
@@ -303,6 +323,14 @@ VkSamplerCreateInfo vkinit::sampler_create_info(VkFilter filters, VkSamplerAddre
     return info;
 }
 
+/**
+ * @brief initialize VkWriteDescriptorSet structure
+ * @param type type
+ * @param dstSet destination
+ * @param imageInfo pointer to image info (sampler, view, layout)
+ * @param binding binding index
+ * @return
+ */
 VkWriteDescriptorSet vkinit::write_descriptor_image(VkDescriptorType type, VkDescriptorSet dstSet, VkDescriptorImageInfo* imageInfo, uint32_t binding)
 {
     VkWriteDescriptorSet write = {};
@@ -316,6 +344,12 @@ VkWriteDescriptorSet vkinit::write_descriptor_image(VkDescriptorType type, VkDes
     return write;
 }
 
+/**
+ * @brief initialize viewport
+ * @param width
+ * @param height
+ * @return viewport
+ */
 VkViewport vkinit::get_viewport(float width, float height) {
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -328,6 +362,12 @@ VkViewport vkinit::get_viewport(float width, float height) {
     return viewport;
 }
 
+/**
+ * @brief initalize two-dimensional sub region structure
+ * @param width
+ * @param height
+ * @return VkRect2D
+ */
 VkRect2D vkinit::get_scissor(float width, float height) {
     VkRect2D scissor{};
     scissor.offset = {0, 0};
