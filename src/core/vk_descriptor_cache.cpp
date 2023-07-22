@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - DescriptorLayoutCache class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -10,12 +10,24 @@
 
 #include <algorithm>
 
+/**
+ * Delete every descriptor set layout.
+ * @brief default destructor
+ */
 DescriptorLayoutCache::~DescriptorLayoutCache() {
     for (auto setLayout : cache) {
         vkDestroyDescriptorSetLayout(_device._logicalDevice, setLayout.second, nullptr);
     }
 }
 
+/**
+ * Create descriptor set layout from list of bindings provided.
+ * Each individual descriptor binding is specified by a descriptor type, number of
+ * descriptors in the binding, a set of shader stages that can access the binding.
+ * @brief create & cache or return cached descriptor set layout
+ * @param info parameters of a newly created descriptor set layout. Contains list of bindings.
+ * @return descriptor set layout
+ */
 VkDescriptorSetLayout DescriptorLayoutCache::createDescriptorLayout(VkDescriptorSetLayoutCreateInfo& info) {
     DescriptorLayoutInfo layoutInfo;
     bool sorted = true;
@@ -24,7 +36,7 @@ VkDescriptorSetLayout DescriptorLayoutCache::createDescriptorLayout(VkDescriptor
     layoutInfo._bindings.reserve(info.bindingCount);
 
     for (int i = 0; i < info.bindingCount; i++) {
-        layoutInfo._bindings.push_back(info.pBindings[i]);
+        layoutInfo._bindings.push_back(info.pBindings[i]); // add layout binding description
         if (info.pBindings[i].binding > lastBinding){
             lastBinding = info.pBindings[i].binding;
         } else{
@@ -32,13 +44,13 @@ VkDescriptorSetLayout DescriptorLayoutCache::createDescriptorLayout(VkDescriptor
         }
     }
 
-    if (!sorted){
+    if (!sorted){ // sort to get proper operator comparison ==
         std::sort(layoutInfo._bindings.begin(), layoutInfo._bindings.end(), [](VkDescriptorSetLayoutBinding& a, VkDescriptorSetLayoutBinding& b ){
             return a.binding < b.binding;
         });
     }
 
-    auto it = cache.find(layoutInfo);
+    auto it = cache.find(layoutInfo); // use overload operator () with hash
     if (it != cache.end()){
         return (*it).second;
     } else {
@@ -49,21 +61,28 @@ VkDescriptorSetLayout DescriptorLayoutCache::createDescriptorLayout(VkDescriptor
     }
 }
 
+/**
+ * Determine descriptor set layout equality based on number of bindings, binding index, type of resource,
+ * number of descriptors and pipeline shader stages with access to this binding.
+ * @brief overload DescriptorLayoutInfo operator ==
+ * @param other
+ * @return
+ */
 bool DescriptorLayoutCache::DescriptorLayoutInfo::operator==(DescriptorLayoutCache::DescriptorLayoutInfo const& other) const {
     if (other._bindings.size() != _bindings.size()){
         return false;
     } else {
         for (int i = 0; i < _bindings.size(); i++) {
-            if (other._bindings[i].binding != _bindings[i].binding) {
+            if (other._bindings[i].binding != _bindings[i].binding) { // index
                 return false;
             }
-            if (other._bindings[i].descriptorType != _bindings[i].descriptorType) {
+            if (other._bindings[i].descriptorType != _bindings[i].descriptorType) { // type
                 return false;
             }
-            if (other._bindings[i].descriptorCount != _bindings[i].descriptorCount) {
+            if (other._bindings[i].descriptorCount != _bindings[i].descriptorCount) { // number of descriptor
                 return false;
             }
-            if (other._bindings[i].stageFlags != _bindings[i].stageFlags) {
+            if (other._bindings[i].stageFlags != _bindings[i].stageFlags) { // shader stage with access
                 return false;
             }
         }
@@ -71,6 +90,11 @@ bool DescriptorLayoutCache::DescriptorLayoutInfo::operator==(DescriptorLayoutCac
     }
 }
 
+/**
+ * Hash made from binding, descriptor type, count and stage flags.
+ * @brief Descriptor layout info hash function
+ * @return hash
+ */
 size_t DescriptorLayoutCache::DescriptorLayoutInfo::hash() const{
     using std::size_t;
     using std::hash;

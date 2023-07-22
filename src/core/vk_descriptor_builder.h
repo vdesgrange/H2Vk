@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - DescriptorBuilder class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -15,6 +15,13 @@ struct DescriptorLayoutCache;
 
 class DescriptorAllocator;
 
+/**
+ * DescriptorBuilder is a set of tools to bind different resources (ie. buffer, images), generate a descriptor layout
+ * and create descriptor set which will be used in different shader stages.
+ * Number of descriptor sets which can be bound is limited (ie. 8 for Mac)
+ * @brief descriptor set builder
+ * @note each method return a reference to the instance in a functional fashion.
+ */
 class DescriptorBuilder final {
 public:
     static DescriptorBuilder begin(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator);
@@ -27,9 +34,12 @@ public:
     bool build(VkDescriptorSet& set, VkDescriptorSetLayout& layout, std::vector<VkDescriptorPoolSize> sizes);
 
 private:
+    /** @brief collection of write operation descriptions (ie. destination set, binding, pointer to image, buffer...)*/
     std::vector<VkWriteDescriptorSet> _writes;
+    /** @brief collection of bindings used to create a descriptor set */
     std::vector<VkDescriptorSetLayoutBinding> _bindings;
 
+    /** @brief descriptor set layout wrapper + caching */
     DescriptorLayoutCache* _cache;
     DescriptorAllocator* _alloc;
 };
