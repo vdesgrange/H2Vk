@@ -1,4 +1,12 @@
-﻿#pragma once
+﻿/*
+*  H2Vk - A Vulkan based rendering engine
+*
+* Copyright (C) 2022-2023 by Viviane Desgrange
+*
+* This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
+*/
+
+#pragma once
 
 #include <GLFW/glfw3.h>
 #include <vector>
@@ -73,6 +81,10 @@ class Statistics;
 
 const bool enableValidationLayers = true;
 
+/**
+ * @brief Main engine class
+ * Manage all resources used by the rendering engine.
+ */
 class VulkanEngine {
 public:
 	bool _isInitialized = false;

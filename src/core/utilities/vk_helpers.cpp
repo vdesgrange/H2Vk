@@ -1,6 +1,19 @@
+/*
+*  H2Vk - Helper functions
+*
+* Copyright (C) 2022-2023 by Viviane Desgrange
+*
+* This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
+*/
+
 #include "vk_helpers.h"
 #include "core/vk_device.h"
 
+/**
+ * @brief read a file
+ * @param filePath
+ * @return vector of int as buffer
+ */
 std::vector<uint32_t> helper::read_file(const char* filePath) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
@@ -16,6 +29,12 @@ std::vector<uint32_t> helper::read_file(const char* filePath) {
     return buffer;
 }
 
+/**
+ * uniform buffer padding method
+ * @param device vulkan device wrapper
+ * @param originalSize buffer size
+ * @return aligned size
+ */
 size_t helper::pad_uniform_buffer_size(const Device& device, size_t originalSize) {
     size_t minUboAlignment = device._gpuProperties.limits.minUniformBufferOffsetAlignment;
     size_t alignedSize = originalSize;

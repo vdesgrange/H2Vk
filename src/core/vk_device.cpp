@@ -1,3 +1,11 @@
+/*
+*  H2Vk - Device class
+*
+* Copyright (C) 2022-2023 by Viviane Desgrange
+*
+* This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
+*/
+
 #ifndef GLFW_INCLUDE_VULKAN
 #define GLFW_INCLUDE_VULKAN
 #endif
@@ -6,6 +14,11 @@
 #include "vk_window.h"
 #include <iostream>
 
+/**
+ * Default Device constructor
+ *
+ * @param window Surface window to be used
+ */
 Device::Device(Window& window) {
     vkb::InstanceBuilder builder;
 
@@ -88,11 +101,19 @@ Device::~Device() {
 //    vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 //    vkDestroyInstance(_instance, nullptr);
 }
-
+/**
+ * Get graphics queue pointer.
+ * Assume to wrap both present and graphics operation. Single graphics queue for basic GPU.
+ * @return
+ */
 VkQueue Device::get_graphics_queue() const {
     return _graphicsQueue;
 }
 
+/**
+ * Get graphics queue index
+ * @return
+ */
 uint32_t Device::get_graphics_queue_family() const {
     return _graphicsQueueFamily;
 }

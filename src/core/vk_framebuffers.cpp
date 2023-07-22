@@ -1,3 +1,11 @@
+/*
+*  H2Vk - Framebuffers class
+*
+* Copyright (C) 2022-2023 by Viviane Desgrange
+*
+* This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
+*/
+
 
 #include <array>
 
@@ -7,13 +15,15 @@
 #include "vk_swapchain.h"
 
 /**
- * Framebuffer object references all of the VkImageView objects that represent the attachments (ie. color)
- * Image that we have to use for the attachment depends on which image the swap chain returns,
- * a framebuffer must be created all of the images in the swap chain.
- * @param window
- * @param device
- * @param swapchain
- * @param renderPass
+ * Framebuffer object references all of the VkImageView objects that represent the attachments (ie. color, depth).
+ * Images used for the attachment depends on which image the swap chain returns.
+ * A framebuffer is associated to a render pass.
+ * A framebuffer must be created for every images in the swap chain (ie. color + depth).
+ * @brief framebuffers constructor
+ * @param window surface window wrapper
+ * @param device vulkan device wrapper
+ * @param swapchain swap chain wrapper
+ * @param renderPass render pass wrapper
  */
 FrameBuffers::FrameBuffers(const Window& window, const Device& device, const SwapChain& swapchain, RenderPass& renderPass) : _device(device), _swapchain(swapchain) {
     VkFramebufferCreateInfo framebufferInfo{};
@@ -36,6 +46,10 @@ FrameBuffers::FrameBuffers(const Window& window, const Device& device, const Swa
     }
 }
 
+/**
+ * release frame buffers resources used by associated swap chain
+ * @brief default destructor
+ */
 FrameBuffers::~FrameBuffers() {
     for (int i = 0; i < _swapchain._swapChainImages.size(); i++) {
         vkDestroyFramebuffer(_device._logicalDevice, _frameBuffers[i], nullptr);

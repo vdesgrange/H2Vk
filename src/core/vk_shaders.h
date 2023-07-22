@@ -1,3 +1,11 @@
+/*
+*  H2Vk - Shader class
+*
+* Copyright (C) 2022-2023 by Viviane Desgrange
+*
+* This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
+*/
+
 #pragma once
 
 #include "vulkan/vulkan_core.h"
@@ -10,6 +18,10 @@
 
 class Device;
 
+/**
+ * @brief An enumeration of shader types
+ * @note Vertex, tesselation control and evaluation, geometry, fragment and compute shaders
+ */
 enum struct ShaderType {
     VERTEX,
     TESSELATION_CONTROL,
@@ -19,11 +31,18 @@ enum struct ShaderType {
     COMPUTE
 };
 
+/**
+ * @brief Description of the push constant
+ */
 struct PushConstant {
     uint32_t size;
     ShaderType stage;
 };
 
+/**
+ *
+ * @brief Structure group a set of shaders composing a material/pipeline
+ */
 struct ShaderEffect {
     struct ShaderStage {
         VkShaderStageFlagBits flags;
@@ -36,6 +55,11 @@ struct ShaderEffect {
     std::vector<ShaderStage> shaderStages;
 };
 
+/**
+ * Built material composed by shader stages, pipeline and pipeline layout
+ * @brief Shader built material
+ * @note Material is an other name for ShaderPass
+ */
 struct ShaderPass : public Entity {
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;

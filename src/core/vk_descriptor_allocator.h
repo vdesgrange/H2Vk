@@ -1,3 +1,11 @@
+/*
+*  H2Vk - A Vulkan based rendering engine
+*
+* Copyright (C) 2022-2023 by Viviane Desgrange
+*
+* This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
+*/
+
 #pragma once
 
 #include <vector>
@@ -16,8 +24,10 @@ class Device;
  */
 class DescriptorAllocator final {
 public:
+    /** @brief vulkan wrapper device */
     const class Device& _device;
-    const unsigned int MAX_SETS = 10; // Number of sets per pools (kind of abstract so far)
+    /** @brief Number of sets per pools (kind of abstract so far) */
+    const unsigned int MAX_SETS = 10;
 
     DescriptorAllocator(const Device &device) : _device(device) {};
     ~DescriptorAllocator();
@@ -29,7 +39,10 @@ public:
     VkDescriptorPool createPool(std::vector<VkDescriptorPoolSize> sizes, VkDescriptorPoolCreateFlags flags, uint32_t count);
 
 private:
+    /** @brief pool set as main allocation pool */
     VkDescriptorPool _currentPool{VK_NULL_HANDLE};
+    /** @brief collection of used descriptor pools */
     std::vector<VkDescriptorPool> usedPools;
+    /** @brief collection of free descriptor pools. Can be used for descriptor set allocation. */
     std::vector<VkDescriptorPool> freePools;
 };

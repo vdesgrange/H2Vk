@@ -1,20 +1,36 @@
+/*
+*  H2Vk - Device class
+*
+* Copyright (C) 2022-2023 by Viviane Desgrange
+*
+* This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
+*/
+
 #pragma once
 
 #include "vk_mem_alloc.h"
 
 class Window;
 
+/**
+ * Class wrapping Vulkan physical and logical device representations
+ */
 class Device final {
 
 public:
-    VkInstance _instance; // Vulkan library handle
-    VkDebugUtilsMessengerEXT _debug_messenger; // Vulkan debug output handle
-    VkPhysicalDevice _physicalDevice; // GPU chosen as the default device
-    VkDevice _logicalDevice; // Vulkan device for commands
-    VkSurfaceKHR _surface; // Vulkan window surface
-
-    VkPhysicalDeviceProperties _gpuProperties; // request gpu information
-
+    /** @brief Initializes the Vulkan library and allows the application to pass information about itself */
+    VkInstance _instance;
+    /** @brief Vulkan debug output handle */
+    VkDebugUtilsMessengerEXT _debug_messenger; //
+    /** @brief Physical device representation. GPU chosen as default device */
+    VkPhysicalDevice _physicalDevice;
+    /** @brief Logical device representation */
+    VkDevice _logicalDevice;
+    /** @brief Native platform window surface abstraction */
+    VkSurfaceKHR _surface;
+    /** @brief GPU information */
+    VkPhysicalDeviceProperties _gpuProperties;
+    /** @brief Represent memory assigned to a buffer */
     VmaAllocator _allocator;
 
     Device(Window& _window);
@@ -24,6 +40,8 @@ public:
     uint32_t get_graphics_queue_family() const;
 
 private:
+    /** @brief Device graphics queue where command buffers are submitted to */
     VkQueue _graphicsQueue;
+
     uint32_t _graphicsQueueFamily;
 };
