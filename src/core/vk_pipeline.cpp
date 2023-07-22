@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - Pipeline class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -16,6 +16,16 @@
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
 
+/**
+ * Build objects required to generate a pipeline layout (information about the shader inputs of the pipeline).
+ * Build shader module, handle specialization (shader injected constants), descriptor set layout and push constants
+ * for each shader stages
+ * @brief Build shader effect structure
+ * @param setLayouts collection of descriptor set layouts (pointers into resources).
+ * @param pushConstants push constants range description
+ * @param shaderModules collection of shader name, file path, specialization constants
+ * @return a structure of shader configurations
+ */
 std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::vector<std::tuple<VkShaderStageFlagBits, const char*, VkSpecializationInfo>> shaderModules) {
     std::shared_ptr<ShaderEffect> effect = std::make_shared<ShaderEffect>();
     effect->setLayouts = setLayouts;
@@ -35,12 +45,18 @@ std::shared_ptr<ShaderEffect> PipelineBuilder::build_effect(std::vector<VkDescri
     return effect;
 }
 
+/**
+ * Build the pipeline
+ * @brief Build specialized pipeline
+ * @param effect collection of shader objects required to generate pipeline layout
+ * @return specialized pipeline
+ */
 std::shared_ptr<ShaderPass> PipelineBuilder::build_pass(std::shared_ptr<ShaderEffect> effect) {
     std::shared_ptr<ShaderPass> pass = std::make_shared<ShaderPass>();
     pass->effect = std::shared_ptr<ShaderEffect>(effect);
     pass->pipelineLayout = this->build_layout(effect->setLayouts, effect->pushConstants);
 
-    std::vector<VkPipelineShaderStageCreateInfo> shaderStages{};
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages{}; // create pipeline shader stage information
     for (auto& stage : pass->effect->shaderStages) {
         shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(stage.flags, stage.shaderModule, &stage.specializationConstants));
     }
@@ -50,19 +66,35 @@ std::shared_ptr<ShaderPass> PipelineBuilder::build_pass(std::shared_ptr<ShaderEf
     return pass;
 }
 
+/**
+ * The pipeline layout contains information about the shader inputs of the pipeline.
+ * It represents sequence of descriptor sets and push constants used.
+ * @brief build pipeline layout
+ * @param setLayouts
+ * @param pushConstants
+ * @return return the pipeline layout
+ */
 VkPipelineLayout PipelineBuilder::build_layout(std::vector<VkDescriptorSetLayout> &setLayouts, std::vector<VkPushConstantRange> &pushConstants) const {
     VkPipelineLayout layout{};
     VkPipelineLayoutCreateInfo layoutInfo = vkinit::pipeline_layout_create_info();
     layoutInfo.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
-    layoutInfo.pSetLayouts = setLayouts.empty() ? nullptr : setLayouts.data();
+    layoutInfo.pSetLayouts = setLayouts.empty() ? nullptr : setLayouts.data(); // descriptor set layouts
     layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstants.size());
-    layoutInfo.pPushConstantRanges = pushConstants.empty() ? nullptr : pushConstants.data();
+    layoutInfo.pPushConstantRanges = pushConstants.empty() ? nullptr : pushConstants.data(); // push constants
 
     VK_CHECK(vkCreatePipelineLayout(_device._logicalDevice, &layoutInfo, nullptr, &layout));
 
     return layout;
 }
 
+/**
+ * Initialize structures required to build a graphics pipeline.
+ * Structure located in this constructor sometimes requires modifications
+ * from there default values in other part of the engine.
+ * @brief default constructor
+ * @param device vulkan device wrapper
+ * @param renderPass render pass object describing the environment in which the pipeline will be used
+ */
 GraphicPipeline::GraphicPipeline(const Device& device, RenderPass& renderPass) : PipelineBuilder(device), _renderPass(renderPass) {
     _inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     _depthStencil = vkinit::pipeline_depth_stencil_state_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
@@ -79,6 +111,15 @@ GraphicPipeline::GraphicPipeline(const Device& device, RenderPass& renderPass) :
     _vertexInputInfo.vertexBindingDescriptionCount = _vertexDescription.bindings.size();
 }
 
+
+/**
+ * Set up remaining structures required to build a graphics pipeline.
+ * These structures (out of constructor) did not require any changes in other part of the engine.
+ * @brief create graphics pipeline
+ * @param pipelineLayout represents sequence of descriptor sets and push constants
+ * @param shaderStages collection of information for each pipeline shader stages (ie. code, entry point)
+ * @return graphics pipeline
+ */
 VkPipeline GraphicPipeline::build_pipeline(VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) {
 
     VkPipeline pipeline;
@@ -115,7 +156,7 @@ VkPipeline GraphicPipeline::build_pipeline(VkPipelineLayout& pipelineLayout, std
     pipelineInfo.pStages = shaderStages.data();
     pipelineInfo.layout = pipelineLayout;
     pipelineInfo.renderPass = _renderPass._renderPass;
-    pipelineInfo.subpass = 0;
+    pipelineInfo.subpass = 0; // index of sub-pass in the render pass where pipeline is used (single sub-pass so far)
 
     if (vkCreateGraphicsPipelines(_device._logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
         std::cout << "Failed to create graphics pipeline\n";
@@ -125,6 +166,12 @@ VkPipeline GraphicPipeline::build_pipeline(VkPipelineLayout& pipelineLayout, std
     return pipeline;
 }
 
+/**
+ * @brief create compute pipeline
+ * @param pipelineLayout represents sequence of descriptor sets and push constants
+ * @param shaderStages collection of information for each pipeline shader stages (ie. code, entry point)
+ * @return compute pipeline
+ */
 VkPipeline ComputePipeline::build_pipeline(VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) {
     VkPipeline pipeline;
     VkComputePipelineCreateInfo pipelineInfo{};
