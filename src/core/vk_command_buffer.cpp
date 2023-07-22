@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - CommandBuffer class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -15,8 +15,9 @@
  * Command buffers are allocated from Command pools and executed on queues.
  * Commands are typically drawing operation, data transfers, etc. and need to go through command buffers.
  * Command buffers submitted to a queue can't be reset/modified until GPU finished executing them.
- * @param device
+ * @param device vulkan device wrapper
  * @param commandPool
+ * @param count number of command buffer to allocate from the pool
  */
 CommandBuffer::CommandBuffer(const Device& device, CommandPool& commandPool, uint32_t count) : _device(device), _commandPool(commandPool), _count(count) {
     VkCommandBufferAllocateInfo allocateInfo{};
@@ -29,23 +30,36 @@ CommandBuffer::CommandBuffer(const Device& device, CommandPool& commandPool, uin
     VK_CHECK(vkAllocateCommandBuffers(device._logicalDevice, &allocateInfo, &_commandBuffer));
 }
 
+/**
+ * Free all command buffers which were allocated from the pool
+ * @brief default destructor
+ */
 CommandBuffer::~CommandBuffer() {
     vkFreeCommandBuffers(_device._logicalDevice, _commandPool._commandPool, _count, &_commandBuffer);
 }
 
+/**
+ * Will records a command (defined as a lambda) and
+ * @brief records and submit command for the GPU
+ * @param device vulkan device wrapper
+ * @param ctx executing command buffer and fences it triggers
+ * @param function lambda executed by the command buffer
+ */
 void CommandBuffer::immediate_submit(const Device& device, const UploadContext& ctx, std::function<void(VkCommandBuffer cmd)>&& function) {
     VkCommandBuffer cmd = ctx._commandBuffer->_commandBuffer;
     VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-    VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-    function(cmd);
-    VK_CHECK(vkEndCommandBuffer(cmd));
+    VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo)); // Start recording command buffer
+    function(cmd); // Commands we want to execute into a command buffer
+    VK_CHECK(vkEndCommandBuffer(cmd)); // Finish recording a command buffer
 
-    VkSubmitInfo submitInfo = vkinit::submit_info(&cmd);
+    VkSubmitInfo submitInfo = vkinit::submit_info(&cmd); // queue submit op. specifications
+    // Submits a sequence of semaphores or command buffers to the graphics queue. todo - Allow choice of queue
     VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, ctx._uploadFence->_fence));
-
+    // Wait for one or more fences to become signaled
     vkWaitForFences(device._logicalDevice, 1, &ctx._uploadFence->_fence, true, 9999999999);
     vkResetFences(device._logicalDevice, 1, &ctx._uploadFence->_fence);
 
+    // Recycles the resources from the command buffers allocated from the command pool back to the command pool.
     vkResetCommandPool(device._logicalDevice, ctx._commandPool->_commandPool, 0);
 }

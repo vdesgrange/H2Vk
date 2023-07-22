@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - CommandPool class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -12,13 +12,20 @@
 
 class Device;
 
+/**
+ * Command pools are opaque objects that command buffer memory is allocated from.
+ * @brief vulkan command pool wrapper
+ * @note mostly sugar syntax
+ */
 class CommandPool final {
 public:
+    /** @brief vulkan command pool object */
     VkCommandPool _commandPool;
 
     CommandPool(const Device& device);
     ~CommandPool();
 
 private:
+    /** @brief vulkan device wrapper */
     const class Device& _device;
 };

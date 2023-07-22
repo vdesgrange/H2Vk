@@ -245,6 +245,12 @@ VkWriteDescriptorSet vkinit::write_descriptor_set(VkDescriptorType type, VkDescr
     return setWrite;
 }
 
+/**
+ * Define additional information about how the command buffer begins recording
+ * @brief Initialize command buffer begin info
+ * @param flags usage behavior for the command buffer
+ * @return begin operation specification
+ */
 VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageFlags flags) {
     VkCommandBufferBeginInfo info{};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -254,6 +260,13 @@ VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageF
     return info;
 }
 
+/**
+ * Specify queue submit operation informations.
+ * Number of semaphores upon which to wait or to signal before executing the command buffer,
+ * number of command buffers to execute
+ * @param cmd pointer to an array of VkCommandBuffer to execute in batch
+ * @return queue submit specification
+ */
 VkSubmitInfo vkinit::submit_info(VkCommandBuffer* cmd) {
     VkSubmitInfo info{};
     info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
