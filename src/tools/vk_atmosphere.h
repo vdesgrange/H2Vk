@@ -21,11 +21,17 @@ public:
     const uint32_t MULTISCATTERING_WIDTH = 32;
     const uint32_t MULTISCATTERING_HEIGHT = 32;
 
+    const uint32_t SKYVIEW_WIDTH = 200;
+    const uint32_t SKYVIEW_HEIGHT = 100;
+
     Texture _transmittanceLUT;
     Texture _transmittanceLUT2;
     VkFramebuffer _transmittanceFramebuffer;
 
     Texture _multipleScatteringLUT;
+
+    Texture _skyviewLUT;
+    VkFramebuffer _skyviewFramebuffer;
 
     Atmosphere() =  delete;
     Atmosphere(Device& device, UploadContext& uploadContext);
@@ -35,6 +41,7 @@ public:
     Texture compute_transmittance(Device& device, UploadContext& uploadContext);
     Texture compute_transmittance_2(Device& device, UploadContext& uploadContext);
     Texture compute_multiple_scattering(Device& device, UploadContext& uploadContext);
+    Texture compute_skyview(Device& device, UploadContext& uploadContext);
     void run_debug(FrameData& frame);
 
 private:

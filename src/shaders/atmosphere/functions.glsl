@@ -1,4 +1,4 @@
-#extension GL_EXT_debug_printf : disable
+#extension GL_EXT_debug_printf : enable
 #extension GL_GOOGLE_include_directive : enable
 
 #include "./constants.glsl"
@@ -17,7 +17,7 @@ void get_beta_coefficients(vec3 x, out vec3 beta_s, out vec3 beta_a, out vec3 be
   vec3 beta_a_m = mie_absorption * mie_density;
   vec3 beta_e_m = mie_extinction * mie_density;
 
-  vec3 beta_a_o = ozone_scattering * ozone_density;
+  vec3 beta_a_o = ozone_absorption * ozone_density;
   
   beta_s = beta_s_r + beta_s_m; // Scattering coefficient
   beta_a = beta_a_r + beta_a_m + beta_a_o; // Absorption coefficient
@@ -83,7 +83,7 @@ float getOpticalLength(DensityProfile profiles, float r, float mu) {
   // Numerical integration
   float result = 0.0;
   for (int i = 0; i <= SAMPLE_COUNT; i++) {
-    float d_i = float(i) * dy; // 
+    float d_i = float(i) * dy;
     float r_i = sqrt(d_i * d_i + 2.0 * r * mu * d_i + r * r); // distance between center and sample point
     float altitude = r_i - r_ground;
 
@@ -105,9 +105,18 @@ vec3 get_spherical_direction(float theta, float phi) {
 }
 
 float get_ray_intersection_length(vec3 pos, vec3 dir, float radius) {
+//  float b = dot(pos, dir);
+//  float c = dot(pos, pos) - radius * radius;
+//  if (c > 0.0f && b > 0.0) return -1.0;
+//  float discr = b*b - c;
+//  if (discr < 0.0) return -1.0;
+//  // Special case: inside sphere, use far discriminant
+//  if (discr > b*b) return (-b + sqrt(discr));
+//  return -b - sqrt(discr);
+
   // Solution to hyperbolic curve at 0.
   float a = dot(dir, dir);
-  float b = dot(pos, dir); // p.d - c, center considered as (0, 0, 0)
+  float b = 2.0 * dot(pos, dir); // p.d - c, center considered as (0, 0, 0)
   float c = dot(pos, pos) - radius * radius;
 
   float delta = b * b - 4 * a * c;
@@ -115,7 +124,7 @@ float get_ray_intersection_length(vec3 pos, vec3 dir, float radius) {
   float solution_b = (-b - sqrt(delta)) / (2.0 * a);
 
   if (delta < 0.0 || a == 0) { // Curve does not cross axis or no quadratic curve
-    return -1;
+    return -1.0;
   }
 
   if (delta > b * b) {
@@ -123,18 +132,6 @@ float get_ray_intersection_length(vec3 pos, vec3 dir, float radius) {
   }
 
   return solution_b;
-  // if (solution_a < 0.0 && solution_b < 0.0) {
-  //  return -1;
-  //}
-
-  //if (solution_a < 0.0) { // 
-  //  return max(0.0, solution_b);
-  //}
-
-  //if (solution_b < 0.0) {
-  //  return max(0.0, solution_a);
-  //}
-  // return max(0.0, min(solution_a, solution_b));
 }
 
 
@@ -159,7 +156,7 @@ vec2 get_uv_for_TLUT(vec3 x, vec3 sun_dir) {
   vec3 up = x / h;
   float cosThetaSun = dot(sun_dir, up);
   vec2 uv = vec2(
-    0.5 + 0.5 * cosThetaSun,
+    clamp(0.5 + 0.5 * cosThetaSun, 0.0, 1.0),
     max(0.0, min((h - r_ground) / (r_top - r_ground), 1.0))
   ); // * TRANSMITTANCE_LUT_RES / MULTISCATTER_LUT_RES
 

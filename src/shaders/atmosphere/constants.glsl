@@ -13,8 +13,8 @@ struct DensityProfile {
 
 const float PI = 3.14159265358979323846f;
 
-const float r_ground = 6360.0; // km
-const float r_top = 6420.0;
+const float r_ground = 6360.0; // 6360.0; // m
+const float r_top = 6420.0; // 6420.0;
 
 const vec2 TRANSMITTANCE_LUT_RES = vec2(256, 64);
 const vec2 MULTISCATTER_LUT_RES = vec2(32, 32);
@@ -22,7 +22,7 @@ const vec2 MULTISCATTER_LUT_RES = vec2(32, 32);
 //
 // Rayleight
 const float rayleight_scale = 8.0; // km
-const vec3 rayleigh_scattering = vec3(0.0058, 0.0135, 0.0331); // km^-1 / * 1e-3 for m-1
+const vec3 rayleigh_scattering = vec3(0.0058, 0.0135, 0.0331); // m^-1 / * 1e3 for km-1
 const vec3 rayleigh_extinction = rayleigh_scattering;
 const vec3 rayleigh_absorption = vec3(0.0);
 DensityProfile rayleigh_density = DensityProfile(DensityLayer[2](
@@ -33,8 +33,8 @@ DensityProfile rayleigh_density = DensityProfile(DensityLayer[2](
 // Mie
 const float mie_scale = 1.2; // km
 const vec3 mie_scattering = vec3(0.003996, 0.003996, 0.003996);
-const vec3 mie_extinction = vec3(0.004440, 004440, 004440); // mie_scattering / 0.9
-const vec3 mie_absorption = mie_extinction - mie_scattering;
+const vec3 mie_extinction = vec3(0.004440, 0.004440, 0.004440); // mie_scattering / 0.9
+const vec3 mie_absorption = vec3(0.004440, 0.004440, 0.004440);
 DensityProfile mie_density = DensityProfile(DensityLayer[2](
   DensityLayer(0.0, 0.0, 0.0, 0.0, 0.0),
   DensityLayer(1.0, -1.0 / mie_scale, 0.0, 0.0, 0.0)

@@ -7,31 +7,71 @@ layout(set = 0, binding = 0, rgba16f) writeonly uniform image2D outputImage;
 
 layout(local_size_x = 32, local_size_y = 32) in;
 
+vec3 get_transmittance(vec3 x, vec3 sun_dir) {
+    vec3 T = vec3(1.0);
+    int SAMPLE_COUNT = 40;
+    float albedo = 0.3;
+
+    if (get_ray_intersection_length(x, sun_dir, r_ground) > 0.0) {
+        return vec3(0.0);
+    }
+
+    float t_atmo = get_ray_intersection_length(x, sun_dir, r_top);
+    float t = 0.0;
+    float dt = t_atmo / SAMPLE_COUNT;
+
+    for (int k = 0; k < SAMPLE_COUNT; k++) {
+        float new_t = t_atmo * (k + albedo) / SAMPLE_COUNT;
+        dt = new_t - t;
+        t = new_t;
+
+        vec3 x_tv = x + t * sun_dir; // x - tv
+
+        vec3 beta_s = vec3(0.0);
+        vec3 beta_a = vec3(0.0);
+        vec3 beta_e = vec3(0.0);
+        get_beta_coefficients(x_tv, beta_s, beta_a, beta_e);
+
+        vec3 sample_T = exp(-dt * beta_e);
+        T *= sample_T;
+    }
+
+    return T;
+}
+
 void main() {
     ivec2 outSize = imageSize(outputImage);
     vec2 texSize = vec2(outSize);
     ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
     vec2 uv =  vec2(gl_GlobalInvocationID.xy) / texSize;
 
-    float x_mu = uv.x;
-    float x_r = uv.y;
+    float height = uv.y * (r_top - r_ground) + r_ground;
+    float zenithSunCosTheta = 2.0 * uv.x - 1.0; // mu_s cosinus zenith and sun angle
+    float zenithSunSinTheta = sqrt(clamp(1.0 - zenithSunCosTheta * zenithSunCosTheta, 0.0, 1.0));
 
-    float h = sqrt(r_top * r_top - r_ground * r_ground); // d_H distance to atmosphere boundary for horizontal ray
-    float rho = h * x_r; // distance to horizon
-    float r = sqrt(rho * rho + r_ground * r_ground);
-    // distance to top atmosphere boundary for a ray (r, mu)
-    float d_min = r_top - r; // minimum
-    float d_max = rho + h; // maximum
-    float d = d_min + x_mu * (d_max - d_min); // actual distance
+    vec3 x = vec3(0.0, height, 0.0);
+    vec3 sun_dir = normalize(vec3(0.0, zenithSunCosTheta, -zenithSunSinTheta));
+    vec3 transmittance = get_transmittance(x, sun_dir);
 
-    float mu = (d == 0.0) ? 1.0 : (h * h - rho * rho - d * d) / (2.0 * r * d);
-    mu = clamp(mu, -1.0, 1.0);
 
-    vec3 transmittance = exp(-(
-        rayleigh_extinction * getOpticalLength(rayleigh_density, r, mu) +
-        mie_extinction * getOpticalLength(mie_density, r, mu) +
-        ozone_extinction * getOpticalLength(ozone_density, r, mu))
-    );
+//    float x_mu = uv.x;
+//    float x_r = uv.y;
+//    float h = sqrt(r_top * r_top - r_ground * r_ground); // d_H distance to atmosphere boundary for horizontal ray
+//    float rho = h * x_r; // distance to horizon
+//    float r = sqrt(rho * rho + r_ground * r_ground);
+//    // distance to top atmosphere boundary for a ray (r, mu)
+//    float d_min = r_top - r; // minimum
+//    float d_max = rho + h; // maximum
+//    float d = d_min + x_mu * (d_max - d_min); // actual distance
+//
+//    float mu = (d == 0.0) ? 1.0 : (h * h - rho * rho - d * d) / (2.0 * r * d);
+//    mu = clamp(mu, -1.0, 1.0);
+//
+//    vec3 transmittance = exp(-(
+//        rayleigh_extinction * getOpticalLength(rayleigh_density, r, mu) +
+//        mie_extinction * getOpticalLength(mie_density, r, mu) +
+//        ozone_extinction * getOpticalLength(ozone_density, r, mu))
+//    );
 
     imageStore(outputImage, texCoord, vec4(transmittance, 1.0));
 }
