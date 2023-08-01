@@ -151,14 +151,14 @@ vec3 get_second_order_scattering() {
   return L2;
 }
 
-vec2 get_uv_for_TLUT(vec3 x, vec3 sun_dir) {
+vec2 get_uv_for_LUT(vec3 x, vec3 sun_dir) {
   float h = length(x);
   vec3 up = x / h;
   float cosThetaSun = dot(sun_dir, up);
   vec2 uv = vec2(
     clamp(0.5 + 0.5 * cosThetaSun, 0.0, 1.0),
     max(0.0, min((h - r_ground) / (r_top - r_ground), 1.0))
-  ); // * TRANSMITTANCE_LUT_RES / MULTISCATTER_LUT_RES
+  );
 
   return uv;
 }
@@ -178,3 +178,7 @@ vec2 lutTransmittanceToUV(float r, float mu) {
   return vec2(u_mu, u_r);
 }
 
+
+float get_horizon_angle(float height) {
+  return acos(clamp(sqrt(height * height - r_ground * r_ground) / height, -1.0, 1.0)) - 0.5 * PI;
+}

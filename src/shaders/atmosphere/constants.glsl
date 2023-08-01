@@ -18,6 +18,10 @@ const float r_top = 6420.0; // 6420.0;
 
 const vec2 TRANSMITTANCE_LUT_RES = vec2(256, 64);
 const vec2 MULTISCATTER_LUT_RES = vec2(32, 32);
+const vec3 AERIAL_LUT_RES = vec3(32, 32, 32);
+const vec2 SKYVIEW_LUT_RES = vec2(200, 100);
+const vec2 ATMOSPHERE_RES = vec2(512, 256); // todo : inject the resolution constants into shader
+
 // --- Transmittance ---
 //
 // Rayleight

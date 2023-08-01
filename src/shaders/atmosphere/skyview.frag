@@ -42,10 +42,6 @@ float get_altitude_angle(float v, float h) {
     return PI / 2.0 * den - h;
 }
 
-float get_horizon_angle(float height) {
-    return acos(clamp(sqrt(height * height - r_ground * r_ground) / height, -1.0, 1.0)) - 0.5 * PI;
-}
-
 vec3 get_light_scattering(vec3 x, vec3 ray_dir, vec3 sun_dir) {
     const int N_LIGHT = 30;
     const float offset = 0.3;
@@ -80,7 +76,7 @@ vec3 get_light_scattering(vec3 x, vec3 ray_dir, vec3 sun_dir) {
 
         vec3 sample_T = exp(-dt * beta_e);
 
-        vec2 sun_uv = get_uv_for_TLUT(x_tv, sun_dir);
+        vec2 sun_uv = get_uv_for_LUT(x_tv, sun_dir);
         vec3 T_sun = texture(transmittanceLUT, sun_uv).xyz; // or lutTransmittanceToUV
         if (isnan(T_sun.x) || isnan(T_sun.y) || isnan(T_sun.z)) {
             debugPrintfEXT("T_sun (%f %f %f) i %i dt %f", T_sun.x, T_sun.y, T_sun.z, i, dt);
@@ -111,15 +107,12 @@ vec3 get_light_scattering(vec3 x, vec3 ray_dir, vec3 sun_dir) {
 }
 
 void main() {
-    // float height = uv.y * (r_top - r_ground) + r_ground;
-
     vec3 x = vec3(0.0, r_ground + 0.2, 0.0); // rayon : km ou m?
     float height = length(x);
-    // debugPrintfEXT("height (%f)", height);
+
     float azimuth = 2 * PI * (uv.x - 0.5); // linear mapping f:[0, 1] -> [-pi, pi]
     float horizon = get_horizon_angle(height);
     float altitude = get_altitude_angle(uv.y, horizon);
-    debugPrintfEXT("height %f azimuth %f horizon %f altitude %f", height, azimuth, horizon, altitude);
 
     vec3 up = x / height;
     float sun_alti = PI / 32.0; // PI / 2.0 - acos(dot(tmp, up));

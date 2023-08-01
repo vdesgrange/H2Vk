@@ -24,29 +24,33 @@ public:
     const uint32_t SKYVIEW_WIDTH = 200;
     const uint32_t SKYVIEW_HEIGHT = 100;
 
+    const uint32_t ATMOSPHERE_WIDTH = 512;
+    const uint32_t ATMOSPHERE_HEIGHT = 256;
+
     Texture _transmittanceLUT;
-    Texture _transmittanceLUT2;
-    VkFramebuffer _transmittanceFramebuffer;
 
     Texture _multipleScatteringLUT;
+    VkFramebuffer _multipleScatteringFramebuffer;
 
     Texture _skyviewLUT;
     VkFramebuffer _skyviewFramebuffer;
+
+    Texture _atmosphereLUT;
+    VkFramebuffer _atmosphereFramebuffer;
 
     Atmosphere() =  delete;
     Atmosphere(Device& device, UploadContext& uploadContext);
     ~Atmosphere();
 
-    void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
     Texture compute_transmittance(Device& device, UploadContext& uploadContext);
-    Texture compute_transmittance_2(Device& device, UploadContext& uploadContext);
     Texture compute_multiple_scattering(Device& device, UploadContext& uploadContext);
+    Texture compute_multiple_scattering_2(Device& device, UploadContext& uploadContext);
     Texture compute_skyview(Device& device, UploadContext& uploadContext);
+    Texture render_atmosphere(Device& device, UploadContext& uploadContext);
+
     void run_debug(FrameData& frame);
 
 private:
     class Device& _device;
     class UploadContext& _uploadContext;
-
-    void draw();
 };

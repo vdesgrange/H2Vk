@@ -60,7 +60,7 @@ void single_scattering(vec3 x, vec3 sun_dir, float i, float j, out vec3 Lprime, 
         vec3 beta_s_m = get_mie_scattering_coefficient(x_tv);
         vec3 sigma_s_m = beta_s_m * vec3(p_m); // mie scattering * density * phase function
 
-        vec2 sun_uv = get_uv_for_TLUT(x_tv, sun_dir);
+        vec2 sun_uv = get_uv_for_LUT(x_tv, sun_dir);
         vec3 T_sun = texture(transmittanceLUT, sun_uv).xyz; // or lutTransmittanceToUV
         vec3 sigma_s = (sigma_s_r + sigma_s_m) * T_sun; // In-scattering (with phase)
         vec3 sigma_s_integral = (sigma_s - sigma_s * sample_T) / beta_e;
@@ -73,7 +73,7 @@ void single_scattering(vec3 x, vec3 sun_dir, float i, float j, out vec3 Lprime, 
         vec3 x_hit = x + t_ground * ray_dir;
         if (dot(x, sun_dir) > 0.0) {
             x_hit = normalize(x_hit) * r_ground;
-            vec2 hit_uv = get_uv_for_TLUT(x_hit, sun_dir);
+            vec2 hit_uv = get_uv_for_LUT(x_hit, sun_dir);
             Lprime += T * vec3(albedo) * texture(transmittanceLUT, hit_uv).xyz;
         }
     }
