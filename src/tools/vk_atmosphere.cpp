@@ -10,16 +10,13 @@
 #include "core/vk_command_pool.h"
 #include "core/vk_command_buffer.h"
 #include "core/utilities/vk_global.h"
+#include "core/camera/vk_camera.h"
 
 #include <chrono>
 #include <iostream>
 
 Atmosphere::Atmosphere(Device &device, UploadContext& uploadContext) : _device(device), _uploadContext(uploadContext) {
-    this->_transmittanceLUT = this->compute_transmittance(_device, _uploadContext);
-    // this->_multipleScatteringLUT = this->compute_multiple_scattering(_device, _uploadContext);
-    this->_multipleScatteringLUT = this->compute_multiple_scattering_2(_device, _uploadContext);
-    this->_skyviewLUT = this->compute_skyview(_device, _uploadContext);
-    this->_atmosphereLUT = this->render_atmosphere(_device, _uploadContext);
+    this->precompute_lut();
 }
 
 Atmosphere::~Atmosphere() {
@@ -31,7 +28,27 @@ Atmosphere::~Atmosphere() {
     vkDestroyFramebuffer(_device._logicalDevice, _multipleScatteringFramebuffer, nullptr);
     vkDestroyFramebuffer(_device._logicalDevice, _skyviewFramebuffer, nullptr);
     vkDestroyFramebuffer(_device._logicalDevice, _atmosphereFramebuffer, nullptr);
+}
 
+/**
+ * Pre-compute look-up tables (ie. transmittance) independent of external resources (such as camera data).
+ * @note To be call at initialisation
+ * @brief pre-compute look-up tables
+ */
+void Atmosphere::precompute_lut() {
+    this->_transmittanceLUT = this->compute_transmittance(_device, _uploadContext);
+    // this->_multipleScatteringLUT = this->compute_multiple_scattering(_device, _uploadContext);
+    this->_multipleScatteringLUT = this->compute_multiple_scattering_2(_device, _uploadContext);
+}
+
+/**
+ * Compute resources such (ie. skyview) affected by real time modification (ie. camera data)
+ * @note This method must be call after dependencies buffer allocation.
+ * @brief compute real-time resources
+ */
+void Atmosphere::compute_resources() {
+    this->_skyviewLUT = this->compute_skyview(_device, _uploadContext);
+    //this->_atmosphereLUT = this->render_atmosphere(_device, _uploadContext);
 }
 
 Texture Atmosphere::compute_transmittance(Device& device, UploadContext& uploadContext) {
@@ -180,29 +197,29 @@ Texture Atmosphere::compute_multiple_scattering(Device &device, UploadContext &u
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
     vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &outTexture._sampler);
 
-    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
-        VkImageSubresourceRange range;
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        range.baseMipLevel = 0;
-        range.levelCount = 1;
-        range.baseArrayLayer = 0;
-        range.layerCount = 1;
-
-        VkImageMemoryBarrier imageBarrier = {};
-        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.image = outTexture._image;
-        imageBarrier.subresourceRange = range;
-        imageBarrier.srcAccessMask = 0;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-
-        // Change texture image layout to shader read after all mip levels have been copied
-        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-        outTexture.updateDescriptor();
-    });
+//    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
+//        VkImageSubresourceRange range;
+//        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//        range.baseMipLevel = 0;
+//        range.levelCount = 1;
+//        range.baseArrayLayer = 0;
+//        range.layerCount = 1;
+//
+//        VkImageMemoryBarrier imageBarrier = {};
+//        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+//        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+//        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+//        imageBarrier.image = outTexture._image;
+//        imageBarrier.subresourceRange = range;
+//        imageBarrier.srcAccessMask = 0;
+//        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+//        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+//
+//        // Change texture image layout to shader read after all mip levels have been copied
+//        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+//
+//        outTexture.updateDescriptor();
+//    });
 
     // === Create compute pipeline ===
 
@@ -372,6 +389,7 @@ Texture Atmosphere::compute_multiple_scattering_2(Device& device, UploadContext&
 
     // Build pipeline
     GraphicPipeline pipelineBuilder = GraphicPipeline(device, renderPass);
+    pipelineBuilder._vertexInputInfo =  vkinit::vertex_input_state_create_info();
 
     std::vector<std::pair<ShaderType, const char*>> transmittance_module {
             {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
@@ -508,21 +526,33 @@ Texture Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext
     framebufferInfo.pAttachments = &outTexture._imageView;
     VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_skyviewFramebuffer));
 
-    std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2}};
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2},
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
+    };
 
     VkDescriptorSet descriptor;
     VkDescriptorSetLayout setLayout;
     DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
     DescriptorAllocator allocator = DescriptorAllocator(device);
 
+    // for (int i = 0; i < FRAME_OVERLAP; i++) { // Est ce vraiment utile de maintenir 2 descriptors set pour l'atmosphere?
+    VkDescriptorBufferInfo camBInfo{};
+    camBInfo.buffer = g_frames[0].cameraBuffer._buffer;
+    camBInfo.offset = 0;
+    camBInfo.range = sizeof(GPUCameraData);
+
     DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
-            .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .bind_image(_multipleScatteringLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .layout(setLayout)
-            .build(descriptor, setLayout, poolSizes);
+        .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+        .bind_image(_multipleScatteringLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+        .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+        .layout(setLayout)
+        .build(descriptor, setLayout, poolSizes); //  changer pour 2 descriptor ?
+    // }
 
     // Build pipeline
     GraphicPipeline pipelineBuilder = GraphicPipeline(device, renderPass);
+    pipelineBuilder._vertexInputInfo =  vkinit::vertex_input_state_create_info();
 
     std::vector<std::pair<ShaderType, const char*>> skyview_module {
             {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
@@ -607,31 +637,6 @@ Texture Atmosphere::render_atmosphere(Device &device, UploadContext &uploadConte
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
     vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &outTexture._sampler);
 
-    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
-        VkImageSubresourceRange range;
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        range.baseMipLevel = 0;
-        range.levelCount = 1;
-        range.baseArrayLayer = 0;
-        range.layerCount = 1;
-
-        VkImageMemoryBarrier imageBarrier = {};
-        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.image = outTexture._image;
-        imageBarrier.subresourceRange = range;
-        imageBarrier.srcAccessMask = 0;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-
-        // Change texture image layout to shader read after all mip levels have been copied
-        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-        outTexture.updateDescriptor();
-    });
-
-
     // === Prepare mapping ===
     RenderPass renderPass = RenderPass(device);
     RenderPass::Attachment color = renderPass.color(format);
@@ -659,22 +664,37 @@ Texture Atmosphere::render_atmosphere(Device &device, UploadContext &uploadConte
     framebufferInfo.pAttachments = &outTexture._imageView;
     VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_atmosphereFramebuffer));
 
-    std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}};
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
+    };
 
     VkDescriptorSet descriptor;
     VkDescriptorSetLayout setLayout;
     DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
     DescriptorAllocator allocator = DescriptorAllocator(device);
 
+    //for (int i = 0; i < FRAME_OVERLAP; i++) {
+        //g_frames[i].atmosphereDescriptor = VkDescriptorSet();
+
+    VkDescriptorBufferInfo camBInfo{};
+    camBInfo.buffer = g_frames[0].cameraBuffer._buffer;
+    camBInfo.offset = 0;
+    camBInfo.range = sizeof(GPUCameraData);
+
     DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
             .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
             .bind_image(_multipleScatteringLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
             .bind_image(_skyviewLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+            .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
             .layout(setLayout)
-            .build(descriptor, setLayout, poolSizes);
+            .build( descriptor, setLayout, poolSizes);
+    //}
+
 
     // Build pipeline
     GraphicPipeline pipelineBuilder = GraphicPipeline(device, renderPass);
+    pipelineBuilder._vertexInputInfo =  vkinit::vertex_input_state_create_info();
 
     std::vector<std::pair<ShaderType, const char*>> atmosphere_module {
             {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
@@ -735,13 +755,95 @@ Texture Atmosphere::render_atmosphere(Device &device, UploadContext &uploadConte
         VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
     }
 
+    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
+        VkImageSubresourceRange range;
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.baseMipLevel = 0;
+        range.levelCount = 1;
+        range.baseArrayLayer = 0;
+        range.layerCount = 1;
+
+        VkImageMemoryBarrier imageBarrier = {};
+        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.image = outTexture._image;
+        imageBarrier.subresourceRange = range;
+        imageBarrier.srcAccessMask = 0;
+        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+
+        // Change texture image layout to shader read after all mip levels have been copied
+        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+        outTexture.updateDescriptor();
+    });
+
     return outTexture;
 }
 
+void Atmosphere::setup_atmosphere_descriptor(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
+    };
 
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        g_frames[i].atmosphereDescriptor = VkDescriptorSet();
 
-void Atmosphere::run_debug(FrameData& frame) {
-//    vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_debug_effect->pipelineLayout, 0, 1, &frame.debugDescriptor, 0, nullptr);
-//    vkCmdBindPipeline(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_debug_effect->pipeline);
-//    vkCmdDraw(frame._commandBuffer->_commandBuffer, 3, 1, 0, 0);
+        VkDescriptorBufferInfo camBInfo{};
+        camBInfo.buffer = g_frames[i].cameraBuffer._buffer;
+        camBInfo.offset = 0;
+        camBInfo.range = sizeof(GPUCameraData);
+
+        DescriptorBuilder::begin(layoutCache, allocator)
+                .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .bind_image(_multipleScatteringLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .bind_image(_skyviewLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+                .layout(setLayout)
+                .build( g_frames[i].atmosphereDescriptor, setLayout, poolSizes);
+    }
+}
+
+void Atmosphere::setup_material(MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass) {
+    std::vector<std::pair<ShaderType, const char*>> module {
+            {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/atmosphere/atmosphere.frag.spv"},
+    };
+
+    GraphicPipeline pipeline = GraphicPipeline(_device, renderPass);
+    pipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
+    materialManager._pipelineBuilder = &pipeline;
+    this->_atmospherePass = materialManager.create_material("atmosphere", setLayouts, {}, module);
+}
+
+void Atmosphere::draw(VkCommandBuffer& commandBuffer, VkDescriptorSet* descriptor) {
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_atmospherePass->pipelineLayout, 0, 1, descriptor, 0, nullptr);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,this->_atmospherePass->pipeline);
+    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+}
+
+void Atmosphere::debug_descriptor(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, MaterialManager& materialManager, RenderPass& renderPass) {
+    std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}};
+
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        g_frames[i].atmosphereDescriptor = VkDescriptorSet();
+        DescriptorBuilder::begin(layoutCache, allocator)
+                .bind_image(_atmosphereLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .layout(setLayout)
+                .build(g_frames[i].atmosphereDescriptor, setLayout, poolSizes);
+    }
+
+    GraphicPipeline debugPipeline = GraphicPipeline(_device, renderPass);
+    debugPipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
+    debugPipeline._dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+
+    std::vector<std::pair<ShaderType, const char*>> module {
+            {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/atmosphere/debug_quad.frag.spv"},
+    };
+
+    materialManager._pipelineBuilder = &debugPipeline;
+    this->_atmospherePass = materialManager.create_material("debug_atmosphere", {setLayout}, {}, module);
 }

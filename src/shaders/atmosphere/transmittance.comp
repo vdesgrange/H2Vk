@@ -10,7 +10,7 @@ layout(local_size_x = 32, local_size_y = 32) in;
 vec3 get_transmittance(vec3 x, vec3 sun_dir) {
     vec3 T = vec3(1.0);
     int SAMPLE_COUNT = 40;
-    float albedo = 0.3;
+    float bias = 0.3;
 
     if (get_ray_intersection_length(x, sun_dir, r_ground) > 0.0) {
         return vec3(0.0);
@@ -21,7 +21,7 @@ vec3 get_transmittance(vec3 x, vec3 sun_dir) {
     float dt = t_atmo / SAMPLE_COUNT;
 
     for (int k = 0; k < SAMPLE_COUNT; k++) {
-        float new_t = t_atmo * (k + albedo) / SAMPLE_COUNT;
+        float new_t = t_atmo * (k + bias) / SAMPLE_COUNT;
         dt = new_t - t;
         t = new_t;
 

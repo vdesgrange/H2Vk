@@ -56,6 +56,8 @@ struct FrameData {
     VkDescriptorSet offscreenDescriptor;
 
     VkDescriptorSet debugDescriptor;
+
+    VkDescriptorSet atmosphereDescriptor;
 };
 
 /**

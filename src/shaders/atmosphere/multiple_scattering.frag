@@ -12,11 +12,11 @@ layout (location = 0) out vec4 outFragColor;
 
 const int SAMPLE_DIR = 8;
 const int SAMPLE_COUNT = 20;
-float albedo = 0.3; // L0(p, v) = 0.3
 
 void single_scattering(vec3 x, vec3 sun_dir, float i, float j, out vec3 Lprime, out vec3 Lf) {
     Lprime = vec3(0.0);
     Lf = vec3(0.0);
+    float bias = 0.3;
 
     // Compute ray direction
     float theta = PI * (i + 0.5) / float(SAMPLE_DIR);
@@ -38,7 +38,7 @@ void single_scattering(vec3 x, vec3 sun_dir, float i, float j, out vec3 Lprime, 
     float dt = t_max / SAMPLE_COUNT;
 
     for (int k = 0; k < SAMPLE_COUNT; k++) {
-        float new_t = t_max * (k + albedo) / SAMPLE_COUNT;
+        float new_t = t_max * (k + bias) / SAMPLE_COUNT;
         dt = new_t - t;
         t = new_t;
 
@@ -51,9 +51,6 @@ void single_scattering(vec3 x, vec3 sun_dir, float i, float j, out vec3 Lprime, 
 
         vec3 sample_T = exp(-dt * beta_e); // T(x, x-tv), transmittance a revoir
         Lf += T * (beta_s - beta_s * sample_T) / beta_e; // integration
-//        if (isnan(Lf.x) || isnan(Lf.y) || isnan(Lf.z)) {
-//            debugPrintfEXT("S (%f %f %f) A (%f %f %f) sT (%f %f %f) Lf (%f %f %f) k %i dt %f", beta_s.x, beta_s.y, beta_s.z, beta_a.x, beta_a.y, beta_a.z, sample_T.x, sample_T.y, sample_T.z, Lf.x, Lf.y, Lf.z, k, dt);
-//        }
 
         vec3 beta_s_r = get_rayleigh_scattering_coefficient(x_tv);
         vec3 sigma_s_r = beta_s_r * vec3(p_r); // rayleight scattering * density * phase function

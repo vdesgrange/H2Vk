@@ -7,17 +7,13 @@
 layout(set = 0, binding = 0) uniform sampler2D transmittanceLUT;
 layout(set = 0, binding = 1) uniform sampler2D multiscatteringLUT;
 
-//layout(std140, set = 0, binding = 0) uniform  CameraBuffer
-//{
-//    mat4 view;
-//    mat4 proj;
-//    vec3 pos;
-//    bool flip;
-//} cameraData;
-//
-//layout (push_constant) uniform NodeModel {
-//    mat4 model;
-//} nodeData;
+layout(std140, set = 0, binding = 2) uniform  CameraBuffer
+{
+    mat4 view;
+    mat4 proj;
+    vec3 pos;
+    bool flip;
+} cameraData;
 
 layout (location = 0) in vec2 uv;
 
@@ -32,7 +28,7 @@ float get_altitude_angle(float v, float h) {
     // non-linear mapping g:[0,1] -> [-pi/2, pi/2]
     float den = 0.0;
     float V = 2.0 * v - 1.0;
-    if (v < 0.5) {
+    if (v > 0.5) {
         V *= -1;
         den = - V * V;
     } else {
@@ -78,9 +74,6 @@ vec3 get_light_scattering(vec3 x, vec3 ray_dir, vec3 sun_dir) {
 
         vec2 sun_uv = get_uv_for_LUT(x_tv, sun_dir);
         vec3 T_sun = texture(transmittanceLUT, sun_uv).xyz; // or lutTransmittanceToUV
-        if (isnan(T_sun.x) || isnan(T_sun.y) || isnan(T_sun.z)) {
-            debugPrintfEXT("T_sun (%f %f %f) i %i dt %f", T_sun.x, T_sun.y, T_sun.z, i, dt);
-        }
 
         vec3 Psi_ms = texture(multiscatteringLUT, sun_uv).xyz;
 
@@ -89,16 +82,10 @@ vec3 get_light_scattering(vec3 x, vec3 ray_dir, vec3 sun_dir) {
         vec3 beta_s_m = get_mie_scattering_coefficient(x_tv);
         vec3 sigma_s_m = beta_s_m * (vec3(p_m) * T_sun + Psi_ms); // mie scattering * density * phase function
         vec3 sigma_s = sigma_s_r + sigma_s_m;
-        if (isnan(sigma_s.x) || isnan(sigma_s.y) || isnan(sigma_s.z)) {
-            debugPrintfEXT("x_tv (%f %f %f)", x_tv.x, x_tv.y, x_tv.z);
-        }
 
         vec3 integral_sigma_s = (sigma_s - sigma_s * sample_T) / beta_e;
 
         L += integral_sigma_s * T;
-        if (integral_sigma_s.x == 0 || integral_sigma_s.y == 0 || integral_sigma_s.z == 0) {
-            debugPrintfEXT("sigma_s (%f %f %f)", sigma_s.x, sigma_s.y, sigma_s.z);
-        }
 
         T *= sample_T;
     }
@@ -107,7 +94,13 @@ vec3 get_light_scattering(vec3 x, vec3 ray_dir, vec3 sun_dir) {
 }
 
 void main() {
-    vec3 x = vec3(0.0, r_ground + 0.2, 0.0); // rayon : km ou m?
+    vec2 xy = 2.0 * uv.xy - 1.0;
+    mat4 view_proj = inverse(cameraData.proj * cameraData.view);
+    vec4 h_pos = view_proj * vec4(xy, 1.0, 1.0);
+    // vec3 dir = normalize(h_pos.xyz / h_pos.w - cameraData.pos);
+    vec3 x = cameraData.pos + vec3(0.0, r_ground, 0.0); // cameraData.pos +
+
+    // vec3 x = cameraData.pos + vec3(0.0, r_ground + 0.2, 0.0); // rayon : km ou m?
     float height = length(x);
 
     float azimuth = 2 * PI * (uv.x - 0.5); // linear mapping f:[0, 1] -> [-pi, pi]
@@ -115,7 +108,7 @@ void main() {
     float altitude = get_altitude_angle(uv.y, horizon);
 
     vec3 up = x / height;
-    float sun_alti = PI / 32.0; // PI / 2.0 - acos(dot(tmp, up));
+    float sun_alti = 0.0; // PI / 2.0 - acos(dot(tmp, up));
     vec3 sun_dir =  normalize(vec3(0.0, sin(sun_alti), -cos(sun_alti)));
     vec3 ray_dir = vec3(cos(altitude) * sin(azimuth), sin(altitude), -cos(altitude) * cos(azimuth)); // get_spherical_direction(altitude, azimuth); ?
 

@@ -125,6 +125,7 @@ public:
         VkDescriptorSetLayout textures;
         VkDescriptorSetLayout gui;
         VkDescriptorSetLayout debug;
+        VkDescriptorSetLayout atmosphere;
     } _descriptorSetLayouts;
 
     DeletionQueue _mainDeletionQueue;

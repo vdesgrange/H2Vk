@@ -13,6 +13,7 @@ struct DensityProfile {
 
 const float PI = 3.14159265358979323846f;
 
+const vec3 albedo = vec3(0.3);
 const float r_ground = 6360.0; // 6360.0; // m
 const float r_top = 6420.0; // 6420.0;
 

@@ -82,7 +82,7 @@ void VulkanEngine::init_interface() {
 void VulkanEngine::init_camera() {
     _camera = std::make_unique<Camera>();
     _camera->inverse(false);
-    _camera->set_position({ 0.f, -6.f, -10.f });
+    _camera->set_position({ 0.f, 0.f, 0.f });
     _camera->set_perspective(70.f, (float)_window->_windowExtent.width /(float)_window->_windowExtent.height, 0.1f, 200.0f);
 
     _window->on_get_key = [this](int key, int action) {
@@ -261,6 +261,14 @@ void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
     _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen, _descriptorSetLayouts.matrices}, *_renderPass);
+    _atmosphere->compute_resources();
+    _atmosphere->setup_atmosphere_descriptor(*_layoutCache, *_allocator, _descriptorSetLayouts.atmosphere);
+    _atmosphere->setup_material(*_materialManager, {_descriptorSetLayouts.atmosphere}, *_renderPass);
+    // _atmosphere->debug_descriptor(*_layoutCache, *_allocator, _descriptorSetLayouts.atmosphere, *_materialManager, *_renderPass);
+
+    // === Update atmosphere ===
+    _atmosphere->compute_resources(); // fixed sun so far
+
 }
 
 /**
@@ -476,8 +484,6 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
     // === Depth map render pass ===
     _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
 
-    // Debug transmittance
-
     // === Scene render pass ===
     {
         // Record command buffers
@@ -502,11 +508,11 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 //            this->_shadow->run_debug(frame);
 //
             // Draw
-            //this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
-
+            // this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
+            this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &get_current_frame().atmosphereDescriptor);
             //this->render_objects(frame._commandBuffer->_commandBuffer);
 
-            //this->ui_overlay();
+            this->ui_overlay();
         }
         vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);
 
@@ -628,6 +634,7 @@ void VulkanEngine::cleanup() {
         }
 
         _scene->_renderables.clear();
+        _atmosphere.reset();
         _skybox.reset();
         _shadow.reset();
         _ui.reset();
