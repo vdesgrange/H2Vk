@@ -24,11 +24,11 @@ vec3 upscale_skyview(vec3 x, vec3 ray_dir, vec3 sun_dir, vec3 dir) { // no upsca
     float height = length(x);
     vec3 up = x / height;
 
+    float horizon = acos(sqrt(height * height - r_ground * r_ground) / height); // get_horizon_angle(height) + 0.5 * PI;
+    float altitude = horizon - acos(dot(ray_dir, up));
+    float azimuth = 0.0;
     vec3 right = cross(sun_dir, up);
     vec3 forward = cross(up, right);
-    float azimuth = 0.0;
-    float horizon = get_horizon_angle(height) + 0.5 * PI;
-    float altitude = horizon - acos(dot(ray_dir, up));
 
     if (abs(altitude) <= (0.5 * PI - .0001)) {
         vec3 projected = normalize(ray_dir - up * dot(ray_dir, up));
@@ -76,33 +76,30 @@ vec3 ray_marching() {
 }
 
 void main() {
-    vec2 xy = 2.0 * uv.xy - 1.0;
+    // vec2 uv2 = -1.0 * uv + 1.0;
+    vec2 cs = 2.0 * uv.xy - 1.0; // clip space
     mat4 view_proj = inverse(cameraData.proj * cameraData.view);
-    vec4 h_pos = view_proj * vec4(xy, 1.0, 1.0);
+    vec4 h_pos = view_proj * vec4(cs, 1.0, 1.0);
     // vec3 cam_dir = normalize(h_pos.xyz / h_pos.w - cameraData.pos);
-    // float coeff = (cameraData.flip) ? -1.0 : 1.0;
-    vec3 x = cameraData.pos + vec3(0.0, r_ground + 0.2, 0.0); //  vec3(1.0, coeff, 1.0) *
-
-    // mock data
-    // vec3 x = cameraData.pos + vec3(0.0, r_ground + 0.2, 0.0);
+    vec3 x = vec3(0.0, r_ground + 0.2, 0.0); //  cameraData.pos +
 
     vec3 cam_dir = normalize(vec3(0.0, 0.27, -1.0));
     float cam_fov_width = PI / 3.5;
-    float cam_width_scale = 2.0 * tan(cam_fov_width / 2.0);
+    float cam_width_scale = 0.0 * tan(cam_fov_width / 2.0);
     float cam_height_scale = cam_width_scale * float(ATMOSPHERE_RES.y) / float(ATMOSPHERE_RES.x);
     vec3 cam_right = normalize(cross(cam_dir, vec3(0.0, 1.0, 0.0)));
     vec3 cam_up = normalize(cross(cam_right, cam_dir));
-    float sun_alti = 0.0; // PI / 2.0 - acos(dot(tmp, up));
+    float sun_alti = PI / 64.0; // PI / 2.0 - acos(dot(tmp, up));
 
     // non-mock
     vec3 sun_dir = normalize(vec3(0.0, sin(sun_alti), -cos(sun_alti)));
-    vec3 ray_dir = normalize(cam_dir + cam_right * xy.x * cam_width_scale + cam_up * xy.y * cam_height_scale); // cam_width_scale cam_height_scale
+    vec3 ray_dir = normalize(cam_dir + cam_right * cs.x * cam_width_scale + cam_up * cs.y * cam_height_scale); // cam_width_scale cam_height_scale
 
     vec3 L = vec3(0.0);
-    L += add_sun(x, ray_dir, sun_dir);
+    //L += add_sun(x, ray_dir, sun_dir);
 
     if (length(x) < r_ground) {
-        L = vec3(0.0);
+        L += upscale_skyview(x, ray_dir, sun_dir, cam_dir);
     } else if (length(x) < r_top) {
         L += upscale_skyview(x, ray_dir, sun_dir, cam_dir);
     } else {

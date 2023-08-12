@@ -53,7 +53,7 @@ void Atmosphere::compute_resources() {
 
 Texture Atmosphere::compute_transmittance(Device& device, UploadContext& uploadContext) {
     Texture outTexture{};
-    VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
     outTexture._width = Atmosphere::TRANSMITTANCE_WIDTH;
     outTexture._height = Atmosphere::TRANSMITTANCE_HEIGHT;
 
@@ -178,7 +178,7 @@ Texture Atmosphere::compute_transmittance(Device& device, UploadContext& uploadC
 
 Texture Atmosphere::compute_multiple_scattering(Device &device, UploadContext &uploadContext) {
     Texture outTexture{};
-    VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
     outTexture._width = Atmosphere::MULTISCATTERING_WIDTH;
     outTexture._height = Atmosphere::MULTISCATTERING_HEIGHT;
 
@@ -305,7 +305,7 @@ Texture Atmosphere::compute_multiple_scattering(Device &device, UploadContext &u
 
 Texture Atmosphere::compute_multiple_scattering_2(Device& device, UploadContext& uploadContext) {
     Texture outTexture{};
-    VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
     outTexture._width = Atmosphere::MULTISCATTERING_WIDTH;
     outTexture._height = Atmosphere::MULTISCATTERING_HEIGHT;
 
@@ -456,7 +456,7 @@ Texture Atmosphere::compute_multiple_scattering_2(Device& device, UploadContext&
 
 Texture Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext) {
     Texture outTexture{};
-    VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
     outTexture._width = Atmosphere::SKYVIEW_WIDTH;
     outTexture._height = Atmosphere::SKYVIEW_HEIGHT;
 
@@ -618,7 +618,7 @@ Texture Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext
 
 Texture Atmosphere::render_atmosphere(Device &device, UploadContext &uploadContext) {
     Texture outTexture{};
-    VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
     outTexture._width = Atmosphere::ATMOSPHERE_WIDTH;
     outTexture._height = Atmosphere::ATMOSPHERE_HEIGHT;
 

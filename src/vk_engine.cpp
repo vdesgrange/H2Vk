@@ -504,7 +504,7 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
 
-            // Debug shadow map
+            // Debug shadow map/
 //            this->_shadow->run_debug(frame);
 //
             // Draw

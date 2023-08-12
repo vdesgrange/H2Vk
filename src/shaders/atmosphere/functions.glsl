@@ -3,6 +3,58 @@
 
 #include "./constants.glsl"
 
+// === 2D & 3D Geometry ===
+vec3 get_spherical_direction(float theta, float phi) {
+  float cos_theta = cos(theta);
+  float sin_theta = sin(theta);
+  float cos_phi = cos(phi);
+  float sin_phi = sin(phi);
+  return vec3(sin_phi * sin_theta, cos_phi, sin_phi * cos_theta);
+}
+
+float get_ray_intersection_length(vec3 pos, vec3 dir, float radius) {
+  float a = dot(dir, dir);
+  float b = dot(pos, dir); // projection s of l into d : when camera outside sphere, intersection if b >= 0 ?
+  float c = dot(pos, pos) - radius * radius; // Camera inside sphere if l^2 - r^2 <= 0
+  if (c > 0.0f && b > 0.0) return -1.0; // camera outside atmosphere
+
+  // Solution to 2nd degree equation (planet-like parabole curve) at 0.
+  float discr = b*b - c; // - 4.0 * a * c;
+  if (discr < 0.0) return -1.0; // No solution
+  if (discr > b*b) return (-b + sqrt(discr)); // / (2.0 * a);
+  return (-b - sqrt(discr)); // / (2.0 * a);
+
+}
+
+float get_horizon_angle(float height) {
+  return acos(clamp(sqrt(height * height - r_ground * r_ground) / height, -1.0, 1.0)) - 0.5 * PI;
+}
+
+vec2 get_uv_for_LUT(vec3 x, vec3 sun_dir) {
+  float h = length(x);
+  vec3 up = x / h;
+  float cosThetaSun = dot(up, sun_dir);
+  vec2 uv = vec2(
+    clamp(0.5 + 0.5 * cosThetaSun, 0.0, 1.0),
+    max(0.0, min((h - r_ground) / (r_top - r_ground), 1.0))
+  );
+
+  return uv;
+}
+
+// === Transmittance coefficients ===
+float get_rayleigh_phase(float mu) {
+  float c = 3.0 / (16.0 * PI);
+  return c * (1.0 + mu * mu); // mu = cos(theta)
+}
+
+float get_mie_phase(float g, float mu) {
+  float c = 3.0 / (8.0 * PI);
+  float num = (1.0 - g * g) * (1.0 + mu * mu);
+  float den = (2.0 + g * g) * pow(1.0 + g * g - 2.0 * g * mu, 1.5);
+  return c * num / den;
+}
+
 void get_beta_coefficients(vec3 x, out vec3 beta_s, out vec3 beta_a, out vec3 beta_e) {
   float altitude = length(x) - r_ground; // km
   float rayleigh_density = exp(-altitude / rayleight_scale); // e(-h/Hr)
@@ -24,30 +76,11 @@ void get_beta_coefficients(vec3 x, out vec3 beta_s, out vec3 beta_a, out vec3 be
   beta_e = beta_s + beta_a;// Extinction coefficient
 }
 
-float get_rayleigh_phase(float mu) {
-  float c = 3.0 / (16.0 * PI);
-  return c * (1 + mu * mu); // mu = cos(theta)
-}
-
-float get_mie_phase(float g, float mu) {
-  float c = 3.0 / (8.0 * PI);
-  float num = (1 - g * g) * (1 + mu * mu);
-  float den = (2 + g * g) * pow(1 + g * g - 2 * g * mu, 1.5);
-  return c * num / den;
-}
-
 vec3 get_rayleigh_scattering_coefficient(vec3 x) {
   float altitude = length(x) - r_ground; // km
   float density = exp(-altitude / rayleight_scale); // e(-h/Hr)
 
   return rayleigh_scattering * density; // beta_s
-}
-
-vec3 get_rayleigh_in_scattering(vec3 x, float mu) {
-  vec3 scattering = get_rayleigh_scattering_coefficient(x);
-  float phase = get_rayleigh_phase(mu);
-
-  return phase * scattering; // sigma_s_ray
 }
 
 vec3 get_mie_scattering_coefficient(vec3 x) {
@@ -56,13 +89,7 @@ vec3 get_mie_scattering_coefficient(vec3 x) {
   return mie_scattering * density; // beta_s
 }
 
-vec3 get_mie_in_scattering(vec3 x, float mu, float g) {
-  vec3 scattering = get_mie_scattering_coefficient(x);
-  float phase = get_mie_phase(g, mu);
-  return phase * scattering; // sigma_s_mie
-}
-
-
+// ==== Version 2 - transmittance (Hillaire codebase)
 float getLayerDensity(float altitude, float e, float s, float l, float c) {
   float density = e * exp(s * altitude) + l * altitude + c;
   return clamp(density, 0.0, 1.0);
@@ -96,89 +123,97 @@ float getOpticalLength(DensityProfile profiles, float r, float mu) {
   return result;
 }
 
-vec3 get_spherical_direction(float theta, float phi) {
-     float cos_theta = cos(theta);
-     float sin_theta = sin(theta);
-     float cos_phi = cos(phi);
-     float sin_phi = sin(phi);
-     return vec3(sin_phi * sin_theta, cos_phi, sin_phi * cos_theta);
-}
+// float get_ray_intersection_length2(vec3 pos, vec3 dir, float radius) {
+//  float l2 = dot(pos, pos);
+//  float r2 = radius * radius;
+//  float s = dot(pos, dir); // projection s of l into d : when camera outside sphere, intersection if b >= 0 ?
+//  float c = l2 - r2; // Camera inside sphere if l^2 - r^2 <= 0
+//  float m2 = l2 - (s * s);
+//
+//  float h = -1.0;
+//
+//  if (c <= 0) {
+//    float q = sqrt(r2 - m2);
+//    h = s + q;
+//  } else if (s >= 0 && m2 <= r2) {
+//    float q = sqrt(r2 - m2);
+//    h = 2 * q;
+//  }
+//
+//  return h;
+//
 
-float get_ray_intersection_length(vec3 pos, vec3 dir, float radius) {
-//  float b = dot(pos, dir);
-//  float c = dot(pos, pos) - radius * radius;
-//  if (c > 0.0f && b > 0.0) return -1.0;
-//  float discr = b*b - c;
-//  if (discr < 0.0) return -1.0;
-//  // Special case: inside sphere, use far discriminant
-//  if (discr > b*b) return (-b + sqrt(discr));
-//  return -b - sqrt(discr);
-
-  // Solution to hyperbolic curve at 0.
-  float a = dot(dir, dir);
-  float b = 2.0 * dot(pos, dir); // p.d - c, center considered as (0, 0, 0)
-  float c = dot(pos, pos) - radius * radius;
-
-  float delta = b * b - 4 * a * c;
-  float solution_a = (-b + sqrt(delta)) / (2.0 * a);
-  float solution_b = (-b - sqrt(delta)) / (2.0 * a);
-
-  if (delta < 0.0 || a == 0) { // Curve does not cross axis or no quadratic curve
-    return -1.0;
-  }
-
-  if (delta > b * b) {
-    return solution_a;
-  }
-
-  return solution_b;
-}
-
-
-vec3 get_second_order_scattering() {
-  vec3 L2 = vec3(0.0);
-  const int SAMPLE_DIR = 8;
-  const int SAMPLE_COUNT = SAMPLE_DIR * SAMPLE_DIR;
-
-  for (int i=0; i <= SAMPLE_DIR; i++) {
-    for (int j=0; j <= SAMPLE_DIR; j++) {
-      float theta = PI * (float(i) + 0.5) / float(SAMPLE_DIR);
-      float phi = clamp(acos(1.0 - 2.0*(float(j) + 0.5) / float(SAMPLE_DIR)), -1.0, 1.0);
-      vec3 ray_dir = get_spherical_direction(theta, phi);
-    }
-  }
-
-  return L2;
-}
-
-vec2 get_uv_for_LUT(vec3 x, vec3 sun_dir) {
-  float h = length(x);
-  vec3 up = x / h;
-  float cosThetaSun = dot(sun_dir, up);
-  vec2 uv = vec2(
-    clamp(0.5 + 0.5 * cosThetaSun, 0.0, 1.0),
-    max(0.0, min((h - r_ground) / (r_top - r_ground), 1.0))
-  );
-
-  return uv;
-}
-
-vec2 lutTransmittanceToUV(float r, float mu) {
-  float rho = sqrt(max(0.0, r * r - r_ground * r_ground)); // distance to horizon
-  float h = sqrt(r_top * r_top - r_ground * r_ground); // distance to top atmosphere boundary for horizontal ray
-
-  float discriminant = r * r * (mu * mu - 1.0) + r_top * r_top;
-  float d = -r * mu + max(0.0, sqrt(discriminant)); // distance to top atmosphere boundary
-  float d_min = r_top - r;
-  float d_max = rho + h;
-
-  float u_mu = (d - d_min) / (d_max - d_min);
-  float u_r = rho / h;
-
-  return vec2(u_mu, u_r);
-}
+  //  float a = dot(dir, dir);
+  //  float b = 2.0 * dot(pos, dir); // p.d - c, center considered as (0, 0, 0)
+  //  float c = dot(pos, pos) - radius * radius;
+  //
+  //  float delta = b * b - 4 * a * c;
+  //  float solution_a = (-b + sqrt(delta)) / (2.0 * a);
+  //  float solution_b = (-b - sqrt(delta)) / (2.0 * a);
+  //
+  //  if (delta < 0.0 || a == 0) { // Curve does not cross axis or no quadratic curve
+  //    return -1.0;
+  //  }
+  //
+  //  if (delta > b * b) {
+  //    return solution_a;
+  //  }
+  //
+  //  return solution_b;
+// }
 
 
-float get_horizon_angle(float height) {
-  return acos(clamp(sqrt(height * height - r_ground * r_ground) / height, -1.0, 1.0)) - 0.5 * PI;
-}
+//vec3 get_second_order_scattering() {
+//  vec3 L2 = vec3(0.0);
+//  const int SAMPLE_DIR = 8;
+//  const int SAMPLE_COUNT = SAMPLE_DIR * SAMPLE_DIR;
+//
+//  for (int i=0; i <= SAMPLE_DIR; i++) {
+//    for (int j=0; j <= SAMPLE_DIR; j++) {
+//      float theta = PI * (float(i) + 0.5) / float(SAMPLE_DIR);
+//      float phi = clamp(acos(1.0 - 2.0*(float(j) + 0.5) / float(SAMPLE_DIR)), -1.0, 1.0);
+//      vec3 ray_dir = get_spherical_direction(theta, phi);
+//    }
+//  }
+//
+//  return L2;
+//}
+
+//vec2 lutTransmittanceToUV(float r, float mu) {
+//  float rho = sqrt(max(0.0, r * r - r_ground * r_ground)); // distance to horizon
+//  float h = sqrt(r_top * r_top - r_ground * r_ground); // distance to top atmosphere boundary for horizontal ray
+//
+//  float discriminant = r * r * (mu * mu - 1.0) + r_top * r_top;
+//  float d = -r * mu + max(0.0, sqrt(discriminant)); // distance to top atmosphere boundary
+//  float d_min = r_top - r;
+//  float d_max = rho + h;
+//
+//  float u_mu = (d - d_min) / (d_max - d_min);
+//  float u_r = rho / h;
+//
+//  return vec2(u_mu, u_r);
+//}
+
+//vec3 add_sun2(vec3 x, vec3 dir, float r, vec3 sun_dir) {
+//    if (dot(dir, sun_dir) > 0.0) {
+//        float t = get_ray_intersection_length(x, dir, r_ground);
+//        if (t < 0.0) {
+//            return vec3(1000000.0);
+//        }
+//    }
+//
+//    return vec3(0.0);
+//}
+
+//vec3 get_rayleigh_in_scattering(vec3 x, float mu) {
+//  vec3 scattering = get_rayleigh_scattering_coefficient(x);
+//  float phase = get_rayleigh_phase(mu);
+//
+//  return phase * scattering; // sigma_s_ray
+//}
+
+//vec3 get_mie_in_scattering(vec3 x, float mu, float g) {
+//  vec3 scattering = get_mie_scattering_coefficient(x);
+//  float phase = get_mie_phase(g, mu);
+//  return phase * scattering; // sigma_s_mie
+//}
