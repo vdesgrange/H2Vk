@@ -5,8 +5,10 @@
 
 #include "core/vk_texture.h"
 #include "core/vk_shaders.h"
+#include "core/vk_renderpass.h"
 
 class Device;
+class LightingManager;
 class RenderPass;
 class MaterialManager;
 class DescriptorLayoutCache;
@@ -27,39 +29,57 @@ public:
     const uint32_t SKYVIEW_WIDTH = 200;
     const uint32_t SKYVIEW_HEIGHT = 100;
 
-    const uint32_t ATMOSPHERE_WIDTH = 1280;
-    const uint32_t ATMOSPHERE_HEIGHT = 720;
+    // const uint32_t ATMOSPHERE_WIDTH = 1280;
+    // const uint32_t ATMOSPHERE_HEIGHT = 720;
 
     Texture _transmittanceLUT;
+    std::shared_ptr<Material> _transmittancePass; // weak_ptr?
+    VkDescriptorSet _transmittanceDescriptor;
+    VkDescriptorSetLayout _transmittanceDescriptorLayout;
 
     Texture _multipleScatteringLUT;
+    std::shared_ptr<Material> _multiScatteringPass; // weak_ptr?
+    RenderPass _multipleScatteringRenderPass;
     VkFramebuffer _multipleScatteringFramebuffer;
+    VkDescriptorSet _multipleScatteringDescriptor;
+    VkDescriptorSetLayout _multipleScatteringDescriptorLayout;
 
     Texture _skyviewLUT;
+    std::shared_ptr<Material> _skyviewPass; // weak_ptr?
+    RenderPass _skyviewRenderPass;
     VkFramebuffer _skyviewFramebuffer;
+    std::vector<VkDescriptorSet> _skyviewDescriptor;
+    VkDescriptorSetLayout _skyviewDescriptorLayout;
 
     Texture _atmosphereLUT;
-    VkFramebuffer _atmosphereFramebuffer;
     std::shared_ptr<Material> _atmospherePass;
+    // RenderPass _atmosphereRenderPass;
+    VkFramebuffer _atmosphereFramebuffer;
+    VkDescriptorSetLayout _atmosphereDescriptorLayout;
 
     Atmosphere() =  delete;
-    Atmosphere(Device& device, UploadContext& uploadContext);
+    Atmosphere(Device& device, MaterialManager& materialManager, LightingManager& lightingManager, UploadContext& uploadContext);
     ~Atmosphere();
 
-    void precompute_lut();
-    void compute_resources();
-    Texture compute_transmittance(Device& device, UploadContext& uploadContext);
-    Texture compute_multiple_scattering(Device& device, UploadContext& uploadContext);
-    Texture compute_multiple_scattering_2(Device& device, UploadContext& uploadContext);
-    Texture compute_skyview(Device& device, UploadContext& uploadContext);
-    Texture render_atmosphere(Device& device, UploadContext& uploadContext);
+    void create_resources(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, RenderPass& renderPass);
+    void precompute_resources();
+    void compute_resources(uint32_t frameIndex);
+    void destroy_resources();
 
-    void setup_atmosphere_descriptor(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
-    void debug_descriptor(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, MaterialManager& materialManager, RenderPass& renderPass);
-    void setup_material(MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);
     void draw(VkCommandBuffer& commandBuffer, VkDescriptorSet* descriptor);
 
 private:
     class Device& _device;
+    class MaterialManager& _materialManager;
+    class LightingManager& _lightingManager;
     class UploadContext& _uploadContext;
+
+    void create_transmittance_resource(Device& device, UploadContext& uploadContext, DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator);
+    void create_multiple_scattering_resource(Device& device, UploadContext& uploadContext, DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator);
+    void create_skyview_resource(Device& device, UploadContext& uploadContext, DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator);
+    void create_atmosphere_resource(Device& device, UploadContext& uploadContext, DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, RenderPass& renderPass);
+
+    void compute_transmittance(Device& device, UploadContext& uploadContext, CommandBuffer& commandBuffer);
+    void compute_multiple_scattering(Device& device, UploadContext& uploadContext, CommandBuffer& commandBuffer);
+    void compute_skyview(Device& device, LightingManager& lightingManager, UploadContext& uploadContext, uint32_t frameIndex);
 };

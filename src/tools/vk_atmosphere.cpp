@@ -7,6 +7,7 @@
 #include "core/vk_renderpass.h"
 #include "core/vk_texture.h"
 #include "core/manager/vk_material_manager.h"
+#include "core/lighting/vk_light.h"
 #include "core/vk_command_pool.h"
 #include "core/vk_command_buffer.h"
 #include "core/utilities/vk_global.h"
@@ -15,8 +16,16 @@
 #include <chrono>
 #include <iostream>
 
-Atmosphere::Atmosphere(Device &device, UploadContext& uploadContext) : _device(device), _uploadContext(uploadContext) {
-    this->precompute_lut();
+#include <glm/gtx/string_cast.hpp>
+
+
+Atmosphere::Atmosphere(Device &device, MaterialManager& materialManager, LightingManager& lightingManager, UploadContext& uploadContext) :
+_device(device),
+_materialManager(materialManager),
+_lightingManager(lightingManager),
+_uploadContext(uploadContext),
+_multipleScatteringRenderPass(RenderPass(device)),
+_skyviewRenderPass(RenderPass(device)) {
 }
 
 Atmosphere::~Atmosphere() {
@@ -31,14 +40,49 @@ Atmosphere::~Atmosphere() {
 }
 
 /**
+ * Initialize images, image views, framebuffer, render pass, material, etc. used by atmospheric scattering.
+ * @Brief initialize atmospheric scattering resources
+ * @param layoutCache
+ * @param allocator
+ */
+void Atmosphere::create_resources(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, RenderPass& renderPass) {
+    this->create_transmittance_resource(_device, _uploadContext, layoutCache, allocator);
+    this->create_multiple_scattering_resource(_device, _uploadContext, layoutCache, allocator);
+    this->create_skyview_resource(_device, _uploadContext, layoutCache, allocator);
+    this->create_atmosphere_resource(_device, _uploadContext, layoutCache, allocator, renderPass); // render pass ?
+}
+
+/**
  * Pre-compute look-up tables (ie. transmittance) independent of external resources (such as camera data).
  * @note To be call at initialisation
  * @brief pre-compute look-up tables
  */
-void Atmosphere::precompute_lut() {
-    this->_transmittanceLUT = this->compute_transmittance(_device, _uploadContext);
-    // this->_multipleScatteringLUT = this->compute_multiple_scattering(_device, _uploadContext);
-    this->_multipleScatteringLUT = this->compute_multiple_scattering_2(_device, _uploadContext);
+void Atmosphere::precompute_resources() {
+    CommandPool commandPool = CommandPool(_device); // can use graphic queue for compute work
+    CommandBuffer commandBuffer = CommandBuffer(_device, commandPool);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.pNext = nullptr;
+    submitInfo.pWaitDstStageMask = nullptr;
+    submitInfo.waitSemaphoreCount = 0; // Semaphore to wait before executing the command buffers
+    submitInfo.pWaitSemaphores = nullptr;
+    submitInfo.signalSemaphoreCount = 0; // Number of semaphores to be signaled once the commands
+    submitInfo.pSignalSemaphores = nullptr;
+    submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
+    submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
+
+    VK_CHECK(vkQueueWaitIdle(_device.get_graphics_queue()));
+
+    this->compute_transmittance(_device, _uploadContext, commandBuffer);
+
+    VK_CHECK(vkQueueSubmit(_device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
+    VK_CHECK(vkQueueWaitIdle(_device.get_graphics_queue()));
+
+    this->compute_multiple_scattering(_device, _uploadContext, commandBuffer);
+
+    VK_CHECK(vkQueueSubmit(_device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
+    VK_CHECK(vkQueueWaitIdle(_device.get_graphics_queue()));
 }
 
 /**
@@ -46,16 +90,34 @@ void Atmosphere::precompute_lut() {
  * @note This method must be call after dependencies buffer allocation.
  * @brief compute real-time resources
  */
-void Atmosphere::compute_resources() {
-    this->_skyviewLUT = this->compute_skyview(_device, _uploadContext);
-    //this->_atmosphereLUT = this->render_atmosphere(_device, _uploadContext);
+void Atmosphere::compute_resources(uint32_t frameIndex) {
+    this->compute_skyview(_device, _lightingManager, _uploadContext, frameIndex);
 }
 
-Texture Atmosphere::compute_transmittance(Device& device, UploadContext& uploadContext) {
-    Texture outTexture{};
+/**
+ * todo - utiliser uniquement quand swapchain est detruit (ex. fenetre deformee), il ne faut pas tout recreer a chaque frame
+ * Destroy real-times resources computed for the latest frame rendered.
+ * @brief Destroy real-times resources
+ * @note If not performed, the memory allocated will remain.
+ */
+void Atmosphere::destroy_resources() {
+    // this->_skyviewLUT.destroy(_device);
+
+    // vkDestroyFramebuffer(_device._logicalDevice, _skyviewFramebuffer, nullptr);
+}
+
+/**
+ * Create resources (render pass, framebuffer, pipeline, etc.) used to compute the transmittance look-up table.
+ * @brief Create transmittance LUT resources
+ * @param device
+ * @param uploadContext
+ * @param layoutCache
+ * @param allocator
+ */
+void Atmosphere::create_transmittance_resource(Device& device, UploadContext& uploadContext, DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator) {
     VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    outTexture._width = Atmosphere::TRANSMITTANCE_WIDTH;
-    outTexture._height = Atmosphere::TRANSMITTANCE_HEIGHT;
+    _transmittanceLUT._width = Atmosphere::TRANSMITTANCE_WIDTH;
+    _transmittanceLUT._height = Atmosphere::TRANSMITTANCE_HEIGHT;
 
     VkExtent3D imageExtent { Atmosphere::TRANSMITTANCE_WIDTH, Atmosphere::TRANSMITTANCE_HEIGHT, 1 };
     VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
@@ -64,13 +126,13 @@ Texture Atmosphere::compute_transmittance(Device& device, UploadContext& uploadC
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &outTexture._image, &outTexture._allocation, nullptr);
+    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &_transmittanceLUT._image, &_transmittanceLUT._allocation, nullptr);
 
-    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &outTexture._imageView);
+    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _transmittanceLUT._image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &_transmittanceLUT._imageView);
 
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &outTexture._sampler);
+    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &_transmittanceLUT._sampler);
 
     CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
         VkImageSubresourceRange range;
@@ -84,230 +146,49 @@ Texture Atmosphere::compute_transmittance(Device& device, UploadContext& uploadC
         imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.image = outTexture._image;
+        imageBarrier.image = _transmittanceLUT._image;
         imageBarrier.subresourceRange = range;
         imageBarrier.srcAccessMask = 0;
         imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 
         // Change texture image layout to shader read after all mip levels have been copied
-        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-        outTexture.updateDescriptor();
+        _transmittanceLUT._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        _transmittanceLUT.updateDescriptor();
     });
+
 
     // === Create compute pipeline ===
 
     // Descriptor set
     std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
-    VkDescriptorSet descriptor{};
-    VkDescriptorSetLayout setLayout{};
-    DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
-    DescriptorAllocator allocator = DescriptorAllocator(device);
     DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
-            .bind_image(outTexture._descriptor, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0)
-            .layout(setLayout)
-            .build(descriptor, setLayout, poolSizes);
+            .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0)
+            .layout(_transmittanceDescriptorLayout)
+            .build(_transmittanceDescriptor, _transmittanceDescriptorLayout, poolSizes);
 
     // Build pipeline
     ComputePipeline pipelineBuilder = ComputePipeline(device);
-
     std::vector<std::pair<ShaderType, const char*>> comp_module {
-            {ShaderType::COMPUTE, "../src/shaders/atmosphere/transmittance.comp.spv"},
+        {ShaderType::COMPUTE, "../src/shaders/atmosphere/transmittance.comp.spv"},
     };
 
-    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
-    std::shared_ptr<ShaderPass> transmittancePass = materialManager.create_material("transmittance", {setLayout}, {}, comp_module);
-
-    {
-        CommandPool commandPool = CommandPool(device); // can use graphic queue for compute work
-        CommandBuffer commandBuffer = CommandBuffer(device, commandPool);
-
-        VkCommandBufferBeginInfo cmdBeginInfo{};
-        cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        cmdBeginInfo.pNext = nullptr;
-        cmdBeginInfo.pInheritanceInfo = nullptr;
-        cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
-
-        VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
-        {
-            vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, transmittancePass->pipeline);
-            vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, transmittancePass->pipelineLayout, 0,1, &descriptor, 0, nullptr);
-            vkCmdDispatch(commandBuffer._commandBuffer,   8, 2, 1);
-        }
-        VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.pNext = nullptr;
-        submitInfo.pWaitDstStageMask = nullptr;
-        submitInfo.waitSemaphoreCount = 0; // Semaphore to wait before executing the command buffers
-        submitInfo.pWaitSemaphores = nullptr;
-        submitInfo.signalSemaphoreCount = 0; // Number of semaphores to be signaled once the commands
-        submitInfo.pSignalSemaphores = nullptr;
-        submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
-        submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
-
-        VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
-    }
-
-    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
-        VkImageSubresourceRange range;
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        range.baseMipLevel = 0;
-        range.levelCount = 1;
-        range.baseArrayLayer = 0;
-        range.layerCount = 1;
-
-        VkImageMemoryBarrier imageBarrier = {};
-        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.image = outTexture._image;
-        imageBarrier.subresourceRange = range;
-        imageBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-    });
-
-    return outTexture;
+    _materialManager._pipelineBuilder = &pipelineBuilder;
+    _transmittancePass = _materialManager.create_material("transmittance", {_transmittanceDescriptorLayout}, {}, comp_module);
 }
 
-Texture Atmosphere::compute_multiple_scattering(Device &device, UploadContext &uploadContext) {
-    Texture outTexture{};
+/**
+ * Create resources  (render pass, framebuffer, pipeline, etc.) used to compute the multiple scattering look-up table.
+ * @brief Create multiple scattering LUT resources
+ * @param device
+ * @param uploadContext
+ * @param layoutCache
+ * @param allocator
+ */
+void Atmosphere::create_multiple_scattering_resource(Device& device, UploadContext& uploadContext, DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator) {
     VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    outTexture._width = Atmosphere::MULTISCATTERING_WIDTH;
-    outTexture._height = Atmosphere::MULTISCATTERING_HEIGHT;
-
-    VkExtent3D imageExtent { Atmosphere::MULTISCATTERING_WIDTH, Atmosphere::MULTISCATTERING_HEIGHT, 1 };
-    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
-    imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    VmaAllocationCreateInfo imgAllocinfo = {};
-    imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &outTexture._image, &outTexture._allocation, nullptr);
-
-    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &outTexture._imageView);
-
-    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &outTexture._sampler);
-
-//    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
-//        VkImageSubresourceRange range;
-//        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//        range.baseMipLevel = 0;
-//        range.levelCount = 1;
-//        range.baseArrayLayer = 0;
-//        range.layerCount = 1;
-//
-//        VkImageMemoryBarrier imageBarrier = {};
-//        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-//        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-//        imageBarrier.image = outTexture._image;
-//        imageBarrier.subresourceRange = range;
-//        imageBarrier.srcAccessMask = 0;
-//        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-//        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-//
-//        // Change texture image layout to shader read after all mip levels have been copied
-//        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-//
-//        outTexture.updateDescriptor();
-//    });
-
-    // === Create compute pipeline ===
-
-    // Descriptor set
-    std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2}};
-    VkDescriptorSet descriptor{};
-    VkDescriptorSetLayout setLayout{};
-    DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
-    DescriptorAllocator allocator = DescriptorAllocator(device);
-    DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
-            .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT, 0)
-            .bind_image(outTexture._descriptor, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 1)
-            .layout(setLayout)
-            .build(descriptor, setLayout, poolSizes);
-
-    // Build pipeline
-    ComputePipeline pipelineBuilder = ComputePipeline(device);
-
-    std::vector<std::pair<ShaderType, const char*>> comp_module {
-            {ShaderType::COMPUTE, "../src/shaders/atmosphere/multiple_scattering.comp.spv"},
-    };
-
-    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
-    std::shared_ptr<ShaderPass> multiScatteringPass = materialManager.create_material("multipleScattering", {setLayout}, {}, comp_module);
-
-
-    {
-        CommandPool commandPool = CommandPool(device); // can use graphic queue for compute work
-        CommandBuffer commandBuffer = CommandBuffer(device, commandPool);
-
-        VkCommandBufferBeginInfo cmdBeginInfo{};
-        cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        cmdBeginInfo.pNext = nullptr;
-        cmdBeginInfo.pInheritanceInfo = nullptr;
-        cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
-
-        VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
-        {
-            vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, multiScatteringPass->pipeline);
-            vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, multiScatteringPass->pipelineLayout, 0,1, &descriptor, 0, nullptr);
-            vkCmdDispatch(commandBuffer._commandBuffer,   1, 1, 1);
-        }
-        VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.pNext = nullptr;
-        submitInfo.pWaitDstStageMask = nullptr;
-        submitInfo.waitSemaphoreCount = 0; // Semaphore to wait before executing the command buffers
-        submitInfo.pWaitSemaphores = nullptr;
-        submitInfo.signalSemaphoreCount = 0; // Number of semaphores to be signaled once the commands
-        submitInfo.pSignalSemaphores = nullptr;
-        submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
-        submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
-
-        VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
-    }
-
-    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
-        VkImageSubresourceRange range;
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        range.baseMipLevel = 0;
-        range.levelCount = 1;
-        range.baseArrayLayer = 0;
-        range.layerCount = 1;
-
-        VkImageMemoryBarrier imageBarrier = {};
-        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.image = outTexture._image;
-        imageBarrier.subresourceRange = range;
-        imageBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-    });
-
-    return outTexture;
-}
-
-Texture Atmosphere::compute_multiple_scattering_2(Device& device, UploadContext& uploadContext) {
-    Texture outTexture{};
-    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    outTexture._width = Atmosphere::MULTISCATTERING_WIDTH;
-    outTexture._height = Atmosphere::MULTISCATTERING_HEIGHT;
+    _multipleScatteringLUT._width = Atmosphere::MULTISCATTERING_WIDTH;
+    _multipleScatteringLUT._height = Atmosphere::MULTISCATTERING_HEIGHT;
 
     VkExtent3D imageExtent { Atmosphere::MULTISCATTERING_WIDTH, Atmosphere::MULTISCATTERING_HEIGHT, 1 };
     VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT  | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
@@ -316,13 +197,13 @@ Texture Atmosphere::compute_multiple_scattering_2(Device& device, UploadContext&
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &outTexture._image, &outTexture._allocation, nullptr);
+    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &_multipleScatteringLUT._image, &_multipleScatteringLUT._allocation, nullptr);
 
-    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &outTexture._imageView);
+    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _multipleScatteringLUT._image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &_multipleScatteringLUT._imageView);
 
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &outTexture._sampler);
+    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &_multipleScatteringLUT._sampler);
 
     CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
         VkImageSubresourceRange range;
@@ -336,59 +217,47 @@ Texture Atmosphere::compute_multiple_scattering_2(Device& device, UploadContext&
         imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.image = outTexture._image;
+        imageBarrier.image = _multipleScatteringLUT._image;
         imageBarrier.subresourceRange = range;
         imageBarrier.srcAccessMask = 0;
         imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 
         // Change texture image layout to shader read after all mip levels have been copied
-        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        _multipleScatteringLUT._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-        outTexture.updateDescriptor();
+        _multipleScatteringLUT.updateDescriptor();
     });
 
-    // === Prepare mapping ===
-    RenderPass renderPass = RenderPass(device);
-    RenderPass::Attachment color = renderPass.color(format);
+    _multipleScatteringRenderPass = RenderPass(device);
+    RenderPass::Attachment color = _multipleScatteringRenderPass.color(format);
     color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     std::vector<VkAttachmentReference> references = {color.ref};
     std::vector<VkAttachmentDescription> attachments = {color.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency};
-    VkSubpassDescription subpass = renderPass.subpass_description(references, nullptr);
+    VkSubpassDescription subpass = _multipleScatteringRenderPass.subpass_description(references, nullptr);
 
-    renderPass.init(attachments, dependencies, subpass);
-
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-    clearValues[1].depthStencil.depth = 1.0f;
+    _multipleScatteringRenderPass.init(attachments, dependencies, subpass);
 
     // Prepare framebuffer
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = renderPass._renderPass;
+    framebufferInfo.renderPass = _multipleScatteringRenderPass._renderPass;
     framebufferInfo.width = Atmosphere::MULTISCATTERING_WIDTH;
     framebufferInfo.height = Atmosphere::MULTISCATTERING_HEIGHT;
     framebufferInfo.layers = 1;
     framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments = &outTexture._imageView;
+    framebufferInfo.pAttachments = &_multipleScatteringLUT._imageView;
     VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_multipleScatteringFramebuffer));
-
-    std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}};
-
-    VkDescriptorSet descriptor;
-    VkDescriptorSetLayout setLayout;
-    DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
-    DescriptorAllocator allocator = DescriptorAllocator(device);
 
     DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
             .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .layout(setLayout)
-            .build(descriptor, setLayout, poolSizes);
+            .layout(_multipleScatteringDescriptorLayout)
+            .build(_multipleScatteringDescriptor, _multipleScatteringDescriptorLayout, {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}});
 
     // Build pipeline
-    GraphicPipeline pipelineBuilder = GraphicPipeline(device, renderPass);
+    GraphicPipeline pipelineBuilder = GraphicPipeline(device, _multipleScatteringRenderPass);
     pipelineBuilder._vertexInputInfo =  vkinit::vertex_input_state_create_info();
 
     std::vector<std::pair<ShaderType, const char*>> transmittance_module {
@@ -396,84 +265,38 @@ Texture Atmosphere::compute_multiple_scattering_2(Device& device, UploadContext&
             {ShaderType::FRAGMENT, "../src/shaders/atmosphere/multiple_scattering.frag.spv"},
     };
 
-    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
-    std::shared_ptr<ShaderPass> multiScatteringPass = materialManager.create_material("multiScattering", {setLayout}, {}, transmittance_module);
+    _materialManager._pipelineBuilder = &pipelineBuilder;
+    _multiScatteringPass = _materialManager.create_material("multiScattering", {_multipleScatteringDescriptorLayout}, {}, transmittance_module);
 
-    {
-        CommandPool commandPool = CommandPool(device); // can use graphic queue for compute work
-        CommandBuffer commandBuffer = CommandBuffer(device, commandPool);
-
-        VkExtent2D extent;
-        extent.width = static_cast<uint32_t>(Atmosphere::MULTISCATTERING_WIDTH);
-        extent.height = static_cast<uint32_t>(Atmosphere::MULTISCATTERING_HEIGHT);
-
-        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent,
-                                                                                _multipleScatteringFramebuffer);
-        offscreenPassInfo.clearValueCount = clearValues.size();
-        offscreenPassInfo.pClearValues = clearValues.data();
-
-        VkCommandBufferBeginInfo cmdBeginInfo{};
-        cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        cmdBeginInfo.pNext = nullptr;
-        cmdBeginInfo.pInheritanceInfo = nullptr;
-        cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
-        {
-            vkCmdBeginRenderPass(commandBuffer._commandBuffer, &offscreenPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            {
-                VkViewport viewport = vkinit::get_viewport((float) Atmosphere::MULTISCATTERING_WIDTH,(float) Atmosphere::MULTISCATTERING_HEIGHT);
-                vkCmdSetViewport(commandBuffer._commandBuffer, 0, 1, &viewport);
-
-                VkRect2D scissor = vkinit::get_scissor((float) Atmosphere::MULTISCATTERING_WIDTH,(float) Atmosphere::MULTISCATTERING_HEIGHT);
-                vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
-
-                vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, multiScatteringPass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
-                vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,multiScatteringPass->pipeline);
-                vkCmdDraw(commandBuffer._commandBuffer, 3, 1, 0, 0);
-            }
-            vkCmdEndRenderPass(commandBuffer._commandBuffer);
-        }
-        VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.pNext = nullptr;
-        submitInfo.pWaitDstStageMask = nullptr;
-        submitInfo.waitSemaphoreCount = 0; // Semaphore to wait before executing the command buffers
-        submitInfo.pWaitSemaphores = nullptr;
-        submitInfo.signalSemaphoreCount = 0; // Number of semaphores to be signaled once the commands
-        submitInfo.pSignalSemaphores = nullptr;
-        submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
-        submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
-
-        VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
-    }
-
-    return outTexture;
 }
 
-Texture Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext) {
-    Texture outTexture{};
+/**
+ * Create resources  (render pass, framebuffer, pipeline, etc.) used to compute the downscaled sky view.
+ * @brief Create skyview LUT resources
+ * @param device
+ * @param uploadContext
+ * @param layoutCache
+ * @param allocator
+ */
+void Atmosphere::create_skyview_resource(Device &device, UploadContext &uploadContext, DescriptorLayoutCache &layoutCache, DescriptorAllocator &allocator) {
+    _skyviewDescriptor.reserve(FRAME_OVERLAP);
+
     VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    outTexture._width = Atmosphere::SKYVIEW_WIDTH;
-    outTexture._height = Atmosphere::SKYVIEW_HEIGHT;
+    _skyviewLUT._width = Atmosphere::SKYVIEW_WIDTH;
+    _skyviewLUT._height = Atmosphere::SKYVIEW_HEIGHT;
 
     VkExtent3D imageExtent { Atmosphere::SKYVIEW_WIDTH, Atmosphere::SKYVIEW_HEIGHT, 1 };
     VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT  | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
-    imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     VmaAllocationCreateInfo imgAllocinfo = {};
     imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &outTexture._image, &outTexture._allocation, nullptr);
+    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &_skyviewLUT._image, &_skyviewLUT._allocation, nullptr);
 
-    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &outTexture._imageView);
+    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _skyviewLUT._image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &_skyviewLUT._imageView);
 
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &outTexture._sampler);
+    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &_skyviewLUT._sampler);
 
     CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
         VkImageSubresourceRange range;
@@ -487,43 +310,39 @@ Texture Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext
         imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.image = outTexture._image;
+        imageBarrier.image = _skyviewLUT._image;
         imageBarrier.subresourceRange = range;
         imageBarrier.srcAccessMask = 0;
         imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
 
         // Change texture image layout to shader read after all mip levels have been copied
-        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        _skyviewLUT._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-        outTexture.updateDescriptor();
+        _skyviewLUT.updateDescriptor();
     });
 
     // === Prepare mapping ===
-    RenderPass renderPass = RenderPass(device);
-    RenderPass::Attachment color = renderPass.color(format);
+    _skyviewRenderPass = RenderPass(device);
+    RenderPass::Attachment color = _skyviewRenderPass.color(format);
     color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     std::vector<VkAttachmentReference> references = {color.ref};
     std::vector<VkAttachmentDescription> attachments = {color.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency};
-    VkSubpassDescription subpass = renderPass.subpass_description(references, nullptr);
+    VkSubpassDescription subpass = _skyviewRenderPass.subpass_description(references, nullptr);
 
-    renderPass.init(attachments, dependencies, subpass);
+    _skyviewRenderPass.init(attachments, dependencies, subpass);
 
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-    clearValues[1].depthStencil.depth = 1.0f;
-
-    // Prepare framebuffer
+    // === Prepare framebuffer ===
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = renderPass._renderPass;
+    framebufferInfo.renderPass = _skyviewRenderPass._renderPass;
     framebufferInfo.width = Atmosphere::SKYVIEW_WIDTH;
     framebufferInfo.height = Atmosphere::SKYVIEW_HEIGHT;
     framebufferInfo.layers = 1;
     framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments = &outTexture._imageView;
+    framebufferInfo.pAttachments = &_skyviewLUT._imageView;
     VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_skyviewFramebuffer));
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
@@ -531,36 +350,213 @@ Texture Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
     };
 
-    VkDescriptorSet descriptor;
-    VkDescriptorSetLayout setLayout;
-    DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
-    DescriptorAllocator allocator = DescriptorAllocator(device);
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        _skyviewDescriptor.push_back(VkDescriptorSet());
 
-    // for (int i = 0; i < FRAME_OVERLAP; i++) { // Est ce vraiment utile de maintenir 2 descriptors set pour l'atmosphere?
-    VkDescriptorBufferInfo camBInfo{};
-    camBInfo.buffer = g_frames[0].cameraBuffer._buffer;
-    camBInfo.offset = 0;
-    camBInfo.range = sizeof(GPUCameraData);
+        VkDescriptorBufferInfo camBInfo{};
+        camBInfo.buffer = g_frames[i].cameraBuffer._buffer;
+        camBInfo.offset = 0;
+        camBInfo.range = sizeof(GPUCameraData);
 
-    DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
-        .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-        .bind_image(_multipleScatteringLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-        .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-        .layout(setLayout)
-        .build(descriptor, setLayout, poolSizes); //  changer pour 2 descriptor ?
-    // }
+        DescriptorBuilder::begin(layoutCache, allocator)
+            .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .bind_image(_multipleScatteringLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+            .layout(_skyviewDescriptorLayout)
+            .build(_skyviewDescriptor.at(i), _skyviewDescriptorLayout, poolSizes);
+    }
+
 
     // Build pipeline
-    GraphicPipeline pipelineBuilder = GraphicPipeline(device, renderPass);
+    GraphicPipeline pipelineBuilder = GraphicPipeline(device, _skyviewRenderPass);
     pipelineBuilder._vertexInputInfo =  vkinit::vertex_input_state_create_info();
 
+    std::vector<PushConstant> constants {{sizeof(glm::vec4), ShaderType::FRAGMENT}};
     std::vector<std::pair<ShaderType, const char*>> skyview_module {
             {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
             {ShaderType::FRAGMENT, "../src/shaders/atmosphere/skyview.frag.spv"},
     };
 
-    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
-    std::shared_ptr<ShaderPass> skyviewPass = materialManager.create_material("skyview", {setLayout}, {}, skyview_module);
+    _materialManager._pipelineBuilder = &pipelineBuilder;
+    _skyviewPass = _materialManager.create_material("skyview", {_skyviewDescriptorLayout}, constants, skyview_module);
+}
+
+/**
+ * Create resources (render pass, framebuffer, pipeline, etc.) used to render the atmosphere texture.
+ * @brief Create atmosphere LUT resources
+ * @param device
+ * @param uploadContext
+ * @param layoutCache
+ * @param allocator
+ */
+void Atmosphere::create_atmosphere_resource(Device &device, UploadContext &uploadContext, DescriptorLayoutCache &layoutCache, DescriptorAllocator &allocator, RenderPass& renderPass) {
+    // Atmosphere descriptor
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
+    };
+
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        g_frames[i].atmosphereDescriptor = VkDescriptorSet();
+
+        VkDescriptorBufferInfo camBInfo{};
+        camBInfo.buffer = g_frames[i].cameraBuffer._buffer;
+        camBInfo.offset = 0;
+        camBInfo.range = sizeof(GPUCameraData);
+
+        DescriptorBuilder::begin(layoutCache, allocator)
+                .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .bind_image(_multipleScatteringLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .bind_image(_skyviewLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+                .layout(_atmosphereDescriptorLayout)
+                .build(g_frames[i].atmosphereDescriptor, _atmosphereDescriptorLayout, poolSizes);
+    }
+
+    std::vector<std::pair<ShaderType, const char*>> module {
+            {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/atmosphere/atmosphere.frag.spv"},
+    };
+
+    GraphicPipeline pipeline = GraphicPipeline(_device, renderPass);
+    pipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
+
+    _materialManager._pipelineBuilder = &pipeline;
+    _atmospherePass = _materialManager.create_material("atmosphere", {_atmosphereDescriptorLayout}, {}, module);
+}
+
+/**
+ * Pre-compute the transmittance look-up table. It only need to be computed once at initialisation.
+ * @brief Pre-compute transmittance LUT
+ * @param device
+ * @param uploadContext
+ * @param commandBuffer
+ */
+void Atmosphere::compute_transmittance(Device& device, UploadContext& uploadContext, CommandBuffer& commandBuffer) {
+
+    VkCommandBufferBeginInfo cmdBeginInfo{};
+    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmdBeginInfo.pNext = nullptr;
+    cmdBeginInfo.pInheritanceInfo = nullptr;
+    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
+    {
+        vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _transmittancePass->pipeline);
+        vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _transmittancePass->pipelineLayout, 0, 1, &_transmittanceDescriptor, 0, nullptr);
+        vkCmdDispatch(commandBuffer._commandBuffer, 8, 2, 1);
+    }
+    VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
+
+    CommandBuffer::immediate_submit(_device, _uploadContext, [&](VkCommandBuffer cmd) {
+        VkImageSubresourceRange range;
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.baseMipLevel = 0;
+        range.levelCount = 1;
+        range.baseArrayLayer = 0;
+        range.layerCount = 1;
+
+        VkImageMemoryBarrier imageBarrier = {};
+        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.image = _transmittanceLUT._image;
+        imageBarrier.subresourceRange = range;
+        imageBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        imageBarrier.srcQueueFamilyIndex = _device.get_graphics_queue_family();
+        imageBarrier.dstQueueFamilyIndex = _device.get_graphics_queue_family();
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+
+        _transmittanceLUT._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        _transmittanceLUT.updateDescriptor();
+    });
+
+}
+
+/**
+ * Pre-compute the multiple scattering look-up table. It only need to be computed once at initialisation.
+ * @brief Pre-compute multiple scattering LUT
+ * @param device
+ * @param uploadContext
+ * @param commandBuffer
+ */
+void Atmosphere::compute_multiple_scattering(Device& device, UploadContext& uploadContext, CommandBuffer& commandBuffer) {
+    VkExtent2D extent;
+    extent.width = static_cast<uint32_t>(Atmosphere::MULTISCATTERING_WIDTH);
+    extent.height = static_cast<uint32_t>(Atmosphere::MULTISCATTERING_HEIGHT);
+
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[1].depthStencil.depth = 1.0f;
+
+    VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(_multipleScatteringRenderPass._renderPass, extent, _multipleScatteringFramebuffer);
+    offscreenPassInfo.clearValueCount = clearValues.size();
+    offscreenPassInfo.pClearValues = clearValues.data();
+
+    VkCommandBufferBeginInfo cmdBeginInfo{};
+    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmdBeginInfo.pNext = nullptr;
+    cmdBeginInfo.pInheritanceInfo = nullptr;
+    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
+    {
+        vkCmdBeginRenderPass(commandBuffer._commandBuffer, &offscreenPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        {
+            VkViewport viewport = vkinit::get_viewport((float) Atmosphere::MULTISCATTERING_WIDTH,(float) Atmosphere::MULTISCATTERING_HEIGHT);
+            vkCmdSetViewport(commandBuffer._commandBuffer, 0, 1, &viewport);
+
+            VkRect2D scissor = vkinit::get_scissor((float) Atmosphere::MULTISCATTERING_WIDTH,(float) Atmosphere::MULTISCATTERING_HEIGHT);
+            vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
+
+            vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _multiScatteringPass->pipelineLayout, 0, 1, &_multipleScatteringDescriptor, 0, nullptr);
+            vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _multiScatteringPass->pipeline);
+            vkCmdDraw(commandBuffer._commandBuffer, 3, 1, 0, 0);
+        }
+        vkCmdEndRenderPass(commandBuffer._commandBuffer);
+    }
+    VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
+
+    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
+        VkImageSubresourceRange range;
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.baseMipLevel = 0;
+        range.levelCount = 1;
+        range.baseArrayLayer = 0;
+        range.layerCount = 1;
+
+        VkImageMemoryBarrier imageBarrier = {};
+        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.image = _multipleScatteringLUT._image;
+        imageBarrier.subresourceRange = range;
+        imageBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+    });
+}
+
+/**
+ * Compute the skyview look-up table. Must be computed in real-time.
+ * @brief Compute skyview LUT
+ * @param device
+ * @param uploadContext
+ * @param commandBuffer
+ */
+void Atmosphere::compute_skyview(Device& device, LightingManager& lightingManager, UploadContext& uploadContext, uint32_t frameIndex) {
+
+    // todo - rewrite - Get first directional light orientation/position
+    glm::vec4 sun_direction = glm::vec4(0.0f, M_PI / 32.0, 0.0f, 0.0f);
+    std::shared_ptr<Light> main = std::static_pointer_cast<Light>(lightingManager.get_entity("sun"));
+    if (main != nullptr) {
+        sun_direction = main->get_position();
+    }
+
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[1].depthStencil.depth = 1.0f;
 
     {
         CommandPool commandPool = CommandPool(device); // can use graphic queue for compute work
@@ -570,7 +566,7 @@ Texture Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext
         extent.width = static_cast<uint32_t>(Atmosphere::SKYVIEW_WIDTH);
         extent.height = static_cast<uint32_t>(Atmosphere::SKYVIEW_HEIGHT);
 
-        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent,_skyviewFramebuffer);
+        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(_skyviewRenderPass._renderPass, extent, _skyviewFramebuffer);
         offscreenPassInfo.clearValueCount = clearValues.size();
         offscreenPassInfo.pClearValues = clearValues.data();
 
@@ -590,8 +586,9 @@ Texture Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext
                 VkRect2D scissor = vkinit::get_scissor((float) Atmosphere::SKYVIEW_WIDTH,(float) Atmosphere::SKYVIEW_HEIGHT);
                 vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
 
-                vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skyviewPass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
-                vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,skyviewPass->pipeline);
+                vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skyviewPass->pipelineLayout, 0, 1, &_skyviewDescriptor.at(frameIndex), 0, nullptr);
+                vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skyviewPass->pipeline);
+                vkCmdPushConstants(commandBuffer._commandBuffer, _skyviewPass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &sun_direction);
                 vkCmdDraw(commandBuffer._commandBuffer, 3, 1, 0, 0);
             }
             vkCmdEndRenderPass(commandBuffer._commandBuffer);
@@ -613,237 +610,49 @@ Texture Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext
         VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
     }
 
-    return outTexture;
 }
 
-Texture Atmosphere::render_atmosphere(Device &device, UploadContext &uploadContext) {
-    Texture outTexture{};
-    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    outTexture._width = Atmosphere::ATMOSPHERE_WIDTH;
-    outTexture._height = Atmosphere::ATMOSPHERE_HEIGHT;
-
-    VkExtent3D imageExtent { Atmosphere::ATMOSPHERE_WIDTH, Atmosphere::ATMOSPHERE_HEIGHT, 1 };
-    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT  | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
-    imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    VmaAllocationCreateInfo imgAllocinfo = {};
-    imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &outTexture._image, &outTexture._allocation, nullptr);
-
-    VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_COLOR_BIT);
-    vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &outTexture._imageView);
-
-    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-    vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &outTexture._sampler);
-
-    // === Prepare mapping ===
-    RenderPass renderPass = RenderPass(device);
-    RenderPass::Attachment color = renderPass.color(format);
-    color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-    std::vector<VkAttachmentReference> references = {color.ref};
-    std::vector<VkAttachmentDescription> attachments = {color.description};
-    std::vector<VkSubpassDependency> dependencies = {color.dependency};
-    VkSubpassDescription subpass = renderPass.subpass_description(references, nullptr);
-
-    renderPass.init(attachments, dependencies, subpass);
-
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-    clearValues[1].depthStencil.depth = 1.0f;
-
-    // Prepare framebuffer
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = renderPass._renderPass;
-    framebufferInfo.width = Atmosphere::ATMOSPHERE_WIDTH;
-    framebufferInfo.height = Atmosphere::ATMOSPHERE_HEIGHT;
-    framebufferInfo.layers = 1;
-    framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments = &outTexture._imageView;
-    VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_atmosphereFramebuffer));
-
-    std::vector<VkDescriptorPoolSize> poolSizes = {
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
-    };
-
-    VkDescriptorSet descriptor;
-    VkDescriptorSetLayout setLayout;
-    DescriptorLayoutCache layoutCache = DescriptorLayoutCache(device);
-    DescriptorAllocator allocator = DescriptorAllocator(device);
-
-    //for (int i = 0; i < FRAME_OVERLAP; i++) {
-        //g_frames[i].atmosphereDescriptor = VkDescriptorSet();
-
-    VkDescriptorBufferInfo camBInfo{};
-    camBInfo.buffer = g_frames[0].cameraBuffer._buffer;
-    camBInfo.offset = 0;
-    camBInfo.range = sizeof(GPUCameraData);
-
-    DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
-            .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .bind_image(_multipleScatteringLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .bind_image(_skyviewLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-            .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-            .layout(setLayout)
-            .build( descriptor, setLayout, poolSizes);
-    //}
-
-
-    // Build pipeline
-    GraphicPipeline pipelineBuilder = GraphicPipeline(device, renderPass);
-    pipelineBuilder._vertexInputInfo =  vkinit::vertex_input_state_create_info();
-
-    std::vector<std::pair<ShaderType, const char*>> atmosphere_module {
-            {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/atmosphere/atmosphere.frag.spv"},
-    };
-
-    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
-    std::shared_ptr<ShaderPass> atmospherePass = materialManager.create_material("atmosphere", {setLayout}, {}, atmosphere_module);
-
-    {
-        CommandPool commandPool = CommandPool(device);
-        CommandBuffer commandBuffer = CommandBuffer(device, commandPool);
-
-        VkExtent2D extent;
-        extent.width = static_cast<uint32_t>(Atmosphere::ATMOSPHERE_WIDTH);
-        extent.height = static_cast<uint32_t>(Atmosphere::ATMOSPHERE_HEIGHT);
-
-        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent,_atmosphereFramebuffer);
-        offscreenPassInfo.clearValueCount = clearValues.size();
-        offscreenPassInfo.pClearValues = clearValues.data();
-
-        VkCommandBufferBeginInfo cmdBeginInfo{};
-        cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        cmdBeginInfo.pNext = nullptr;
-        cmdBeginInfo.pInheritanceInfo = nullptr;
-        cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
-        {
-            vkCmdBeginRenderPass(commandBuffer._commandBuffer, &offscreenPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            {
-                VkViewport viewport = vkinit::get_viewport((float) Atmosphere::ATMOSPHERE_WIDTH,(float) Atmosphere::ATMOSPHERE_HEIGHT);
-                vkCmdSetViewport(commandBuffer._commandBuffer, 0, 1, &viewport);
-
-                VkRect2D scissor = vkinit::get_scissor((float) Atmosphere::ATMOSPHERE_WIDTH,(float) Atmosphere::ATMOSPHERE_HEIGHT);
-                vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
-
-                vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, atmospherePass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
-                vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,atmospherePass->pipeline);
-                vkCmdDraw(commandBuffer._commandBuffer, 3, 1, 0, 0);
-            }
-            vkCmdEndRenderPass(commandBuffer._commandBuffer);
-        }
-        VK_CHECK(vkEndCommandBuffer(commandBuffer._commandBuffer));
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.pNext = nullptr;
-        submitInfo.pWaitDstStageMask = nullptr;
-        submitInfo.waitSemaphoreCount = 0; // Semaphore to wait before executing the command buffers
-        submitInfo.pWaitSemaphores = nullptr;
-        submitInfo.signalSemaphoreCount = 0; // Number of semaphores to be signaled once the commands
-        submitInfo.pSignalSemaphores = nullptr;
-        submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
-        submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
-
-        VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
-    }
-
-    CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
-        VkImageSubresourceRange range;
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        range.baseMipLevel = 0;
-        range.levelCount = 1;
-        range.baseArrayLayer = 0;
-        range.layerCount = 1;
-
-        VkImageMemoryBarrier imageBarrier = {};
-        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.image = outTexture._image;
-        imageBarrier.subresourceRange = range;
-        imageBarrier.srcAccessMask = 0;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
-
-        // Change texture image layout to shader read after all mip levels have been copied
-        outTexture._imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-        outTexture.updateDescriptor();
-    });
-
-    return outTexture;
-}
-
-void Atmosphere::setup_atmosphere_descriptor(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
-    std::vector<VkDescriptorPoolSize> poolSizes = {
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
-    };
-
-    for (int i = 0; i < FRAME_OVERLAP; i++) {
-        g_frames[i].atmosphereDescriptor = VkDescriptorSet();
-
-        VkDescriptorBufferInfo camBInfo{};
-        camBInfo.buffer = g_frames[i].cameraBuffer._buffer;
-        camBInfo.offset = 0;
-        camBInfo.range = sizeof(GPUCameraData);
-
-        DescriptorBuilder::begin(layoutCache, allocator)
-                .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-                .bind_image(_multipleScatteringLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-                .bind_image(_skyviewLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-                .layout(setLayout)
-                .build( g_frames[i].atmosphereDescriptor, setLayout, poolSizes);
-    }
-}
-
-void Atmosphere::setup_material(MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass) {
-    std::vector<std::pair<ShaderType, const char*>> module {
-            {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/atmosphere/atmosphere.frag.spv"},
-    };
-
-    GraphicPipeline pipeline = GraphicPipeline(_device, renderPass);
-    pipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
-    materialManager._pipelineBuilder = &pipeline;
-    this->_atmospherePass = materialManager.create_material("atmosphere", setLayouts, {}, module);
-}
-
+/**
+ * Draw atmosphere background. Must be computed in real-time.
+ * @brief Render atmosphere
+ * @param commandBuffer
+ * @param descriptor
+ * @param framebuffer
+ */
 void Atmosphere::draw(VkCommandBuffer& commandBuffer, VkDescriptorSet* descriptor) {
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_atmospherePass->pipelineLayout, 0, 1, descriptor, 0, nullptr);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,this->_atmospherePass->pipeline);
     vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-}
 
-void Atmosphere::debug_descriptor(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, MaterialManager& materialManager, RenderPass& renderPass) {
-    std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}};
-
-    for (int i = 0; i < FRAME_OVERLAP; i++) {
-        g_frames[i].atmosphereDescriptor = VkDescriptorSet();
-        DescriptorBuilder::begin(layoutCache, allocator)
-                .bind_image(_atmosphereLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-                .layout(setLayout)
-                .build(g_frames[i].atmosphereDescriptor, setLayout, poolSizes);
-    }
-
-    GraphicPipeline debugPipeline = GraphicPipeline(_device, renderPass);
-    debugPipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
-    debugPipeline._dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-
-    std::vector<std::pair<ShaderType, const char*>> module {
-            {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/atmosphere/debug_quad.frag.spv"},
-    };
-
-    materialManager._pipelineBuilder = &debugPipeline;
-    this->_atmospherePass = materialManager.create_material("debug_atmosphere", {setLayout}, {}, module);
+//    std::array<VkClearValue, 2> clearValues{};
+//    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+//    clearValues[1].depthStencil.depth = 1.0f;
+//
+//    VkExtent2D extent;
+//    extent.width = static_cast<uint32_t>(Atmosphere::ATMOSPHERE_WIDTH);
+//    extent.height = static_cast<uint32_t>(Atmosphere::ATMOSPHERE_HEIGHT);
+//
+//    VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(_atmosphereRenderPass._renderPass, extent, sceneFramebuffer);
+//    offscreenPassInfo.clearValueCount = clearValues.size();
+//    offscreenPassInfo.pClearValues = clearValues.data();
+//
+//    VkCommandBufferBeginInfo cmdBeginInfo{};
+//    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+//    cmdBeginInfo.pNext = nullptr;
+//    cmdBeginInfo.pInheritanceInfo = nullptr;
+//    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+//
+//    vkCmdBeginRenderPass(commandBuffer, &offscreenPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+//    {
+//        VkViewport viewport = vkinit::get_viewport((float) Atmosphere::ATMOSPHERE_WIDTH, (float) Atmosphere::ATMOSPHERE_HEIGHT);
+//        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+//
+//        VkRect2D scissor = vkinit::get_scissor((float) Atmosphere::ATMOSPHERE_WIDTH, (float) Atmosphere::ATMOSPHERE_HEIGHT);
+//        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+//
+//        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_atmospherePass->pipelineLayout, 0, 1, descriptor, 0, nullptr);
+//        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,this->_atmospherePass->pipeline);
+//        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+//    }
+//    vkCmdEndRenderPass(commandBuffer);
 }

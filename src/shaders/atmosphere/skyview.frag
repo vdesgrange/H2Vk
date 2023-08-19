@@ -15,6 +15,10 @@ layout(std140, set = 0, binding = 2) uniform  CameraBuffer
     bool flip;
 } cameraData;
 
+layout (push_constant) uniform PushConstants {
+    vec4 sun_direction;
+} pushData;
+
 layout (location = 0) in vec2 uv;
 
 layout (location = 0) out vec4 outFragColor;
@@ -102,6 +106,7 @@ vec3 get_light_scattering(vec3 x, vec3 ray_dir, vec3 sun_dir) {
 
 void main() {
     vec2 xy = 2.0 * uv.xy - 1.0;
+    vec3 sun_direction = pushData.sun_direction.xyz;
     // mat4 view_proj = inverse(cameraData.proj * cameraData.view);
     // vec4 h_pos = view_proj * vec4(xy, 1.0, 1.0);
     // vec3 dir = normalize(h_pos.xyz / h_pos.w - cameraData.pos);
@@ -114,8 +119,10 @@ void main() {
     float altitude = get_altitude_angle(uv.y, horizon);
 
     vec3 up = x / height;
-    float sun_alti = PI / 4.0; // Temporary
+    float sun_alti = dot(up, sun_direction); //  PI / 4.0; // Temporary
+    // debugPrintfEXT("Sun direction %f %f %f altitude : %f", sun_direction.x, sun_direction.y, sun_direction.z, sun_alti);
     vec3 sun_dir =  normalize(vec3(0.0, sin(sun_alti), -cos(sun_alti)));
+
     vec3 ray_dir = vec3(cos(altitude) * sin(azimuth), sin(altitude), -cos(altitude) * cos(azimuth));
 
     vec3 L = get_light_scattering(x, ray_dir, sun_dir);
