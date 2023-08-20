@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <array>
+#include <glm/vec4.hpp>
 
 #include "core/vk_texture.h"
 #include "core/vk_shaders.h"
@@ -81,5 +82,5 @@ private:
 
     void compute_transmittance(Device& device, UploadContext& uploadContext, CommandBuffer& commandBuffer);
     void compute_multiple_scattering(Device& device, UploadContext& uploadContext, CommandBuffer& commandBuffer);
-    void compute_skyview(Device& device, LightingManager& lightingManager, UploadContext& uploadContext, uint32_t frameIndex);
+    void compute_skyview(Device& device, UploadContext& uploadContext, uint32_t frameIndex, glm::vec4 sun_direction = glm::vec4(0.0));
 };

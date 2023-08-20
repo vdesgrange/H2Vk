@@ -91,7 +91,13 @@ void Atmosphere::precompute_resources() {
  * @brief compute real-time resources
  */
 void Atmosphere::compute_resources(uint32_t frameIndex) {
-    this->compute_skyview(_device, _lightingManager, _uploadContext, frameIndex);
+    glm::vec4 sun_direction = glm::vec4(0.0f, M_PI / 32.0, 0.0f, 0.0f);
+    std::shared_ptr<Light> main = std::static_pointer_cast<Light>(_lightingManager.get_entity("sun"));
+    if (main != nullptr) {
+        sun_direction = main->get_position();
+    }
+
+    this->compute_skyview(_device, _uploadContext, frameIndex, sun_direction);
 }
 
 /**
@@ -413,6 +419,7 @@ void Atmosphere::create_atmosphere_resource(Device &device, UploadContext &uploa
                 .build(g_frames[i].atmosphereDescriptor, _atmosphereDescriptorLayout, poolSizes);
     }
 
+    std::vector<PushConstant> constants {{sizeof(glm::vec4), ShaderType::FRAGMENT}};
     std::vector<std::pair<ShaderType, const char*>> module {
             {ShaderType::VERTEX, "../src/shaders/atmosphere/quad.vert.spv"},
             {ShaderType::FRAGMENT, "../src/shaders/atmosphere/atmosphere.frag.spv"},
@@ -422,7 +429,7 @@ void Atmosphere::create_atmosphere_resource(Device &device, UploadContext &uploa
     pipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
 
     _materialManager._pipelineBuilder = &pipeline;
-    _atmospherePass = _materialManager.create_material("atmosphere", {_atmosphereDescriptorLayout}, {}, module);
+    _atmospherePass = _materialManager.create_material("atmosphere", {_atmosphereDescriptorLayout}, constants, module);
 }
 
 /**
@@ -545,15 +552,7 @@ void Atmosphere::compute_multiple_scattering(Device& device, UploadContext& uplo
  * @param uploadContext
  * @param commandBuffer
  */
-void Atmosphere::compute_skyview(Device& device, LightingManager& lightingManager, UploadContext& uploadContext, uint32_t frameIndex) {
-
-    // todo - rewrite - Get first directional light orientation/position
-    glm::vec4 sun_direction = glm::vec4(0.0f, M_PI / 32.0, 0.0f, 0.0f);
-    std::shared_ptr<Light> main = std::static_pointer_cast<Light>(lightingManager.get_entity("sun"));
-    if (main != nullptr) {
-        sun_direction = main->get_position();
-    }
-
+void Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext, uint32_t frameIndex, glm::vec4 sun_direction) {
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     clearValues[1].depthStencil.depth = 1.0f;
@@ -619,10 +618,20 @@ void Atmosphere::compute_skyview(Device& device, LightingManager& lightingManage
  * @param descriptor
  * @param framebuffer
  */
-void Atmosphere::draw(VkCommandBuffer& commandBuffer, VkDescriptorSet* descriptor) {
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_atmospherePass->pipelineLayout, 0, 1, descriptor, 0, nullptr);
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,this->_atmospherePass->pipeline);
-    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+void Atmosphere::draw(VkCommandBuffer& cmd, VkDescriptorSet* descriptor) {
+
+    glm::vec4 sun_direction = glm::vec4(0.0f, M_PI / 32.0, 0.0f, 0.0f);
+    std::shared_ptr<Light> main = std::static_pointer_cast<Light>(_lightingManager.get_entity("sun"));
+    if (main != nullptr) {
+        sun_direction = main->get_position();
+    }
+
+    // warning : push constants can be written to a share command buffer,
+    // but they are stateful. So must be careful to overwrite them properly for each pass.
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_atmospherePass->pipelineLayout, 0, 1, descriptor, 0, nullptr);
+    vkCmdPushConstants(cmd, this->_atmospherePass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &sun_direction);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,this->_atmospherePass->pipeline);
+    vkCmdDraw(cmd, 3, 1, 0, 0);
 
 //    std::array<VkClearValue, 2> clearValues{};
 //    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
