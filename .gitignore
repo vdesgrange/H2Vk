@@ -4,6 +4,7 @@
 cmake-build-debug/
 /src/shaders/*.spv
 /src/shaders/**/*.spv
+/src/shaders/atmosphere2/*
 .DS_Store
 /src/.DS_Store
 /assets/.DS_Store
