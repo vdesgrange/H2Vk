@@ -12,17 +12,25 @@ vec3 get_spherical_direction(float theta, float phi) {
   return vec3(sin_phi * sin_theta, cos_phi, sin_phi * cos_theta);
 }
 
+/**
+* Compute intersection between a ray and a sphere. Assume sphere centered at origin.
+* @param pos : ray starting position
+* @param dir : ray direction
+* @param radius : sphere radius
+*/
 float get_ray_intersection_length(vec3 pos, vec3 dir, float radius) {
   float a = dot(dir, dir);
-  float b = dot(pos, dir); // projection s of l into d : when camera outside sphere, intersection if b >= 0 ?
+  float b = 2.0 * dot(pos, dir); // projection s of l into d : when camera outside sphere, intersection if b >= 0 ?
   float c = dot(pos, pos) - radius * radius; // Camera inside sphere if l^2 - r^2 <= 0
+
   if (c > 0.0f && b > 0.0) return -1.0; // camera outside atmosphere
 
   // Solution to 2nd degree equation (planet-like parabole curve) at 0.
-  float discr = b*b - c; // - 4.0 * a * c;
+  float discr = b * b - 4.0 * a * c;
+
   if (discr < 0.0) return -1.0; // No solution
-  if (discr > b*b) return (-b + sqrt(discr)); // / (2.0 * a);
-  return (-b - sqrt(discr)); // / (2.0 * a);
+  if (discr > b*b) return (-b + sqrt(discr)) / (2.0 * a);
+  return (-b - sqrt(discr)) / (2.0 * a);
 
 }
 

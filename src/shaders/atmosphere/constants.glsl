@@ -20,8 +20,8 @@ const float r_top = 6420.0; // 6420.0;
 const vec2 TRANSMITTANCE_LUT_RES = vec2(256.0, 64.0);
 const vec2 MULTISCATTER_LUT_RES = vec2(32.0, 32.0);
 const vec3 AERIAL_LUT_RES = vec3(32.0, 32.0, 32.0);
-const vec2 SKYVIEW_LUT_RES = vec2(1200.0, 800.0);
-const vec2 ATMOSPHERE_RES = vec2(1200.0, 800.0); // todo : inject the resolution constants into shader
+const vec2 SKYVIEW_LUT_RES = vec2(200.0, 100.0);
+const vec2 ATMOSPHERE_RES = vec2(1280.0, 720.0); // todo : inject the resolution constants into shader
 
 // --- Transmittance ---
 //

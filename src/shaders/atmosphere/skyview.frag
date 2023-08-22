@@ -42,33 +42,6 @@ float get_altitude_angle(float v, float h) {
     return PI / 2.0 * den - h;
 }
 
-vec2 get_angles(vec2 uv, float h) {
-    float azimuth = 2.0 * PI * (0.5 - uv.x); // linear mapping f:[0, 1] -> [-pi, pi]
-    float horizon = get_horizon_angle(h);
-    float altitude = get_altitude_angle(uv.y, horizon);
-
-    return vec2(altitude, azimuth);
-}
-
-vec2 get_angles2(vec2 uv, float h) {
-    float horizon = acos(sqrt((h * h) - (r_ground * r_ground)) / h);
-    float zenithHorizonAngle = PI - horizon;
-    float viewZenithCosAngle;
-
-    if (uv.y < 0.5) {
-        float coord = uv.y * 2.0;
-        viewZenithCosAngle = zenithHorizonAngle * coord;
-    }
-    else {
-        float coord = uv.y * 2.0 - 1.0;
-        viewZenithCosAngle = zenithHorizonAngle + horizon * coord;
-    }
-
-    float lightViewCosAngle = 1.0 - 2.0 * uv.x * uv.x;
-
-    return vec2(viewZenithCosAngle, acos(lightViewCosAngle));
-}
-
 vec3 get_light_scattering(vec3 x, vec3 ray_dir, vec3 sun_dir) {
     const float N_LIGHT = 32.0;
     const float offset = 0.3;
@@ -133,32 +106,26 @@ vec3 get_light_scattering(vec3 x, vec3 ray_dir, vec3 sun_dir) {
 
 void main() {
     vec2 xy = 2.0 * uv.xy - 1.0;
+    vec2 cs = uv.xy - vec2(0.5, 0.0);
     vec3 sun_direction = normalize(pushData.sun_direction.xyz);
-    mat4 view_proj = inverse(cameraData.proj * cameraData.view);
-    vec4 h_pos = view_proj * vec4(xy, 1.0, 1.0);
-    vec3 dir = normalize(h_pos.xyz / h_pos.w - cameraData.pos);
-    vec3 x = cameraData.pos + vec3(0.0, r_ground + 0.2, 0.0);
+    mat4 view_proj = inverse(cameraData.proj * cameraData.view); // inv(AB) = inv(B).inv(A)
+    vec4 h_pos = view_proj * vec4(xy, 1.0, 1.0); // inv(proj view) = inv(view).inv(proj)
+    vec3 dir = normalize(h_pos.xyz / h_pos.w - cameraData.pos); // view direction, removing view pos not necessary?
+    vec3 x = cameraData.pos + vec3(0.0, r_ground, 0.0); // view position
 
     float height = length(x);
 
-    float azimuth = 2.0 * PI * (0.5 - uv.x); // linear mapping f:[0, 1] -> [-pi, pi]
+    float azimuth = 2.0 * PI * (0.5 - cs.x); // linear mapping f:[0, 1] -> [-pi, pi]
     float horizon = get_horizon_angle(height);
-    float altitude = get_altitude_angle(uv.y, horizon);
+    float altitude = get_altitude_angle(cs.y, horizon);
 
     vec3 up = x / height;
     float sun_alti = PI / 2.0 - acos(dot(up, sun_direction));
-//    debugPrintfEXT("Sun direction %f %f %f altitude : %f", sun_direction.x, sun_direction.y, sun_direction.z, sun_alti);
     vec3 sun_dir = normalize(vec3(0.0, sin(sun_alti), -cos(sun_alti))); // normalize(vec3(sin(sun_alti), cos(sun_alti), 0.0));
 
     vec3 ray_dir = vec3(cos(altitude) * sin(azimuth), sin(altitude), cos(altitude) * cos(azimuth));
 
-//    vec2 skyViewLutParams = get_angles2(uv, height);
-//    skyViewLutParams = get_angles(uv, height);
-//    float viewZenithAngle = skyViewLutParams.x;
-//    float lightViewAngle = skyViewLutParams.y;
-//    ray_dir = vec3(cos(viewZenithAngle) * sin(lightViewAngle), sin(viewZenithAngle), cos(viewZenithAngle) * cos(lightViewAngle));
-    // ray_dir = vec3(sin(viewZenithAngle) * cos(lightViewAngle), cos(viewZenithAngle), sin(viewZenithAngle) * sin(lightViewAngle));
-
+    x = vec3(0.0, height, 0.0); // should we only consider altitude?
     vec3 L = get_light_scattering(x, ray_dir, sun_dir);
 
     outFragColor = vec4(L, 1.0);

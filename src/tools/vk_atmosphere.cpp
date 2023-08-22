@@ -137,7 +137,7 @@ void Atmosphere::create_transmittance_resource(Device& device, UploadContext& up
     VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _transmittanceLUT._image, VK_IMAGE_ASPECT_COLOR_BIT);
     vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &_transmittanceLUT._imageView);
 
-    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
     vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &_transmittanceLUT._sampler);
 
     CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
@@ -301,7 +301,7 @@ void Atmosphere::create_skyview_resource(Device &device, UploadContext &uploadCo
     VkImageViewCreateInfo imageViewInfo = vkinit::imageview_create_info(format, _skyviewLUT._image, VK_IMAGE_ASPECT_COLOR_BIT);
     vkCreateImageView(device._logicalDevice, &imageViewInfo, nullptr, &_skyviewLUT._imageView);
 
-    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
     vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &_skyviewLUT._sampler);
 
     CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {
