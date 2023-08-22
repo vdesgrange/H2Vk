@@ -261,14 +261,9 @@ void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
     _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen, _descriptorSetLayouts.matrices}, *_renderPass);
-    _atmosphere->compute_resources();
-    _atmosphere->setup_atmosphere_descriptor(*_layoutCache, *_allocator, _descriptorSetLayouts.atmosphere);
-    _atmosphere->setup_material(*_materialManager, {_descriptorSetLayouts.atmosphere}, *_renderPass);
-    // _atmosphere->debug_descriptor(*_layoutCache, *_allocator, _descriptorSetLayouts.atmosphere, *_materialManager, *_renderPass);
 
-    // === Update atmosphere ===
-    _atmosphere->compute_resources(); // fixed sun so far
-
+    _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
+    _atmosphere->precompute_resources();
 }
 
 /**
@@ -302,7 +297,7 @@ void VulkanEngine::init_scene() {
 
     _shadow = std::make_unique<ShadowMapping>(*_device);
 
-    _atmosphere = std::make_unique<Atmosphere>(*_device, _uploadContext);
+    _atmosphere = std::make_unique<Atmosphere>(*_device, *_materialManager, *_lightingManager, _uploadContext);
 
     _sceneListing = std::make_unique<SceneListing>();
     _scene = std::make_unique<Scene>(*this);
@@ -484,6 +479,8 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
     // === Depth map render pass ===
     _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
 
+    _atmosphere->compute_resources(_frameNumber % FRAME_OVERLAP);
+
     // === Scene render pass ===
     {
         // Record command buffers
@@ -503,15 +500,19 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
+            // Debug shadow map
+            // this->_shadow->run_debug(frame);
 
-            // Debug shadow map/
-//            this->_shadow->run_debug(frame);
-//
-            // Draw
-            // this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
-            this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &get_current_frame().atmosphereDescriptor);
-            //this->render_objects(frame._commandBuffer->_commandBuffer);
+            // === Skybox ===
+            this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
 
+            // === Atmosphere ===
+            // this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &get_current_frame().atmosphereDescriptor);
+
+            // === Meshes ===
+            this->render_objects(frame._commandBuffer->_commandBuffer);
+
+            // === UI ===
             this->ui_overlay();
         }
         vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);

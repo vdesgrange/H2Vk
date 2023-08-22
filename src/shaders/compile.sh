@@ -18,3 +18,8 @@ glslc shadow_map/depth_debug_quad.vert -o shadow_map/depth_debug_quad.vert.spv
 glslc shadow_map/depth_debug_quad.frag -o shadow_map/depth_debug_quad.frag.spv
 glslc shadow_map/depth_debug_scene.vert -o shadow_map/depth_debug_scene.vert.spv
 glslc shadow_map/depth_debug_scene.frag -o shadow_map/depth_debug_scene.frag.spv
+glslc atmosphere/quad.vert -o atmosphere/quad.vert.spv
+glslc atmosphere/atmosphere.frag -o atmosphere/atmosphere.frag.spv
+glslc atmosphere/skyview.frag -o atmosphere/skyview.frag.spv
+glslc atmosphere/multiple_scattering.frag -o atmosphere/multiple_scattering.frag.spv
+glslc atmosphere/transmittance.comp -o atmosphere/transmittance.comp.spv
