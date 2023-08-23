@@ -39,10 +39,10 @@
 #include "core/manager/vk_material_manager.h"
 #include "core/manager/vk_mesh_manager.h"
 
-#include "core/skybox/vk_skybox.h"
-#include "core/camera/vk_camera.h"
-#include "core/model/vk_model.h"
-#include "core/lighting/vk_light.h"
+#include "components/skybox/vk_skybox.h"
+#include "components/camera/vk_camera.h"
+#include "components/model/vk_model.h"
+#include "components/lighting/vk_light.h"
 
 #include "ui/vk_imgui.h"
 

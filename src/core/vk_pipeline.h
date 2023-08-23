@@ -12,7 +12,7 @@
 #include <unordered_map>
 
 #include "vk_shaders.h"
-#include "core/model/vk_model.h"
+#include "components/model/vk_model.h"
 #include "core/manager/vk_system_manager.h"
 
 class Device;

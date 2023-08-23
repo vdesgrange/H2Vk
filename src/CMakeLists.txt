@@ -2,11 +2,12 @@
 
 file(GLOB_RECURSE ENGINE "*.cpp" "*.h")
 file(GLOB_RECURSE CORE "core/*.cpp" "core/*.h") #  "assets/*.cpp" "assets/*.h"
+file(GLOB_RECURSE COMPONENTS "scenes/*.cpp" "scenes/*.h")
 file(GLOB_RECURSE SCENES "scenes/*.cpp" "scenes/*.h")
 file(GLOB_RECURSE UI "ui/*.cpp" "ui/*.h")
 file(GLOB_RECURSE TOOLS "tools/*.cpp" "tools/*.h")
 file(GLOB_RECURSE TRACY_CLIENT "../third_party/tracy/public/TracyClient.cpp")
-add_executable(h2vk ${ENGINE} ${CORE} ${SCENES} ${UI} ${TOOLS} ${TRACY_CLIENT})
+add_executable(h2vk ${ENGINE} ${CORE} ${COMPONENTS} ${SCENES} ${UI} ${TOOLS} ${TRACY_CLIENT})
 
 set_property(TARGET h2vk PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:h2vk>")
 

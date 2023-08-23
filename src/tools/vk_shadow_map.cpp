@@ -13,9 +13,9 @@
 #include "core/vk_descriptor_builder.h"
 #include "core/vk_pipeline.h"
 #include "core/manager/vk_material_manager.h"
-#include "core/camera/vk_camera.h"
-#include "core/lighting/vk_light.h"
-#include "core/model/vk_model.h"
+#include "components/camera/vk_camera.h"
+#include "components/lighting/vk_light.h"
+#include "components/model/vk_model.h"
 #include "core/utilities/vk_initializers.h"
 #include "core/utilities/vk_global.h"
 

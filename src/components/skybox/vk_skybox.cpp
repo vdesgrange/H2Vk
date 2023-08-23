@@ -13,13 +13,13 @@
 #include "core/vk_command_buffer.h"
 #include "core/manager/vk_mesh_manager.h"
 #include "core/manager/vk_material_manager.h"
-#include "core/model/vk_poly.h"
-#include "core/camera/vk_camera.h"
+#include "components/model/vk_poly.h"
+#include "components/camera/vk_camera.h"
 #include "core/utilities/vk_initializers.h"
 #include "core/utilities/vk_global.h"
 #include "tools/vk_env_map.h"
 
-#include <stb_image.h>
+#include "stb_image.h"
 
 Skybox::Skybox(Device& device, MeshManager& meshManager, UploadContext& uploadContext) :
     _device(device), _meshManager(meshManager), _uploadContext(uploadContext) {}

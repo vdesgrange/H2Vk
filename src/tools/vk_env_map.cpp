@@ -16,7 +16,7 @@
 #include "core/vk_descriptor_cache.h"
 #include "core/vk_descriptor_builder.h"
 #include "core/vk_texture.h"
-#include "core/model/vk_poly.h"
+#include "components/model/vk_poly.h"
 #include "core/manager/vk_mesh_manager.h"
 #include "core/manager/vk_material_manager.h"
 #include "core/utilities/vk_helpers.h"

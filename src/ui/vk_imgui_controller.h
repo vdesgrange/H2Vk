@@ -10,8 +10,8 @@
 
 #include <functional>
 #include <array>
-#include "core/camera/vk_camera.h"
-#include "core/lighting/vk_light.h"
+#include "components/camera/vk_camera.h"
+#include "components/lighting/vk_light.h"
 
 class Camera;
 

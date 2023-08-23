@@ -9,7 +9,7 @@
 #include "vk_model.h"
 #include "core/vk_device.h"
 #include "core/vk_command_buffer.h"
-#include "core/camera/vk_camera.h"
+#include "components/camera/vk_camera.h"
 
 std::atomic<uint32_t> Model::nextID {0};
 

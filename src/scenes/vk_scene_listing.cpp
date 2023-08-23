@@ -7,10 +7,10 @@
 */
 
 #include "vk_scene_listing.h"
-#include "core/camera/vk_camera.h"
-#include "core/model/vk_model.h"
-#include "core/model/vk_poly.h"
-#include "core/model/vk_glb.h"
+#include "components/camera/vk_camera.h"
+#include "components/model/vk_model.h"
+#include "components/model/vk_poly.h"
+#include "components/model/vk_glb.h"
 #include "core/vk_descriptor_builder.h"
 #include "vk_engine.h"
 

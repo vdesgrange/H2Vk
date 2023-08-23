@@ -10,7 +10,7 @@
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
-#include "core/model/vk_model.h"
+#include "components/model/vk_model.h"
 #include "core/utilities/vk_types.h"
 
 #include <vector>

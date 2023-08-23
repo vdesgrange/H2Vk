@@ -12,7 +12,7 @@
 #include "core/vk_device.h"
 #include "core/vk_buffer.h"
 #include "core/vk_command_buffer.h"
-#include "core/model/vk_model.h"
+#include "components/model/vk_model.h"
 
 MeshManager::MeshManager(const Device* device, UploadContext* uploadContext) : _device(device), _uploadContext(uploadContext) {};
 

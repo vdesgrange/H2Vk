@@ -12,7 +12,7 @@
 #include "vk_pipeline.h"
 #include "vk_device.h"
 #include "vk_renderpass.h"
-#include "core/model/vk_model.h"
+#include "components/model/vk_model.h"
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
 

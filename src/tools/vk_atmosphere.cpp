@@ -7,11 +7,11 @@
 #include "core/vk_renderpass.h"
 #include "core/vk_texture.h"
 #include "core/manager/vk_material_manager.h"
-#include "core/lighting/vk_light.h"
+#include "components/lighting/vk_light.h"
 #include "core/vk_command_pool.h"
 #include "core/vk_command_buffer.h"
 #include "core/utilities/vk_global.h"
-#include "core/camera/vk_camera.h"
+#include "components/camera/vk_camera.h"
 
 #include <chrono>
 #include <iostream>

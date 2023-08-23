@@ -7,7 +7,7 @@
 */
 
 #include "vk_poly.h"
-#include "../vk_device.h"
+#include "core/vk_device.h"
 
 #include <array>
 

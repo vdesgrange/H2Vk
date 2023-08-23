@@ -9,7 +9,7 @@
 #include "vk_material_manager.h"
 #include "core/vk_device.h"
 #include "core/vk_pipeline.h"
-#include "core/model/vk_pbr_material.h"
+#include "components/model/vk_pbr_material.h"
 
 MaterialManager::MaterialManager(const Device* device, PipelineBuilder* pipelineBuilder) : _device(device), _pipelineBuilder(pipelineBuilder) {}
 

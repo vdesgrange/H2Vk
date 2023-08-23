@@ -12,7 +12,7 @@
 #include <vector>
 #include "glm/gtc/matrix_transform.hpp"
 
-#include "core/lighting/vk_light.h"
+#include "components/lighting/vk_light.h"
 #include "core/vk_texture.h"
 #include "core/vk_renderpass.h"
 #include "core/vk_shaders.h"
