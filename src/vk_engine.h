@@ -49,8 +49,8 @@
 #include "scenes/vk_scene_listing.h"
 #include "scenes/vk_scene.h"
 
-#include "tools/vk_shadow_map.h"
-#include "tools/vk_atmosphere.h"
+#include "techniques/vk_shadow_map.h"
+#include "techniques/vk_atmosphere.h"
 
 class Window;
 class Device;

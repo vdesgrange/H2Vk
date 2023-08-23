@@ -17,7 +17,7 @@
 #include "components/camera/vk_camera.h"
 #include "core/utilities/vk_initializers.h"
 #include "core/utilities/vk_global.h"
-#include "tools/vk_env_map.h"
+#include "techniques/vk_env_map.h"
 
 #include "stb_image.h"
 

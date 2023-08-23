@@ -20,7 +20,7 @@ Window::Window() {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-    _window = glfwCreateWindow(CWIDTH, CHEIGHT, "Vulkan", nullptr, nullptr);
+    _window = glfwCreateWindow(CWIDTH, CHEIGHT, "H2Vk", nullptr, nullptr);
     glfwSetWindowUserPointer(_window, this);
     // glfwSetKeyCallback(_window, glfw_key_callback); // avoid call back for continue action like key press
     glfwSetCursorPosCallback(_window, glfw_cursor_position_callback);
