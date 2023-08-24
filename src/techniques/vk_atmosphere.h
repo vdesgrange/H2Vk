@@ -7,10 +7,12 @@
 #include "core/vk_texture.h"
 #include "core/vk_shaders.h"
 #include "core/vk_renderpass.h"
+#include "core/vk_framebuffers.h"
 
 class Device;
 class LightingManager;
 class RenderPass;
+class FrameBuffer;
 class MaterialManager;
 class DescriptorLayoutCache;
 class DescriptorAllocator;
@@ -42,6 +44,7 @@ public:
     std::shared_ptr<Material> _multiScatteringPass; // weak_ptr?
     RenderPass _multipleScatteringRenderPass;
     VkFramebuffer _multipleScatteringFramebuffer = VK_NULL_HANDLE;
+    // FrameBuffer _multipleScatteringFramebuffer;
     VkDescriptorSet _multipleScatteringDescriptor;
     VkDescriptorSetLayout _multipleScatteringDescriptorLayout;
 
@@ -49,6 +52,7 @@ public:
     std::shared_ptr<Material> _skyviewPass; // weak_ptr?
     RenderPass _skyviewRenderPass;
     VkFramebuffer _skyviewFramebuffer = VK_NULL_HANDLE;
+    // FrameBuffer _skyviewFramebuffer;
     std::vector<VkDescriptorSet> _skyviewDescriptor;
     VkDescriptorSetLayout _skyviewDescriptorLayout;
 
@@ -56,6 +60,7 @@ public:
     std::shared_ptr<Material> _atmospherePass;
     // RenderPass _atmosphereRenderPass;
     VkFramebuffer _atmosphereFramebuffer = VK_NULL_HANDLE;
+    // FrameBuffer _atmosphereFramebuffer;
     VkDescriptorSetLayout _atmosphereDescriptorLayout;
 
     Atmosphere() =  delete;

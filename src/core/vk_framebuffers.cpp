@@ -8,7 +8,6 @@
 
 #include "vk_framebuffers.h"
 #include "vk_window.h"
-#include "vk_renderpass.h"
 
 /**
  * A collection of memory attachments that a render pass instance uses.
@@ -33,16 +32,6 @@ FrameBuffer::FrameBuffer(const RenderPass& renderPass, std::vector<VkImageView>&
     VK_CHECK(vkCreateFramebuffer(_renderPass._device._logicalDevice, &framebufferInfo, nullptr, &_frameBuffer));
 }
 
-/**
- * @brief Move constructor
- * @param rhs other object
- * @note Rule of five, vector requires move semantic.
- */
-FrameBuffer::FrameBuffer(FrameBuffer&& rhs) noexcept : _renderPass(rhs._renderPass) {
-    this->_frameBuffer = rhs._frameBuffer;
-    rhs._frameBuffer = nullptr;
-    // std::swap(this->_frameBuffer, rhs._frameBuffer);
-}
 
 /**
  * release frame buffers resources used by associated swap chain

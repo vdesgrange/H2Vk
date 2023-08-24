@@ -16,11 +16,12 @@
 #include "core/vk_descriptor_cache.h"
 #include "core/vk_descriptor_builder.h"
 #include "core/vk_texture.h"
-#include "components/model/vk_poly.h"
+#include "core/vk_framebuffers.h"
 #include "core/manager/vk_mesh_manager.h"
 #include "core/manager/vk_material_manager.h"
 #include "core/utilities/vk_helpers.h"
 #include "core/utilities/vk_initializers.h"
+#include "components/model/vk_poly.h"
 
 Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext, MeshManager& meshManager, Texture& inTexture) {
     uint32_t count = 6;
@@ -93,16 +94,9 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     clearValues[1].depthStencil.depth = 1.0f;
 
-    std::array<VkFramebuffer, 6> framebuffers {};
     std::array<VkImageView, 6> imagesViews {};
-
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = renderPass._renderPass;
-    framebufferInfo.width = ENV_WIDTH;
-    framebufferInfo.height = ENV_HEIGHT;
-    framebufferInfo.layers = 1;
+    std::vector<FrameBuffer> framebuffers;
+    framebuffers.reserve(count);
 
     for (int face = 0; face < count; face++) {
         // Create image view
@@ -113,10 +107,8 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
         info.subresourceRange.levelCount = 1;
         vkCreateImageView(device._logicalDevice, &info, nullptr, &imagesViews[face]);
 
-        std::array<VkImageView, 1> attachments = {imagesViews[face]};
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();  // framebuffer used for image modification
-        VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &framebuffers[face]));
+        std::vector<VkImageView> attachments = {imagesViews[face]};
+        framebuffers.emplace_back(FrameBuffer(renderPass, attachments, ENV_WIDTH, ENV_HEIGHT, 1));
     }
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
@@ -168,7 +160,7 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
         extent.width = static_cast<uint32_t>(ENV_WIDTH);
         extent.height = static_cast<uint32_t>(ENV_HEIGHT);
 
-        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers[face]);
+        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers.at(face)._frameBuffer);
         renderPassInfo.clearValueCount = clearValues.size();
         renderPassInfo.pClearValues = clearValues.data();
 
@@ -215,7 +207,6 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
     }
 
     for (int face = 0; face < count; face++) {
-        vkDestroyFramebuffer(device._logicalDevice, framebuffers[face], nullptr);
         vkDestroyImageView(device._logicalDevice, imagesViews[face], nullptr);
     }
 
@@ -297,16 +288,9 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     clearValues[1].depthStencil.depth = 1.0f;
 
-    std::array<VkFramebuffer, 6> framebuffers {};
     std::array<VkImageView, 6> imagesViews {};
-
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = renderPass._renderPass;
-    framebufferInfo.width = CONVOLVE_WIDTH;
-    framebufferInfo.height = CONVOLVE_HEIGHT;
-    framebufferInfo.layers = 1;
+    std::vector<FrameBuffer> framebuffers;
+    framebuffers.reserve(count);
 
     for (int face = 0; face < count; face++) {
         // Create image view
@@ -317,10 +301,8 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
         info.subresourceRange.levelCount = 1;
         vkCreateImageView(device._logicalDevice, &info, nullptr, &imagesViews[face]);
 
-        std::array<VkImageView, 1> attachments = {imagesViews[face]};
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();  // framebuffer used for image modification
-        VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &framebuffers[face]));
+        std::vector<VkImageView> attachments = {imagesViews[face]};
+        framebuffers.emplace_back(FrameBuffer(renderPass, attachments, CONVOLVE_WIDTH, CONVOLVE_HEIGHT, 1));
     }
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
@@ -373,7 +355,7 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
         extent.width = static_cast<uint32_t>(CONVOLVE_WIDTH);
         extent.height = static_cast<uint32_t>(CONVOLVE_HEIGHT);
 
-        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers[face]);
+        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers.at(face)._frameBuffer);
         renderPassInfo.clearValueCount = clearValues.size();
         renderPassInfo.pClearValues = clearValues.data();
 
@@ -444,7 +426,6 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
     });
 
     for (int face = 0; face < count; face++) {
-        vkDestroyFramebuffer(device._logicalDevice, framebuffers[face], nullptr);
         vkDestroyImageView(device._logicalDevice, imagesViews[face], nullptr);
     }
 
@@ -533,7 +514,8 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     clearValues[1].depthStencil.depth = 1.0f;
 
-    std::array<VkFramebuffer, 24> framebuffers {}; // 6 * PRE_FILTER_MIP_LEVEL
+    std::vector<FrameBuffer> framebuffers;
+    framebuffers.reserve(6 * PRE_FILTER_MIP_LEVEL);
     std::array<VkImageView, 24> imagesViews {};
 
     std::vector<std::pair<ShaderType, const char*>> modules {
@@ -558,14 +540,6 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
         uint32_t mipHeight = static_cast<uint32_t>(PRE_FILTER_HEIGHT * std::pow(0.5f, mipLevel));
         glm::mat4 projection = glm::perspective(glm::radians(90.0f), static_cast<float>(mipWidth) / static_cast<float>(mipHeight),  0.1f, 10.0f);
 
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.pNext = nullptr;
-        framebufferInfo.renderPass = renderPass._renderPass;
-        framebufferInfo.width = mipWidth;
-        framebufferInfo.height = mipHeight;
-        framebufferInfo.layers = 1;
-
         for (int face = 0; face < count; face++) {
             // Create image view
             VkImageViewCreateInfo info = vkinit::imageview_create_info(format, outTexture._image, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -575,10 +549,8 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
             info.subresourceRange.levelCount = 1;
             vkCreateImageView(device._logicalDevice, &info, nullptr, &imagesViews[mipLevel * 6 + face]);
 
-            std::array<VkImageView, 1> attachments = {imagesViews[mipLevel * 6 + face]};
-            framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-            framebufferInfo.pAttachments = attachments.data();  // framebuffer used for image modification
-            VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &framebuffers[mipLevel * 6 + face]));
+            std::vector<VkImageView> attachments = {imagesViews[mipLevel * 6 + face]};
+            framebuffers.emplace_back(FrameBuffer(renderPass, attachments, mipWidth, mipHeight, 1));
         }
 
         std::vector<VkDescriptorPoolSize> poolSizes = {
@@ -617,7 +589,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
             extent.width = static_cast<uint32_t>(mipWidth);
             extent.height = static_cast<uint32_t>(mipHeight);
 
-            VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers[mipLevel * 6 + face]);
+            VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(renderPass._renderPass, extent, framebuffers.at(mipLevel * 6 + face)._frameBuffer);
             renderPassInfo.clearValueCount = clearValues.size();
             renderPassInfo.pClearValues = clearValues.data();
 
@@ -667,7 +639,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
     }
 
     for (int i = 0; i < PRE_FILTER_MIP_LEVEL * 6; i++) {
-        vkDestroyFramebuffer(device._logicalDevice, framebuffers[i], nullptr);
+        // vkDestroyFramebuffer(device._logicalDevice, framebuffers.at(i)._frameBuffer, nullptr);
         vkDestroyImageView(device._logicalDevice, imagesViews[i], nullptr);
     }
 

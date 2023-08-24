@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "vk_renderpass.h"
 #include "core/utilities/vk_resources.h"
 
 class RenderPass;
@@ -21,12 +22,20 @@ public:
     /** @brief collection of frame buffers associated to render pass */
     VkFramebuffer _frameBuffer = VK_NULL_HANDLE;
 
+    FrameBuffer() = delete;
     FrameBuffer(const RenderPass& renderPass, std::vector<VkImageView>& attachments, uint32_t width, uint32_t height, uint32_t layers);
     ~FrameBuffer();
 
-    FrameBuffer(const FrameBuffer&) = delete;
-    FrameBuffer& operator= (const FrameBuffer&) = delete;
-    FrameBuffer ( FrameBuffer && ) noexcept;
+    FrameBuffer(const FrameBuffer& rhs) : _renderPass(rhs._renderPass) {
+        this->_frameBuffer = rhs._frameBuffer;
+    }
+
+    FrameBuffer& operator= (FrameBuffer other) = delete;
+
+    FrameBuffer(FrameBuffer&& rhs) noexcept : _renderPass(rhs._renderPass) {
+        std::swap(this->_frameBuffer, rhs._frameBuffer);
+    }
+
     FrameBuffer& operator= (FrameBuffer &&) = delete;
 
 private:

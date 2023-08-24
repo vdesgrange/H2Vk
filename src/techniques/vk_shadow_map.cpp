@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - Shadow mapping
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -12,6 +12,7 @@
 #include "core/vk_descriptor_cache.h"
 #include "core/vk_descriptor_builder.h"
 #include "core/vk_pipeline.h"
+#include "core/vk_framebuffers.h"
 #include "core/manager/vk_material_manager.h"
 #include "components/camera/vk_camera.h"
 #include "components/lighting/vk_light.h"
@@ -31,10 +32,6 @@ ShadowMapping::~ShadowMapping() {
     this->_offscreen_shadow.destroy(_device);
     this->_offscreen_effect.reset();
     this->_debug_effect.reset();
-
-    for (auto& framebuffer : this->_offscreen_framebuffer) {
-        vkDestroyFramebuffer(_device._logicalDevice, framebuffer, nullptr); // todo use FrameBuffer class
-    }
 
     for (auto& imageview: this->_offscreen_imageview) {
         vkDestroyImageView(_device._logicalDevice, imageview, nullptr);
@@ -79,7 +76,7 @@ void ShadowMapping::prepare_offscreen_pass(Device& device) {
     this->_offscreen_pass.init(attachments, dependencies, subpass);
 }
 
-void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadContext, RenderPass& renderPass, LightingManager& lighting) {
+void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadContext, LightingManager& lighting) {
     uint num_lights = 2 * MAX_LIGHT; // lighting._entities.size();
     this->_offscreen_shadow._descriptor = {};
     this->_offscreen_shadow._width = SHADOW_WIDTH;
@@ -87,9 +84,7 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
     this->_offscreen_framebuffer.reserve(num_lights);
     this->_offscreen_imageview.reserve(num_lights);
 
-
     for (int i=0; i < num_lights; i++) {
-        this->_offscreen_framebuffer.push_back({});
         this->_offscreen_imageview.push_back({});
     }
 
@@ -136,17 +131,6 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
     this->_offscreen_shadow._imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     this->_offscreen_shadow.updateDescriptor();
 
-    // Prepare framebuffer
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = this->_offscreen_pass._renderPass;
-    framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments = &this->_offscreen_shadow._imageView;
-    framebufferInfo.width = SHADOW_WIDTH;
-    framebufferInfo.height = SHADOW_HEIGHT;
-    framebufferInfo.layers = 1;
-
     for (int l = 0; l < num_lights; l++) {
         // Create image view
         VkImageViewCreateInfo info = vkinit::imageview_create_info(DEPTH_FORMAT, this->_offscreen_shadow._image, VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -156,10 +140,8 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
         info.subresourceRange.levelCount = 1;
         vkCreateImageView(device._logicalDevice, &info, nullptr, &_offscreen_imageview[l]);
 
-        std::array<VkImageView, 1> attachments = {_offscreen_imageview[l]};
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();  // framebuffer used for image modification
-        VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_offscreen_framebuffer[l]));
+        std::vector<VkImageView> attachments = {_offscreen_imageview[l]};
+        this->_offscreen_framebuffer.emplace_back(FrameBuffer(_offscreen_pass, attachments, SHADOW_WIDTH, SHADOW_HEIGHT, 1));
     }
 }
 
@@ -254,7 +236,7 @@ void ShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& entities, 
 
         uint32_t lightType = light->get_type();
 
-        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(this->_offscreen_pass._renderPass, extent, this->_offscreen_framebuffer[lightIndex]);
+        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(this->_offscreen_pass._renderPass, extent, this->_offscreen_framebuffer.at(lightIndex)._frameBuffer);
         offscreenPassInfo.clearValueCount = clearValues.size();
         offscreenPassInfo.pClearValues = clearValues.data();
 

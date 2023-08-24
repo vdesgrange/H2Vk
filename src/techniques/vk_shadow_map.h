@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - Shadow mapping
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -21,6 +21,7 @@
 class Device;
 class MaterialManager;
 class RenderPass;
+class FrameBuffer;
 class DescriptorAllocator;
 class DescriptorLayoutCache;
 class Model;
@@ -42,7 +43,7 @@ public:
     Texture _offscreen_shadow;
     RenderPass _offscreen_pass;
 
-    std::vector<VkFramebuffer> _offscreen_framebuffer;
+    std::vector<FrameBuffer> _offscreen_framebuffer;
     std::vector<VkImageView> _offscreen_imageview;
     std::shared_ptr<Material> _offscreen_effect;
     std::shared_ptr<Material> _debug_effect;
@@ -52,7 +53,7 @@ public:
     ~ShadowMapping();
 
     static void allocate_buffers(Device& device);
-    void prepare_depth_map(Device& device, UploadContext& uploadContext, RenderPass& renderPass, LightingManager& lighting);
+    void prepare_depth_map(Device& device, UploadContext& uploadContext, LightingManager& lighting);
     void prepare_offscreen_pass(Device& device);
     void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
     void setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);

@@ -1,11 +1,18 @@
+/*
+*  H2Vk - Atmospheric scattering
+*
+* Copyright (C) 2022-2023 by Viviane Desgrange
+*
+* This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
+*/
+
+
 #include "vk_atmosphere.h"
 #include "core/utilities/vk_initializers.h"
 #include "core/vk_descriptor_allocator.h"
 #include "core/vk_descriptor_cache.h"
 #include "core/vk_descriptor_builder.h"
 #include "core/vk_pipeline.h"
-#include "core/vk_renderpass.h"
-#include "core/vk_texture.h"
 #include "core/manager/vk_material_manager.h"
 #include "components/lighting/vk_light.h"
 #include "core/vk_command_pool.h"
@@ -15,9 +22,6 @@
 
 #include <chrono>
 #include <iostream>
-
-#include <glm/gtx/string_cast.hpp>
-
 
 Atmosphere::Atmosphere(Device &device, MaterialManager& materialManager, LightingManager& lightingManager, UploadContext& uploadContext) :
 _device(device),
@@ -264,6 +268,9 @@ void Atmosphere::create_multiple_scattering_resource(Device& device, UploadConte
     framebufferInfo.attachmentCount = 1;
     framebufferInfo.pAttachments = &_multipleScatteringLUT._imageView;
     VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_multipleScatteringFramebuffer));
+
+    // std::vector<VkImageView> imageviews = {_multipleScatteringLUT._imageView};
+    // _multipleScatteringFramebuffer = FrameBuffer(_multipleScatteringRenderPass, imageviews, Atmosphere::MULTISCATTERING_WIDTH, Atmosphere::MULTISCATTERING_HEIGHT, 1);
 
     DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
             .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
