@@ -151,9 +151,19 @@ void VulkanEngine::init_default_renderpass() {
 /**
  * @brief Initialize framebuffers
  * A collection of memory attachments that a render pass instance uses.
+ * Images used for the framebuffer attachment must be created for every images in the swap chain (ie. color + depth).
  */
 void VulkanEngine::init_framebuffers() {
-    _frameBuffers = std::make_unique<FrameBuffers>(*_window, *_device, *_swapchain, *_renderPass);
+    _frameBuffers.clear();
+    _frameBuffers.reserve(_swapchain->_swapChainImages.size());
+
+    for (int i = 0; i < _swapchain->_swapChainImages.size(); i++) {
+        std::vector<VkImageView> attachments;
+        attachments.push_back(_swapchain->_swapChainImageViews[i]);
+        attachments.push_back(_swapchain->_depthImageView);
+
+        _frameBuffers.push_back(FrameBuffer(*_renderPass, attachments, _window->_windowExtent.width, _window->_windowExtent.height, 1));
+    }
 }
 
 /**
@@ -317,7 +327,6 @@ void VulkanEngine::recreate_swap_chain() {
 
     vkDeviceWaitIdle(_device->_logicalDevice);
     _pipelineBuilder.reset();
-    _frameBuffers.reset();
     _renderPass.reset();
     _swapchain.reset();
 
@@ -488,7 +497,7 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
         clearValues[1].depthStencil = {1.0f, 0};
 
-        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass,_window->_windowExtent,_frameBuffers->_frameBuffers[imageIndex]);
+        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass,_window->_windowExtent,_frameBuffers.at(imageIndex)._frameBuffer);
         renderPassInfo.clearValueCount = clearValues.size();
         renderPassInfo.pClearValues = clearValues.data();
 
@@ -643,20 +652,13 @@ void VulkanEngine::cleanup() {
         _materialManager.reset();
         _systemManager.reset();
         _pipelineBuilder.reset();
-        _frameBuffers.reset();
+        _frameBuffers.clear();
         _renderPass.reset();
         _swapchain.reset();
         _mainDeletionQueue.flush();
 
         delete _uploadContext._commandBuffer;
         delete _uploadContext._commandPool;
-
-//        if (_uploadContext._commandBuffer != nullptr) {
-//            delete _uploadContext._commandBuffer;
-//        }
-//        if (_uploadContext._commandPool != nullptr) {
-//            delete _uploadContext._commandPool;
-//        }
 
         // todo find a way to move this into vk_device without breaking swapchain
         vmaDestroyAllocator(_device->_allocator);

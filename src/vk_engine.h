@@ -56,7 +56,7 @@ class Window;
 class Device;
 class SwapChain;
 class RenderPass;
-class FrameBuffers;
+class FrameBuffer;
 class GraphicPipeline;
 
 class SceneListing;
@@ -95,7 +95,6 @@ public:
     std::unique_ptr<Device> _device;
     std::unique_ptr<SwapChain> _swapchain;
     std::unique_ptr<RenderPass> _renderPass;
-    std::unique_ptr<FrameBuffers> _frameBuffers;
     std::unique_ptr<GraphicPipeline> _pipelineBuilder;
 
     std::unique_ptr<SceneListing> _sceneListing;
@@ -111,7 +110,7 @@ public:
     std::shared_ptr<LightingManager> _lightingManager;
     std::unique_ptr<Camera> _camera; // std::shared_ptr<class CameraManager> _cameraManager; todo
 
-    // FrameData _frames[FRAME_OVERLAP];
+    std::vector<FrameBuffer> _frameBuffers;
     std::vector<RenderObject> _renderables;
 
     DescriptorLayoutCache* _layoutCache;

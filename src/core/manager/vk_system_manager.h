@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  SystemManager, System and Entity
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -13,6 +13,9 @@
 #include <string>
 #include <atomic>
 
+/**
+ * Entity - a unique ID
+ */
 class Entity {
 protected:
     static std::atomic<uint32_t> nextGUID;
@@ -23,6 +26,11 @@ public:
     Entity();
 };
 
+/**
+ * System - logic
+ * @brief Generic resource manager
+ * @note To be updated to handle component logic in ECS
+ */
 class System {
 public:
     std::unordered_map<std::string, std::shared_ptr<Entity>> _entities {};
@@ -33,6 +41,11 @@ public:
     void clear_entities();
 };
 
+/**
+ * Register and handle generic managers (ie. lights, materials, meshes)
+ * @brief Manager of managers
+ * @note To be extended to an Entity-Component-System
+ */
 class SystemManager final {
 public:
 

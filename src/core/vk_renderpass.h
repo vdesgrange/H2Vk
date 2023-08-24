@@ -34,6 +34,9 @@ public:
         VkSubpassDependency dependency{};
     };
 
+    /** @brief vulkan device wrapper */
+    class Device& _device;
+
     /** @brief render pass object, collection of attachments, subpasses, dependencies, etc. */
     VkRenderPass _renderPass;
 
@@ -56,8 +59,4 @@ public:
     RenderPass::Attachment color(VkFormat format);
     RenderPass::Attachment depth(VkFormat format);
     VkSubpassDescription subpass_description(std::vector<VkAttachmentReference>& colorAttachmentRef, VkAttachmentReference* depthAttachmentRef);
-
-private:
-    /** @brief vulkan device wrapper */
-    class Device& _device;
 };
