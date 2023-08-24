@@ -19,7 +19,7 @@ class RenderPass;
 class FrameBuffer final {
 public:
     /** @brief collection of frame buffers associated to render pass */
-    VkFramebuffer _frameBuffer = nullptr;
+    VkFramebuffer _frameBuffer = VK_NULL_HANDLE;
 
     FrameBuffer(const RenderPass& renderPass, std::vector<VkImageView>& attachments, uint32_t width, uint32_t height, uint32_t layers);
     ~FrameBuffer();

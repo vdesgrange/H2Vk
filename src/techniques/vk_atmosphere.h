@@ -41,21 +41,21 @@ public:
     Texture _multipleScatteringLUT;
     std::shared_ptr<Material> _multiScatteringPass; // weak_ptr?
     RenderPass _multipleScatteringRenderPass;
-    VkFramebuffer _multipleScatteringFramebuffer;
+    VkFramebuffer _multipleScatteringFramebuffer = VK_NULL_HANDLE;
     VkDescriptorSet _multipleScatteringDescriptor;
     VkDescriptorSetLayout _multipleScatteringDescriptorLayout;
 
     Texture _skyviewLUT;
     std::shared_ptr<Material> _skyviewPass; // weak_ptr?
     RenderPass _skyviewRenderPass;
-    VkFramebuffer _skyviewFramebuffer;
+    VkFramebuffer _skyviewFramebuffer = VK_NULL_HANDLE;
     std::vector<VkDescriptorSet> _skyviewDescriptor;
     VkDescriptorSetLayout _skyviewDescriptorLayout;
 
     Texture _atmosphereLUT;
     std::shared_ptr<Material> _atmospherePass;
     // RenderPass _atmosphereRenderPass;
-    VkFramebuffer _atmosphereFramebuffer;
+    VkFramebuffer _atmosphereFramebuffer = VK_NULL_HANDLE;
     VkDescriptorSetLayout _atmosphereDescriptorLayout;
 
     Atmosphere() =  delete;

@@ -19,15 +19,15 @@ struct Texture {
     /** @brief Texture URI */
     std::string _uri;
     /** @brief Image object. Handle actual texture data. To be bind to graphics or compute pipeline */
-    VkImage _image;
+    VkImage _image = VK_NULL_HANDLE;
     /** @brief Layout of image and its sub-ressources. In-memory image pixels organization. */
     VkImageLayout _imageLayout; // duplicate with _descriptor
     /** @brief Single memory allocation. */
     VmaAllocation _allocation;
     /** @brief Image wrapper. Hold information on access image data. Handle metadata, mipmap, etc. */
-    VkImageView _imageView;  // duplicate
+    VkImageView _imageView =  VK_NULL_HANDLE;  // duplicate
     /** @brief How image is sampled by shader (filter, blending...) */
-    VkSampler _sampler;  // duplicate
+    VkSampler _sampler = VK_NULL_HANDLE;  // duplicate
 
     /** @brief Descriptor image information. Duplicates with image layout, view, sampler */
     VkDescriptorImageInfo _descriptor;

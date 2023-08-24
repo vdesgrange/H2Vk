@@ -34,9 +34,17 @@ Atmosphere::~Atmosphere() {
     this->_skyviewLUT.destroy(_device);
     this->_atmosphereLUT.destroy(_device);
 
-    vkDestroyFramebuffer(_device._logicalDevice, _multipleScatteringFramebuffer, nullptr);
-    vkDestroyFramebuffer(_device._logicalDevice, _skyviewFramebuffer, nullptr);
-    vkDestroyFramebuffer(_device._logicalDevice, _atmosphereFramebuffer, nullptr);
+    if (_multipleScatteringFramebuffer != VK_NULL_HANDLE) {
+        vkDestroyFramebuffer(_device._logicalDevice, _multipleScatteringFramebuffer, nullptr);
+    }
+
+    if (_skyviewFramebuffer != VK_NULL_HANDLE) {
+        vkDestroyFramebuffer(_device._logicalDevice, _skyviewFramebuffer, nullptr);
+    }
+
+    if (_atmosphereFramebuffer != VK_NULL_HANDLE) {
+        vkDestroyFramebuffer(_device._logicalDevice, _atmosphereFramebuffer, nullptr);
+    }
 }
 
 /**
