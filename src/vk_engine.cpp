@@ -162,7 +162,7 @@ void VulkanEngine::init_framebuffers() {
         attachments.push_back(_swapchain->_swapChainImageViews[i]);
         attachments.push_back(_swapchain->_depthImageView);
 
-        _frameBuffers.push_back(FrameBuffer(*_renderPass, attachments, _window->_windowExtent.width, _window->_windowExtent.height, 1));
+        _frameBuffers.emplace_back(FrameBuffer(*_renderPass, attachments, _window->_windowExtent.width, _window->_windowExtent.height, 1));
     }
 }
 

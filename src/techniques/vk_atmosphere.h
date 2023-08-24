@@ -32,9 +32,6 @@ public:
     const uint32_t SKYVIEW_WIDTH = 200;
     const uint32_t SKYVIEW_HEIGHT = 100;
 
-    // const uint32_t ATMOSPHERE_WIDTH = 1280;
-    // const uint32_t ATMOSPHERE_HEIGHT = 720;
-
     Texture _transmittanceLUT;
     std::shared_ptr<Material> _transmittancePass; // weak_ptr?
     VkDescriptorSet _transmittanceDescriptor;
@@ -43,24 +40,19 @@ public:
     Texture _multipleScatteringLUT;
     std::shared_ptr<Material> _multiScatteringPass; // weak_ptr?
     RenderPass _multipleScatteringRenderPass;
-    VkFramebuffer _multipleScatteringFramebuffer = VK_NULL_HANDLE;
-    // FrameBuffer _multipleScatteringFramebuffer;
+    std::unique_ptr<FrameBuffer> _multipleScatteringFramebuffer;
     VkDescriptorSet _multipleScatteringDescriptor;
     VkDescriptorSetLayout _multipleScatteringDescriptorLayout;
 
     Texture _skyviewLUT;
     std::shared_ptr<Material> _skyviewPass; // weak_ptr?
     RenderPass _skyviewRenderPass;
-    VkFramebuffer _skyviewFramebuffer = VK_NULL_HANDLE;
-    // FrameBuffer _skyviewFramebuffer;
+    std::unique_ptr<FrameBuffer> _skyviewFramebuffer;
     std::vector<VkDescriptorSet> _skyviewDescriptor;
     VkDescriptorSetLayout _skyviewDescriptorLayout;
 
     Texture _atmosphereLUT;
     std::shared_ptr<Material> _atmospherePass;
-    // RenderPass _atmosphereRenderPass;
-    VkFramebuffer _atmosphereFramebuffer = VK_NULL_HANDLE;
-    // FrameBuffer _atmosphereFramebuffer;
     VkDescriptorSetLayout _atmosphereDescriptorLayout;
 
     Atmosphere() =  delete;

@@ -38,17 +38,17 @@ Atmosphere::~Atmosphere() {
     this->_skyviewLUT.destroy(_device);
     this->_atmosphereLUT.destroy(_device);
 
-    if (_multipleScatteringFramebuffer != VK_NULL_HANDLE) {
-        vkDestroyFramebuffer(_device._logicalDevice, _multipleScatteringFramebuffer, nullptr);
-    }
+//    if (_multipleScatteringFramebuffer != VK_NULL_HANDLE) {
+//        vkDestroyFramebuffer(_device._logicalDevice, _multipleScatteringFramebuffer, nullptr);
+//    }
 
-    if (_skyviewFramebuffer != VK_NULL_HANDLE) {
-        vkDestroyFramebuffer(_device._logicalDevice, _skyviewFramebuffer, nullptr);
-    }
+//    if (_skyviewFramebuffer != VK_NULL_HANDLE) {
+//        vkDestroyFramebuffer(_device._logicalDevice, _skyviewFramebuffer, nullptr);
+//    }
 
-    if (_atmosphereFramebuffer != VK_NULL_HANDLE) {
-        vkDestroyFramebuffer(_device._logicalDevice, _atmosphereFramebuffer, nullptr);
-    }
+//    if (_atmosphereFramebuffer != VK_NULL_HANDLE) {
+//        vkDestroyFramebuffer(_device._logicalDevice, _atmosphereFramebuffer, nullptr);
+//    }
 }
 
 /**
@@ -258,19 +258,8 @@ void Atmosphere::create_multiple_scattering_resource(Device& device, UploadConte
     _multipleScatteringRenderPass.init(attachments, dependencies, subpass);
 
     // Prepare framebuffer
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = _multipleScatteringRenderPass._renderPass;
-    framebufferInfo.width = Atmosphere::MULTISCATTERING_WIDTH;
-    framebufferInfo.height = Atmosphere::MULTISCATTERING_HEIGHT;
-    framebufferInfo.layers = 1;
-    framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments = &_multipleScatteringLUT._imageView;
-    VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_multipleScatteringFramebuffer));
-
-    // std::vector<VkImageView> imageviews = {_multipleScatteringLUT._imageView};
-    // _multipleScatteringFramebuffer = FrameBuffer(_multipleScatteringRenderPass, imageviews, Atmosphere::MULTISCATTERING_WIDTH, Atmosphere::MULTISCATTERING_HEIGHT, 1);
+     std::vector<VkImageView> imageviews = {_multipleScatteringLUT._imageView};
+     _multipleScatteringFramebuffer = std::make_unique<FrameBuffer>(_multipleScatteringRenderPass, imageviews, Atmosphere::MULTISCATTERING_WIDTH, Atmosphere::MULTISCATTERING_HEIGHT, 1);
 
     DescriptorBuilder::begin(layoutCache, allocator) // reference texture image
             .bind_image(_transmittanceLUT._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
@@ -355,16 +344,8 @@ void Atmosphere::create_skyview_resource(Device &device, UploadContext &uploadCo
     _skyviewRenderPass.init(attachments, dependencies, subpass);
 
     // === Prepare framebuffer ===
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = _skyviewRenderPass._renderPass;
-    framebufferInfo.width = Atmosphere::SKYVIEW_WIDTH;
-    framebufferInfo.height = Atmosphere::SKYVIEW_HEIGHT;
-    framebufferInfo.layers = 1;
-    framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments = &_skyviewLUT._imageView;
-    VK_CHECK(vkCreateFramebuffer(device._logicalDevice, &framebufferInfo, nullptr, &_skyviewFramebuffer));
+    std::vector<VkImageView> imageviews = {_skyviewLUT._imageView};
+    _skyviewFramebuffer = std::make_unique<FrameBuffer>(_skyviewRenderPass, imageviews, Atmosphere::SKYVIEW_WIDTH, Atmosphere::SKYVIEW_HEIGHT, 1);
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2},
@@ -512,7 +493,7 @@ void Atmosphere::compute_multiple_scattering(Device& device, UploadContext& uplo
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     clearValues[1].depthStencil.depth = 1.0f;
 
-    VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(_multipleScatteringRenderPass._renderPass, extent, _multipleScatteringFramebuffer);
+    VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(_multipleScatteringRenderPass._renderPass, extent, _multipleScatteringFramebuffer->_frameBuffer);
     offscreenPassInfo.clearValueCount = clearValues.size();
     offscreenPassInfo.pClearValues = clearValues.data();
 
@@ -580,7 +561,7 @@ void Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext, u
         extent.width = static_cast<uint32_t>(Atmosphere::SKYVIEW_WIDTH);
         extent.height = static_cast<uint32_t>(Atmosphere::SKYVIEW_HEIGHT);
 
-        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(_skyviewRenderPass._renderPass, extent, _skyviewFramebuffer);
+        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(_skyviewRenderPass._renderPass, extent, _skyviewFramebuffer->_frameBuffer);
         offscreenPassInfo.clearValueCount = clearValues.size();
         offscreenPassInfo.pClearValues = clearValues.data();
 
@@ -647,36 +628,4 @@ void Atmosphere::draw(VkCommandBuffer& cmd, VkDescriptorSet* descriptor) {
     vkCmdPushConstants(cmd, this->_atmospherePass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &sun_direction);
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,this->_atmospherePass->pipeline);
     vkCmdDraw(cmd, 3, 1, 0, 0);
-
-//    std::array<VkClearValue, 2> clearValues{};
-//    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-//    clearValues[1].depthStencil.depth = 1.0f;
-//
-//    VkExtent2D extent;
-//    extent.width = static_cast<uint32_t>(Atmosphere::ATMOSPHERE_WIDTH);
-//    extent.height = static_cast<uint32_t>(Atmosphere::ATMOSPHERE_HEIGHT);
-//
-//    VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(_atmosphereRenderPass._renderPass, extent, sceneFramebuffer);
-//    offscreenPassInfo.clearValueCount = clearValues.size();
-//    offscreenPassInfo.pClearValues = clearValues.data();
-//
-//    VkCommandBufferBeginInfo cmdBeginInfo{};
-//    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-//    cmdBeginInfo.pNext = nullptr;
-//    cmdBeginInfo.pInheritanceInfo = nullptr;
-//    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-//
-//    vkCmdBeginRenderPass(commandBuffer, &offscreenPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-//    {
-//        VkViewport viewport = vkinit::get_viewport((float) Atmosphere::ATMOSPHERE_WIDTH, (float) Atmosphere::ATMOSPHERE_HEIGHT);
-//        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-//
-//        VkRect2D scissor = vkinit::get_scissor((float) Atmosphere::ATMOSPHERE_WIDTH, (float) Atmosphere::ATMOSPHERE_HEIGHT);
-//        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-//
-//        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_atmospherePass->pipelineLayout, 0, 1, descriptor, 0, nullptr);
-//        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,this->_atmospherePass->pipeline);
-//        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-//    }
-//    vkCmdEndRenderPass(commandBuffer);
 }
