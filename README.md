@@ -13,10 +13,29 @@ An small graphic engine developed as a side-project to learn the Vulkan API, imp
 Given that this project is recent, the list of features implemented remains short.
 A long term goal aim at using this work to render solutions obtained from physic simulations with closure modelling.
 
+## Pre-requisites
+
+### OS X
+
+```
+brew install molten-vk
+brew install vulkan-loader
+brew install glfw
+brew install glslang
+brew install git-lfs
+```
+
+### Linux
+
+```
+sudo apt-get update && sudo apt-get install mesa-common-dev libglfw3-dev libvulkan-dev glslang-tools
+```
+
 ## Download
 
 ```
 git clone --recurse-submodules https://github.com/vdesgrange/H2Vk.git
+git lfs pull
 ```
 
 ## How to build & run
@@ -37,6 +56,10 @@ cd ../bin
 - glTF import
 - Keyboard and mouse input
 
+### WIP
+- Shadow mapping
+- Atmosphere
+
 ## Snapshots
 
 ![gold material!](./snapshots/gold.png "Golden spheres")
@@ -45,6 +68,5 @@ cd ../bin
 
 ## References
 
-- [Vulkan tutoriel](https://vulkan-tutorial.com)
-- [Introduction to vulkan](https://vkguide.dev/)
-- [Examples and demos](https://github.com/SaschaWillems/Vulkan)
+Hillaire, Sébastien. (2020). A Scalable and Production Ready Sky and Atmosphere Rendering Technique. Computer Graphics Forum. 10.1111/cgf.14050.
+
