@@ -38,7 +38,7 @@ public:
     class Device& _device;
 
     /** @brief render pass object, collection of attachments, subpasses, dependencies, etc. */
-    VkRenderPass _renderPass;
+    VkRenderPass _renderPass = VK_NULL_HANDLE;
 
     RenderPass(Device& device);
     ~RenderPass();

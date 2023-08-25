@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - Environment mapping
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *

@@ -17,7 +17,7 @@
  * @brief constructor
  * @param device vulkan device wrapper
  */
-RenderPass::RenderPass(Device& device) : _device(device), _renderPass(VK_NULL_HANDLE) {
+RenderPass::RenderPass(Device& device) : _device(device) {
 }
 
 /**
