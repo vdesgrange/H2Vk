@@ -29,6 +29,8 @@ public:
     static std::function<void (int)> set_type(Camera& camera);
     static std::function<std::array<float, 3> ()> get_position(Light& light);
     static std::function<void (std::array<float, 3>)> set_position(Light& light);
+    static std::function<std::array<float, 3> ()> get_rotation(Light& light);
+    static std::function<void (std::array<float, 3>)> set_rotation(Light& light);
     static std::function<std::array<float, 3> ()> get_color(Light& light);
     static std::function<void (std::array<float, 3>)> set_color(Light& light);
 };

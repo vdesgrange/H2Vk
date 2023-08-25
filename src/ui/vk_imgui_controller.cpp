@@ -73,6 +73,19 @@ std::function<void (std::array<float, 3>)> UIController::set_position(Light& lig
     };
 }
 
+std::function<std::array<float, 3> ()> UIController::get_rotation(Light& light) {
+    return [&]() {
+        glm::vec3 p = light.get_rotation();
+        return std::array<float, 3>({p.x, p.y, p.z});
+    };
+}
+
+std::function<void (std::array<float, 3>)> UIController::set_rotation(Light& light) {
+    return [&](std::array<float, 3> p) {
+        light.set_rotation(glm::vec4(p[0], p[1], p[2], 0.0f));
+    };
+}
+
 std::function<std::array<float, 3> ()> UIController::get_color(Light& light) {
     return [&]() {
         glm::vec3 c = light.get_color();

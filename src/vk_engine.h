@@ -108,7 +108,7 @@ public:
     std::shared_ptr<MaterialManager> _materialManager;
     std::shared_ptr<MeshManager> _meshManager;
     std::shared_ptr<LightingManager> _lightingManager;
-    std::unique_ptr<Camera> _camera; // std::shared_ptr<class CameraManager> _cameraManager; todo
+    std::unique_ptr<Camera> _camera; // todo - camera manager for multi-viewport
 
     std::vector<FrameBuffer> _frameBuffers;
     std::vector<RenderObject> _renderables;

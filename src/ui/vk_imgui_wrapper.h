@@ -16,7 +16,9 @@
 namespace ImGui {
     bool InputFloat3(const char* label, const std::function<std::array<float, 3> ()>& getter, const std::function<void (std::array<float, 3>)>& setter, const char* format = "%.3f", ImGuiInputTextFlags flags = 0) {
         std::array<float, 3> value = getter();
+        PushID(label);
         bool updated = ImGui::InputFloat3(label, value.data(), format, flags);
+        PopID();
         if (updated) setter(value);
         return updated;
     }

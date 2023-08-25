@@ -80,7 +80,7 @@ GPULightData LightingManager::gpu_format() {
         std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
 
         if (light->get_type() == Light::Type::DIRECTIONAL) {
-            lightingData.dirDirection[dirLightCount] =  light->get_position(); // light->get_rotation();
+            lightingData.dirDirection[dirLightCount] =  light->get_rotation();
             lightingData.dirColor[dirLightCount] = light->get_color();
             dirLightCount++;
         }

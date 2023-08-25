@@ -282,8 +282,15 @@ bool UInterface::scene_editor() {
                         ImGui::Text("Type"); ImGui::SameLine(100); ImGui::Text("%s", Light::types[light->get_type()]);
                         float color[3] = {light->get_color()[0], light->get_color()[1], light->get_color()[2]};
                         ImGui::Text("Color"); ImGui::SameLine(100); ImGui::ColorEdit3("", color, 0);
-                        ImGui::Text("Position"); ImGui::SameLine(100);
-                        updated |= ImGui::InputFloat3("", UIController::get_position(*light), UIController::set_position(*light), "%.2f");
+                        if (light->get_type() == Light::Type::DIRECTIONAL) {
+                            ImGui::Text("Rotation"); ImGui::SameLine(100);
+                            updated |= ImGui::InputFloat3("dir", UIController::get_rotation(*light), UIController::set_rotation(*light), "%.2f");
+                        } else if (light->get_type() == Light::Type::SPOT) {
+                            ImGui::Text("Position"); ImGui::SameLine(100);
+                            updated |= ImGui::InputFloat3("pos", UIController::get_position(*light), UIController::set_position(*light), "%.2f");
+                            ImGui::Text("Rotation"); ImGui::SameLine(100);
+                            updated |= ImGui::InputFloat3("rot", UIController::get_rotation(*light), UIController::set_rotation(*light), "%.2f");
+                        }
 
                         ImGui::EndTabItem();
                     }
