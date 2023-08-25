@@ -121,7 +121,7 @@ void ShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadConte
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
     });
 
-    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     samplerInfo.maxLod = 1.0f;
     samplerInfo.maxAnisotropy = 1.0f;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -310,7 +310,7 @@ void ShadowMapping::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipe
     }
 }
 
-GPUShadowData ShadowMapping::gpu_format(const LightingManager* lightingManager) {
+GPUShadowData ShadowMapping::gpu_format(const LightingManager* lightingManager, Camera* camera) {
     GPUShadowData offscreenData{};
     uint32_t  dirLightCount = 0;
     uint32_t  spotLightCount = 0;
@@ -318,17 +318,18 @@ GPUShadowData ShadowMapping::gpu_format(const LightingManager* lightingManager) 
         std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
 
         if (light->get_type() == Light::Type::DIRECTIONAL) {
-            glm::vec3 eye = light->get_rotation();
-            glm::mat4 depthProjectionMatrix = glm::ortho<float>(-10,10,-10,10,-10,10); // entire scene must be visible
-            glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(-light->get_position()), glm::vec3(0.0f),glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::vec3 eye = -light->get_rotation();
+            glm::vec3 up = glm::dot(glm::vec3(0.0f, 1.0f, 0.0f), eye) == (glm::length(glm::vec3(0.0f, 1.0f, 0.0f)) * glm::length(eye)) ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0);
+            glm::mat4 depthProjectionMatrix = glm::ortho<float>(-10,10,-10,10,-10.0f,50.0f); // entire scene must be visible
+            glm::mat4 depthViewMatrix = glm::lookAt(eye + camera->get_position_vector() + camera->get_rotation_vector() * 10.0f, camera->get_position_vector() + camera->get_rotation_vector() * 10.0f, up);
             glm::mat4 depthModelMatrix = glm::mat4(1.0f);
             offscreenData.directionalMVP[dirLightCount] = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
             dirLightCount++;
         }
 
         if (light->get_type() == Light::Type::SPOT) {
-            glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(45.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.1f, 100.0f); // change zNear/zFar
-            glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(light->get_position()), glm::vec3(light->get_rotation()), glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 depthProjectionMatrix = glm::perspective(glm::radians(45.0f), (float)ShadowMapping::SHADOW_WIDTH / (float)ShadowMapping::SHADOW_HEIGHT, 0.01f,100.0f); // change zNear/zFar
+            glm::mat4 depthViewMatrix = glm::lookAt(glm::vec3(light->get_position()), glm::vec3(light->get_position() + light->get_rotation()), glm::vec3(0.0f, 1.0f, 0.0f));
             glm::mat4 depthModelMatrix = glm::mat4(1.0f);
             offscreenData.spotMVP[spotLightCount] = depthProjectionMatrix * depthViewMatrix * depthModelMatrix;
             spotLightCount++;

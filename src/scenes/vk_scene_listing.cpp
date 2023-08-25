@@ -53,6 +53,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
             {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
             {ShaderType::FRAGMENT, "../src/shaders/shadow_map/depth_debug_scene.frag.spv"},
     };
+
     std::vector<VkDescriptorSetLayout> shadowSetLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
     // engine->_materialManager->_pipelineBuilder = &scenePipeline;
     engine->_materialManager->create_material("shadowScene", shadowSetLayouts, constants, scene_modules);
@@ -60,7 +61,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     // === Add entities ===
     engine->_lightingManager->clear_entities();
     engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.0f, 0.f),glm::vec4(1.f)));
-    // engine->_lightingManager->add_entity("spot", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.f, 0.f), glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
+//    engine->_lightingManager->add_entity("spot", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.f, 0.f), glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 //    engine->_lightingManager->add_entity("light2", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(2.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 
     PBRProperties blank = {{1.0f,  1.0f, 1.0, 1.0f}, 0.0f,  1.0f, 1.0f};
@@ -98,7 +99,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
             RenderObject sphere;
             sphere.model = engine->_meshManager->get_model(name);
-            sphere.material = engine->_materialManager->get_material("pbrMaterial"); // pbrMaterial
+            sphere.material = engine->_materialManager->get_material("pbrMaterial");
             glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x - 3, y - 3, 0));
             glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.5, 0.5, 0.5));
             sphere.transformMatrix = translation * scale;

@@ -25,6 +25,7 @@ class FrameBuffer;
 class DescriptorAllocator;
 class DescriptorLayoutCache;
 class Model;
+class Camera;
 class Node;
 
 struct GPUShadowData {
@@ -37,8 +38,8 @@ class ShadowMapping final {
 public:
     bool debug = false;
     static const VkFormat DEPTH_FORMAT = VK_FORMAT_D16_UNORM;
-    static const uint32_t SHADOW_WIDTH = 2048;
-    static const uint32_t SHADOW_HEIGHT = 2048;
+    static const uint32_t SHADOW_WIDTH = 1024;
+    static const uint32_t SHADOW_HEIGHT = 1024;
 
     Texture _offscreen_shadow;
     RenderPass _offscreen_pass;
@@ -59,7 +60,7 @@ public:
     void setup_offscreen_pipeline(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);
     void run_offscreen_pass(FrameData& frame, Renderables& entities, LightingManager& lighting);
     void run_debug(FrameData& frame);
-    GPUShadowData gpu_format(const LightingManager* lightingManager);
+    GPUShadowData gpu_format(const LightingManager* lightingManager, Camera* camera);
 
 private:
     class Device& _device;

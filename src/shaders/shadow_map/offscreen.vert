@@ -44,4 +44,5 @@ void main() {
     }
 
     gl_Position = transformMatrix * vec4(vPosition, 1.0);
+    gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }

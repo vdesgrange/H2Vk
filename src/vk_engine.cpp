@@ -414,7 +414,7 @@ void VulkanEngine::update_uniform_buffers() {
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
 
     // Shadow
-    GPUShadowData offscreenData = _shadow->gpu_format(_lightingManager.get());
+    GPUShadowData offscreenData = _shadow->gpu_format(_lightingManager.get(), _camera.get());
 
     void *data3;
     vmaMapMemory(_device->_allocator, frame.offscreenBuffer._allocation, &data3);
@@ -488,7 +488,8 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
     // === Depth map render pass ===
     _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
 
-    _atmosphere->compute_resources(_frameNumber % FRAME_OVERLAP);
+    // === Atmosphere skyview computing (WIP) ===
+    // _atmosphere->compute_resources(_frameNumber % FRAME_OVERLAP);
 
     // === Scene render pass ===
     {
@@ -509,13 +510,13 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
-            // Debug shadow map
+            // Debug shadow map (WIP)
             // this->_shadow->run_debug(frame);
 
             // === Skybox ===
             this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
 
-            // === Atmosphere ===
+            // === Atmosphere (WIP) ===
             // this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &get_current_frame().atmosphereDescriptor);
 
             // === Meshes ===

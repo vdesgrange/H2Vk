@@ -43,6 +43,7 @@ public:
     glm::mat4 get_projection_matrix();
     glm::mat4 get_view_matrix();
     glm::vec3 get_position_vector();
+    glm::vec3 get_rotation_vector();
     glm::mat4 get_rotation_matrix();
     glm::vec3 get_target();
 
