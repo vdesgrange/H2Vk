@@ -133,7 +133,7 @@ public:
     std::string _name = "Unnamed";
     std::vector<Image> _images {};
     std::vector<Textures> _textures {};
-    std::vector<Sampler> _samplers;
+    std::vector<Sampler> _samplers {};
     std::vector<Materials> _materials {};
     std::vector<Node*> _nodes {};
 

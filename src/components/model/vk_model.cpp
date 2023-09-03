@@ -65,9 +65,11 @@ void Model::destroy() {
     for (Image image : _images) {
         image._texture.destroy(*_device);
     }
+
     _images.clear();
     _materials.clear();
     _textures.clear();
+    _samplers.clear();
 
     vmaDestroyBuffer(_device->_allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
     vmaDestroyBuffer(_device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);

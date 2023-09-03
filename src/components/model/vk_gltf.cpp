@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - GLTF file loader
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -64,12 +64,13 @@ void ModelGLTF::load_images(const Device& device, const UploadContext& ctx, tiny
             delete[] buffer;
         }
 
-        // === Empty texture ===
-        unsigned char pixels[] = {0, 0, 0, 0};
-        _images.back()._texture.load_image_from_buffer(device, ctx, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
-        _images.back()._texture._name = "Empty";
-        _images.back()._texture._uri = "Unknown";
     }
+
+    // === Empty texture ===
+    unsigned char pixels[] = {0, 0, 0, 0};
+    _images.back()._texture.load_image_from_buffer(device, ctx, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
+    _images.back()._texture._name = "Empty";
+    _images.back()._texture._uri = "Unknown";
 }
 
 void ModelGLTF::load_textures(tinygltf::Model &input) {
@@ -296,7 +297,7 @@ void ModelGLTF::load_node(const tinygltf::Node& iNode, tinygltf::Model& input, N
 }
 
 void ModelGLTF::load_scene(tinygltf::Model &input, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer) {
-    const tinygltf::Scene& scene = input.scenes[0];
+    const tinygltf::Scene& scene = input.scenes[input.defaultScene > -1 ? input.defaultScene : 0];    // = input.scenes[0];
     this->_name = scene.name.empty() ? "Unknown" : scene.name;
 
     for (uint32_t i = 0; i < scene.nodes.size(); i++) {

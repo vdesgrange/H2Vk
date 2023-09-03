@@ -1,5 +1,5 @@
 /*
-*  H2Vk - GLTF file loader
+*  H2Vk - GLTF file loader (updated version)
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -48,7 +48,7 @@ void ModelGLTF2::load_texture_samplers(tinygltf::Model& input) {
 }
 
 void ModelGLTF2::load_textures(const Device& device, const UploadContext& ctx, tinygltf::Model& input) {
-    _images.reserve(input.textures.size());
+    _images.reserve(input.textures.size() + 1);
 
     for (tinygltf::Texture tex : input.textures) {
         tinygltf::Image& gltfImage = input.images[tex.source];
@@ -64,12 +64,47 @@ void ModelGLTF2::load_textures(const Device& device, const UploadContext& ctx, t
             sampler = _samplers[tex.sampler];
         }
 
+        // Load image
+        unsigned char* buffer = nullptr;
+        VkDeviceSize bufferSize = 0;
+        bool deleteBuffer = false;
+
+        if (gltfImage.component == 3) { // RGB need conversion to RGBA
+            bufferSize = gltfImage.width * gltfImage.height * 4;
+            buffer = new unsigned char[bufferSize];
+            unsigned char* rgba = buffer;
+            unsigned char* rgb = &gltfImage.image[0];
+            for (uint32_t i = 0; i < gltfImage.width * gltfImage.height; ++i) {
+                memcpy(rgba, rgb, sizeof(unsigned char) * 3);
+                rgba += 4; // move of 4 chars
+                rgb += 3; // move of 3 chars
+            }
+            deleteBuffer = true;
+        } else {
+            buffer = gltfImage.image.data(); // ou &gltfImage.image[0]
+            bufferSize = gltfImage.image.size();
+        }
+
         Image image;
-        load_image(device, ctx, input, sampler, tex.source, image);
+        //        load_image(device, ctx, input, sampler, tex.source, image);
+        image._texture.load_image_from_buffer(device, ctx, buffer, bufferSize, sampler, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height);
         image._texture._name = gltfImage.name.empty() ? "Unknown" : gltfImage.name;
         image._texture._uri = gltfImage.uri.empty() ? "Unknown" : gltfImage.uri;
         _images.push_back(image);
+
+//        Image image;
+//        image._texture._name = gltfImage.name.empty() ? "Unknown" : gltfImage.name;
+//        image._texture._uri = gltfImage.uri.empty() ? "Unknown" : gltfImage.uri;
+
     }
+
+    // === Empty texture ===
+    unsigned char pixels[] = {0, 0, 0, 0};
+    Image image;
+    image._texture.load_image_from_buffer(device, ctx, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
+    image._texture._name = "Empty";
+    _images.back()._texture._uri = "Unknown";
+
 }
 
 void ModelGLTF2::load_materials(tinygltf::Model &input) {
@@ -79,20 +114,51 @@ void ModelGLTF2::load_materials(tinygltf::Model &input) {
         tinygltf::Material gltfMaterial = input.materials[i];
 
         _materials[i].baseColorFactor = glm::make_vec4(gltfMaterial.pbrMetallicRoughness.baseColorFactor.data());
-        _materials[i].baseColorTextureIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
+
+        int baseColorTextureIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
+        _materials[i].baseColorTextureIndex = baseColorTextureIndex;
         // _materials[i].texCoordSets.baseColor = gltfMaterial.pbrMetallicRoughness.baseColorTexture.texCoord;
+        if (baseColorTextureIndex != -1) {
+            _materials[i].baseColorTexture =  &this->_images[baseColorTextureIndex];
+        } else {
+            _materials[i].baseColorTexture = &this->_images.back();
+        }
 
-        _materials[i].metallicRoughnessTextureIndex = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
+        int metallicRoughnessTextureIndex =  gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
+        _materials[i].metallicRoughnessTextureIndex = metallicRoughnessTextureIndex;
         // _materials[i].texCoordSets.metallicRoughness = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
+        if (metallicRoughnessTextureIndex != -1) {
+            _materials[i].metallicRoughnessTexture = &this->_images[metallicRoughnessTextureIndex];
+        } else {
+            _materials[i].metallicRoughnessTexture =  &this->_images.back();
+        }
 
-        _materials[i].normalTextureIndex = gltfMaterial.normalTexture.index;
+        int normalTextureIndex = gltfMaterial.normalTexture.index;
+        _materials[i].normalTextureIndex = normalTextureIndex;
         // _materials[i].texCoordSets.normal = gltfMaterial.normalTexture.texCoord;
+        if (normalTextureIndex != -1) {
+            _materials[i].normalTexture = &this->_images[normalTextureIndex];
+        } else {
+            _materials[i].normalTexture =  &this->_images.back();
+        }
 
-        _materials[i].aoTextureIndex = gltfMaterial.occlusionTexture.index;
-        // _materials[i].texCoordSets.occlusion = gltfMaterial.occlusionTexture.texCoord;
+        int aoTextureIndex = gltfMaterial.occlusionTexture.index;
+        _materials[i].aoTextureIndex = aoTextureIndex;
 
-        _materials[i].emissiveTextureIndex = gltfMaterial.emissiveTexture.index;
+        if (aoTextureIndex != -1) {
+            _materials[i].aoTexture = &this->_images[aoTextureIndex];
+        } else {
+            _materials[i].aoTexture =  &this->_images.back();
+        }
+
+        int emissiveTextureIndex =  gltfMaterial.emissiveTexture.index;
+        _materials[i].emissiveTextureIndex = emissiveTextureIndex;
         // _materials[i].texCoordSets.emissive = gltfMaterial.emissiveTexture.texCoord;
+        if (emissiveTextureIndex != -1) {
+            _materials[i].emissiveTexture =  &this->_images[emissiveTextureIndex];
+        } else {
+            _materials[i].emissiveTexture =  &this->_images.back();
+        }
     }
 }
 
