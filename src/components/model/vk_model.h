@@ -84,15 +84,30 @@ struct Node {
 
 };
 
+struct Image {
+    Texture _texture;
+    VkDescriptorSet _descriptorSet; // access texture from the fragment shader
+};
+
 struct Materials {
     glm::vec4 baseColorFactor = glm::vec4(1.0f);
+    float metallicFactor = 1.0f;
+    float roughnessFactor = 1.0f;
+    float alphaCutoff = 1.0f;
+
     uint32_t baseColorTextureIndex;
     uint32_t normalTextureIndex;
     uint32_t metallicRoughnessTextureIndex;
     uint32_t aoTextureIndex;
     uint32_t emissiveTextureIndex;
 
-    VkDescriptorSet _descriptorSet; // access texture from the fragment shader
+    Image *baseColorTexture = nullptr;
+    Image *normalTexture = nullptr;
+    Image *metallicRoughnessTexture = nullptr;
+    Image *aoTexture = nullptr;
+    Image *emissiveTexture = nullptr;
+
+    VkDescriptorSet _descriptorSet = VK_NULL_HANDLE; // access texture from the fragment shader
 
     bool pbr = false;
 
@@ -104,11 +119,6 @@ struct Materials {
     } properties;
 };
 typedef Materials::Properties PBRProperties;
-
-struct Image {
-    Texture _texture;
-    VkDescriptorSet _descriptorSet; // access texture from the fragment shader
-};
 
 struct Textures {
     int32_t imageIndex;
@@ -123,6 +133,7 @@ public:
     std::string _name = "Unnamed";
     std::vector<Image> _images {};
     std::vector<Textures> _textures {};
+    std::vector<Sampler> _samplers;
     std::vector<Materials> _materials {};
     std::vector<Node*> _nodes {};
 

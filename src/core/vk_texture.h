@@ -13,6 +13,14 @@
 #include "vk_command_buffer.h"
 #include "core/utilities/vk_resources.h"
 
+struct Sampler {
+    VkFilter magFilter;
+    VkFilter minFilter;
+    VkSamplerAddressMode addressModeU;
+    VkSamplerAddressMode addressModeV;
+    VkSamplerAddressMode addressModeW;
+};
+
 struct Texture {
     /** @brief Texture appellation */
     std::string _name;
@@ -39,7 +47,9 @@ struct Texture {
 
     bool load_image_from_file(const Device& device, const UploadContext& ctx, const char *file);
     bool load_image_from_buffer(const Device& device, const UploadContext& ctx, void *buffer, VkDeviceSize bufferSize, VkFormat format,
-                                uint32_t texWidth, uint32_t texHeight); // , Image &outImage
+                                uint32_t texWidth, uint32_t texHeight);
+    bool load_image_from_buffer(const Device& device, const UploadContext& ctx, void *buffer, VkDeviceSize bufferSize, Sampler& sampler, VkFormat format,
+                                uint32_t texWidth, uint32_t texHeight);
     /**
      * Update image descriptor texture attributes (sampler, imageView, imageLayout)
      */

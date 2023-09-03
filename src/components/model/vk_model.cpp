@@ -131,18 +131,18 @@ void Model::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllo
 
     for (auto &material: this->_materials) {
         if (material.pbr == false) {
-            VkDescriptorImageInfo colorMap = this->_images[material.baseColorTextureIndex]._texture._descriptor;
-            VkDescriptorImageInfo normalMap = this->_images[material.normalTextureIndex]._texture._descriptor;
-            VkDescriptorImageInfo metallicRoughnessMap = this->_images[material.metallicRoughnessTextureIndex]._texture._descriptor;
-            VkDescriptorImageInfo aoMap = this->_images[material.aoTextureIndex]._texture._descriptor;
-            VkDescriptorImageInfo emissiveMap = this->_images[material.emissiveTextureIndex]._texture._descriptor;
+            VkDescriptorImageInfo colorMap = material.baseColorTexture->_texture._descriptor; // this->_images[material.baseColorTextureIndex]._texture._descriptor;
+            VkDescriptorImageInfo normalMap = material.normalTexture->_texture._descriptor; // this->_images[material.normalTextureIndex]._texture._descriptor;
+            VkDescriptorImageInfo metallicRoughnessMap = material.metallicRoughnessTexture->_texture._descriptor; // this->_images[material.metallicRoughnessTextureIndex]._texture._descriptor;
+            VkDescriptorImageInfo aoMap = material.aoTexture->_texture._descriptor; // this->_images[material.aoTextureIndex]._texture._descriptor;
+            VkDescriptorImageInfo emissiveMap = material.emissiveTexture->_texture._descriptor; // this->_images[material.emissiveTextureIndex]._texture._descriptor;
 
             DescriptorBuilder::begin(layoutCache, allocator)
-                    .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,0)
-                    .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,1)
-                    .bind_image(metallicRoughnessMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,2)
-                    .bind_image(aoMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,3)
-                    .bind_image(emissiveMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,4)
+                    .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                    .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                    .bind_image(metallicRoughnessMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+                    .bind_image(aoMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+                    .bind_image(emissiveMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
                     .layout(setLayout)
                     .build(material._descriptorSet, setLayout, poolSizes); // _images[material.baseColorTextureIndex]._descriptorSet
         }

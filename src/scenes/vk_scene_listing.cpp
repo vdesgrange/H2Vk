@@ -10,6 +10,8 @@
 #include "components/camera/vk_camera.h"
 #include "components/model/vk_model.h"
 #include "components/model/vk_poly.h"
+#include "components/model/vk_gltf.h"
+#include "components/model/vk_gltf2.h"
 #include "components/model/vk_glb.h"
 #include "core/vk_descriptor_builder.h"
 #include "vk_engine.h"
@@ -18,6 +20,7 @@ const std::vector<std::pair<std::string, std::function<Renderables(Camera& camer
         {"None", SceneListing::empty},
         {"Spheres", SceneListing::spheres},
         {"Damaged helmet", SceneListing::damagedHelmet},
+        {"Sponza", SceneListing::sponza},
 };
 
 Renderables SceneListing::empty(Camera& camera, VulkanEngine* engine) {
@@ -148,6 +151,51 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     // == Init scene ==
     RenderObject helmet;
     helmet.model = engine->_meshManager->get_model("helmet");
+    helmet.material = engine->_materialManager->get_material("pbrTextureMaterial");
+    helmet.transformMatrix = glm::mat4{ 1.0f };
+    renderables.push_back(helmet);
+
+    return renderables;
+}
+
+Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
+    Renderables renderables{};
+
+    // === Init camera ===
+    camera.inverse(true);
+    camera.set_position({ 0.0f, -5.0f, 0.0f }); // Re-initialize position after scene change = camera jumping.
+    camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
+    camera.set_type(Camera::Type::pov);
+    camera.set_speed(10.0f);
+
+    // === Add entities ===
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
+
+    std::shared_ptr<ModelGLTF> sponzaModel = std::make_shared<ModelGLTF>(engine->_device.get());
+    sponzaModel->load_model(*engine->_device, engine->_uploadContext, "../assets/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
+    engine->_meshManager->upload_mesh(*sponzaModel);
+    engine->_meshManager->add_entity("sponza", std::static_pointer_cast<Entity>(sponzaModel));
+
+    // === Init shader materials ===
+    std::vector<PushConstant> constants {
+            {sizeof(glm::mat4), ShaderType::VERTEX},
+    };
+
+    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
+            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibl_tex.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_tex.frag.spv"},
+    };
+
+    VkDescriptorSetLayout textures{};
+    sponzaModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures);
+    std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, textures};
+    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
+    engine->_materialManager->create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
+
+    // == Init scene ==
+    RenderObject helmet;
+    helmet.model = engine->_meshManager->get_model("sponza");
     helmet.material = engine->_materialManager->get_material("pbrTextureMaterial");
     helmet.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(helmet);

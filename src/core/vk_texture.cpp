@@ -224,3 +224,100 @@ bool Texture::load_image_from_buffer(const Device& device, const UploadContext& 
 
     return true;
 }
+
+/**
+ * Load image from buffer with sampler
+ * @param device vulkan device wrapper
+ * @param ctx command buffer context
+ * @param buffer temporary data storage
+ * @param bufferSize size of buffer
+ * @param format vulkan image format (ex. VK_FORMAT_R16G16_SFLOAT)
+ * @param texWidth image width
+ * @param texHeight image height
+ * @return
+ */
+bool Texture::load_image_from_buffer(const Device& device, const UploadContext& ctx, void* buffer, VkDeviceSize bufferSize, Sampler& sampler, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
+
+    AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+
+    void* data;
+    vmaMapMemory(device._allocator, stagingBuffer._allocation, &data);
+    memcpy(data, buffer, static_cast<size_t>(bufferSize));
+    vmaUnmapMemory(device._allocator, stagingBuffer._allocation);
+
+    VkExtent3D imageExtent;
+    imageExtent.width = static_cast<uint32_t>(texWidth);
+    imageExtent.height = static_cast<uint32_t>(texHeight);
+    imageExtent.depth = 1;
+
+    this->_width = texWidth;
+    this->_height = texHeight;
+
+    VkImageCreateInfo imgInfo = vkinit::image_create_info(format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, imageExtent);
+    imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VmaAllocationCreateInfo imgAllocinfo = {};
+    imgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    vmaCreateImage(device._allocator, &imgInfo, &imgAllocinfo, &this->_image, &this->_allocation, nullptr);
+
+    CommandBuffer::immediate_submit(device, ctx, [&](VkCommandBuffer cmd) {
+        VkImageSubresourceRange range;
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.baseMipLevel = 0;
+        range.levelCount = 1;
+        range.baseArrayLayer = 0;
+        range.layerCount = 1;
+
+        VkImageMemoryBarrier imageBarrier_toTransfer = {};
+        imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageBarrier_toTransfer.image = this->_image;
+        imageBarrier_toTransfer.subresourceRange = range;
+        imageBarrier_toTransfer.srcAccessMask = 0;
+        imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
+
+        VkBufferImageCopy copyRegion = {};
+        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyRegion.imageSubresource.mipLevel = 0;
+        copyRegion.imageSubresource.baseArrayLayer = 0;
+        copyRegion.imageSubresource.layerCount = 1;
+        copyRegion.imageExtent = imageExtent;
+        copyRegion.bufferOffset = 0;
+        copyRegion.bufferRowLength = 0;
+        copyRegion.bufferImageHeight = 0;
+        vkCmdCopyBufferToImage(cmd, stagingBuffer._buffer, this->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+        // Change texture image layout to shader read after all mip levels have been copied
+        this->_imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
+        imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
+
+        VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        samplerInfo.minFilter = sampler.minFilter;
+        samplerInfo.magFilter = sampler.magFilter;
+        samplerInfo.addressModeU = sampler.addressModeU;
+        samplerInfo.addressModeV = sampler.addressModeV;
+        samplerInfo.addressModeW = sampler.addressModeW;
+        vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &this->_sampler);
+
+        VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(format, this->_image, VK_IMAGE_ASPECT_COLOR_BIT);
+        imageinfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+        vkCreateImageView(device._logicalDevice, &imageinfo, nullptr, &this->_imageView);
+
+        this->updateDescriptor(); // update descriptor with sample, imageView, imageLayout
+
+    });
+
+    vmaDestroyBuffer(device._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+    std::cout << "Texture with sampler loaded successfully " << std::endl;
+
+    return true;
+}

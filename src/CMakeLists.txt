@@ -6,7 +6,7 @@ file(GLOB_RECURSE COMPONENTS "scenes/*.cpp" "scenes/*.h")
 file(GLOB_RECURSE SCENES "scenes/*.cpp" "scenes/*.h")
 file(GLOB_RECURSE UI "ui/*.cpp" "ui/*.h")
 file(GLOB_RECURSE TECHNIQUES "techniques/*.cpp" "techniques/*.h")
-file(GLOB_RECURSE TRACY_CLIENT "../third_party/tracy/public/TracyClient.cpp")
+# file(GLOB_RECURSE TRACY_CLIENT "../third_party/tracy/public/TracyClient.cpp")
 add_executable(h2vk ${ENGINE} ${CORE} ${COMPONENTS} ${SCENES} ${UI} ${TECHNIQUES} ${TRACY_CLIENT})
 
 set_property(TARGET h2vk PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:h2vk>")
@@ -39,7 +39,7 @@ add_dependencies(h2vk shaders) # keep
 
 target_include_directories(h2vk PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}") # keep
 target_link_libraries(h2vk vk-bootstrap VulkanMemoryAllocator glm tinyobjloader tinygltf imgui stb_image fonts glfw) # ${LIBGLFW3} ${LIBVULKAN13} ${LIBVULKAN1} # keep
-target_link_libraries(h2vk Tracy::TracyClient) # keep
+# target_link_libraries(h2vk Tracy::TracyClient) # keep
 
 #find_library(LIBVULKAN13 libvulkan.1.3.204.dylib ~/VulkanSDK/1.3.204.1/macOS/lib/)
 #find_library(LIBVULKAN1 libvulkan.1.dylib ~/VulkanSDK/1.3.204.1/macOS/lib/)
