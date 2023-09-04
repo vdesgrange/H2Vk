@@ -175,11 +175,7 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
     std::shared_ptr<ModelGLTF> sponzaModel = std::make_shared<ModelGLTF>(engine->_device.get());
-    auto start = std::chrono::high_resolution_clock::now();
     sponzaModel->load_model(*engine->_device, engine->_uploadContext, "../assets/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = end - start;
-    std::cout << diff.count() << std::endl;
 
     engine->_meshManager->upload_mesh(*sponzaModel);
     engine->_meshManager->add_entity("sponza", std::static_pointer_cast<Entity>(sponzaModel));
