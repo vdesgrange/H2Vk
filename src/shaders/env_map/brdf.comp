@@ -1,56 +1,15 @@
 #version 460
+#extension GL_GOOGLE_include_directive : enable
 
-#define PI 3.1415926535897932384626433832795
+#include "../common/brdf.glsl"
 
 layout(binding = 0, rgba16f) writeonly uniform image2D outputImage; // brdf
 
 layout(local_size_x = 32, local_size_y = 32) in;
 
-vec2 hammersley(uint i, uint N) {
-    uint bits = (i << 16u) | (i >> 16u);
-    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-    float rdi = float(bits) * 2.3283064365386963e-10;
-
-    return vec2(float(i)/float(N), rdi);
-}
-
-vec3 importance_sample_GGX(vec2 Xi, vec3 N, float roughness) {
-    float alpha = roughness * roughness;
-
-    float phi = 2.0 * PI * Xi.x; // + random(normal.xz) * 0.1
-    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (alpha * alpha - 1.0) * Xi.y));
-    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-
-    // from spherical coordinates to cartesian coordinates
-    vec3 H = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
-
-    // from tangent-space vector to world-space sample vector
-    vec3 up        = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangentX   = normalize(cross(up, N));
-    vec3 tangentY = cross(N, tangentX);
-
-    vec3 sampleVec = tangentX * H.x + tangentY * H.y + N * H.z;
-
-    return normalize(sampleVec);
-}
-
-float G_Smith_GGX(float dotNV, float dotNL, float roughness) {
-    float k = (roughness * roughness) / 2.0;
-    float ggx1 = dotNL / (dotNL * (1.0 - k) + k);
-    float ggx2 = dotNV / (dotNV * (1.0 - k) + k);
-    return ggx1 * ggx2;
-}
-
-float D_GGX(float dotNH, float roughness) {
-    float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-    float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
-    return (alpha2)/(PI * denom*denom);
-}
-
+/**
+* Environment BRDF - Pre-compute LUT
+*/
 vec2 BRDF(float dotNV, float roughness) {
     uint totalSamples = 1024u;
     vec3 V = vec3(sqrt(1.0 - dotNV * dotNV), 0.0, dotNV);
@@ -61,29 +20,24 @@ vec2 BRDF(float dotNV, float roughness) {
 
     for(uint i = 0u; i < totalSamples; i++) {
         vec2 Xi = hammersley(i, totalSamples);
-        vec3 H  = importance_sample_GGX(Xi, N, roughness);
-        float dotHV = dot(H, V);
-        vec3 L  = normalize(2.0 * dotHV * H - V);
+        vec3 H  = importance_sample_GGX(N, Xi, roughness);
+        vec3 L  = normalize(2.0 * dot(V, H) * H - V);
 
-        float dotNL = max(L.z, 0.0);
+        float dotNL = clamp(L.z, 0.0, 1.0); // N = vec3(0.0, 0.0, 1.0);
+        float dotNH = clamp(H.z, 0.0, 1.0);
+        float dotVH = clamp(dot(V, H), 0.0, 1.0);
 
         if(dotNL > 0.0) {
-            dotHV = max(dotHV, 0.0);
-            float dotNH = max(H.z, 0.0);
-
-            float G = G_Smith_GGX(dotNV, dotNL, roughness);
-            float G_Vis = (G * dotHV) / (dotNH * dotNV);
-            float Fc = pow(1.0 - dotHV, 5.0);
+            float G = G_IBL_GGX(dotNL, dotNV, roughness);
+            float G_Vis = (G * dotVH) / (dotNH * dotNV);
+            float Fc = pow(1.0 - dotVH, 5.0);
 
             A += (1.0 - Fc) * G_Vis;
             B += Fc * G_Vis;
         }
     }
 
-    A /= float(totalSamples);
-    B /= float(totalSamples);
-
-    return vec2(A, B);
+    return vec2(A, B) / float(totalSamples);
 }
 
 void main()
@@ -92,9 +46,10 @@ void main()
     float texSize = float(outSize[0]); // square
 
     ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
-    float dotNV = float(texCoord.x) * 1.0 / texSize;
-    float roughness = float(texCoord.y) * 1.0 / texSize;
+    float dotNV = float(texCoord.x + 1.0) * 1.0 / texSize;
+    float roughness = float(texCoord.y + 1.0) * 1.0 / texSize;
 
+    // Compute Look-up table
     vec2 LUT = BRDF(dotNV, roughness);
 
     imageStore(outputImage, texCoord, vec4(LUT, 0.0, 0.0));
