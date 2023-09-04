@@ -86,16 +86,10 @@ void ModelGLTF2::load_textures(const Device& device, const UploadContext& ctx, t
         }
 
         Image image;
-        //        load_image(device, ctx, input, sampler, tex.source, image);
         image._texture.load_image_from_buffer(device, ctx, buffer, bufferSize, sampler, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height);
         image._texture._name = gltfImage.name.empty() ? "Unknown" : gltfImage.name;
         image._texture._uri = gltfImage.uri.empty() ? "Unknown" : gltfImage.uri;
-        _images.push_back(image);
-
-//        Image image;
-//        image._texture._name = gltfImage.name.empty() ? "Unknown" : gltfImage.name;
-//        image._texture._uri = gltfImage.uri.empty() ? "Unknown" : gltfImage.uri;
-
+        _images.emplace_back(std::move(image));
     }
 
     // === Empty texture ===
@@ -103,8 +97,8 @@ void ModelGLTF2::load_textures(const Device& device, const UploadContext& ctx, t
     Image image;
     image._texture.load_image_from_buffer(device, ctx, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
     image._texture._name = "Empty";
-    _images.back()._texture._uri = "Unknown";
-
+    image._texture._uri = "Unknown";
+    _images.emplace_back(std::move(image));
 }
 
 void ModelGLTF2::load_materials(tinygltf::Model &input) {
@@ -159,38 +153,6 @@ void ModelGLTF2::load_materials(tinygltf::Model &input) {
         } else {
             _materials[i].emissiveTexture =  &this->_images.back();
         }
-    }
-}
-
-void ModelGLTF2::load_image(const Device& device, const UploadContext& ctx, tinygltf::Model& input, Sampler& sampler, uint32_t source, Image& image) {
-    tinygltf::Image& gltfImage = input.images[source];
-
-    unsigned char* buffer = nullptr;
-    VkDeviceSize bufferSize = 0;
-    bool deleteBuffer = false;
-
-    if (gltfImage.component == 3) { // RGB need conversion to RGBA
-        bufferSize = gltfImage.width * gltfImage.height * 4;
-        buffer = new unsigned char[bufferSize];
-        unsigned char* rgba = buffer;
-        unsigned char* rgb = &gltfImage.image[0];
-        for (uint32_t i = 0; i < gltfImage.width * gltfImage.height; ++i) {
-            memcpy(rgba, rgb, sizeof(unsigned char) * 3);
-            rgba += 4; // move of 4 chars
-            rgb += 3; // move of 3 chars
-        }
-        deleteBuffer = true;
-    } else {
-        buffer = gltfImage.image.data(); // ou &gltfImage.image[0]
-        bufferSize = gltfImage.image.size();
-    }
-
-    image._texture.load_image_from_buffer(device, ctx, buffer, bufferSize, sampler, VK_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height);
-    image._texture._name = gltfImage.name.empty() ? "Unknown" : gltfImage.name;
-    image._texture._uri = gltfImage.uri.empty() ? "Unknown" : gltfImage.uri;
-
-    if (deleteBuffer) {
-        delete[] buffer;
     }
 }
 

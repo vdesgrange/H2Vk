@@ -100,7 +100,7 @@ void ModelGLTF::load_materials(tinygltf::Model &input) {
         if (gltfMaterial.values.find("baseColorTexture") != gltfMaterial.values.end()) {
             uint32_t baseColorTextureIndex = gltfMaterial.values["baseColorTexture"].TextureIndex();
             _materials[i].baseColorTextureIndex = baseColorTextureIndex;
-            _materials[i].baseColorTexture =  &this->_images[baseColorTextureIndex];
+            _materials[i].baseColorTexture =  &this->_images[_textures[baseColorTextureIndex].imageIndex]; // baseColorTextureIndex
         } else {
             _materials[i].baseColorTexture =  &this->_images.back();
         }
@@ -108,7 +108,7 @@ void ModelGLTF::load_materials(tinygltf::Model &input) {
         if (gltfMaterial.additionalValues.find("normalTexture") != gltfMaterial.additionalValues.end()) {
             uint32_t normalTextureIndex = gltfMaterial.additionalValues["normalTexture"].TextureIndex();
             _materials[i].normalTextureIndex = normalTextureIndex;
-            _materials[i].normalTexture = &this->_images[normalTextureIndex];
+            _materials[i].normalTexture = &this->_images[_textures[normalTextureIndex].imageIndex]; // normalTextureIndex
         } else {
             _materials[i].normalTexture =  &this->_images.back();
         }
@@ -117,7 +117,7 @@ void ModelGLTF::load_materials(tinygltf::Model &input) {
         if (gltfMaterial.additionalValues.find("metallicRoughnessTexture") != gltfMaterial.additionalValues.end()) {
             uint32_t metallicRoughnessTextureIndex = gltfMaterial.additionalValues["metallicRoughnessTexture"].TextureIndex();
             _materials[i].metallicRoughnessTextureIndex = metallicRoughnessTextureIndex;
-            _materials[i].metallicRoughnessTexture = &this->_images[metallicRoughnessTextureIndex];
+            _materials[i].metallicRoughnessTexture = &this->_images[_textures[metallicRoughnessTextureIndex].imageIndex]; // metallicRoughnessTextureIndex
         } else {
             _materials[i].metallicRoughnessTexture =  &this->_images.back();
         }
@@ -125,7 +125,7 @@ void ModelGLTF::load_materials(tinygltf::Model &input) {
         if (gltfMaterial.additionalValues.find("occlusionTexture") != gltfMaterial.additionalValues.end()) {
             uint32_t aoTextureIndex = gltfMaterial.additionalValues["occlusionTexture"].TextureIndex();
             _materials[i].aoTextureIndex = aoTextureIndex;
-            _materials[i].aoTexture = &this->_images[aoTextureIndex];
+            _materials[i].aoTexture = &this->_images[_textures[aoTextureIndex].imageIndex]; // aoTextureIndex
         } else {
             _materials[i].aoTexture =  &this->_images.back();
         }
@@ -133,7 +133,7 @@ void ModelGLTF::load_materials(tinygltf::Model &input) {
         if (gltfMaterial.additionalValues.find("emissiveTexture") != gltfMaterial.additionalValues.end()) {
             uint32_t emissiveTextureIndex = gltfMaterial.additionalValues["emissiveTexture"].TextureIndex();
             _materials[i].emissiveTextureIndex = emissiveTextureIndex;
-            _materials[i].emissiveTexture = &this->_images[emissiveTextureIndex];
+            _materials[i].emissiveTexture = &this->_images[_textures[emissiveTextureIndex].imageIndex]; // emissiveTextureIndex
         } else {
             _materials[i].emissiveTexture =  &this->_images.back();
         }

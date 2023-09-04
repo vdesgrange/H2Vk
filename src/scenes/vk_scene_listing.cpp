@@ -15,6 +15,8 @@
 #include "components/model/vk_glb.h"
 #include "core/vk_descriptor_builder.h"
 #include "vk_engine.h"
+#include <iostream>
+#include <chrono>
 
 const std::vector<std::pair<std::string, std::function<Renderables(Camera& camera, VulkanEngine* engine)>>> SceneListing::scenes = {
         {"None", SceneListing::empty},
@@ -172,8 +174,13 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     engine->_lightingManager->clear_entities();
     engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
-    std::shared_ptr<ModelGLTF2> sponzaModel = std::make_shared<ModelGLTF2>(engine->_device.get());
+    std::shared_ptr<ModelGLTF> sponzaModel = std::make_shared<ModelGLTF>(engine->_device.get());
+    auto start = std::chrono::high_resolution_clock::now();
     sponzaModel->load_model(*engine->_device, engine->_uploadContext, "../assets/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = end - start;
+    std::cout << diff.count() << std::endl;
+
     engine->_meshManager->upload_mesh(*sponzaModel);
     engine->_meshManager->add_entity("sponza", std::static_pointer_cast<Entity>(sponzaModel));
 
@@ -194,11 +201,11 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     engine->_materialManager->create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
 
     // == Init scene ==
-    RenderObject helmet;
-    helmet.model = engine->_meshManager->get_model("sponza");
-    helmet.material = engine->_materialManager->get_material("pbrTextureMaterial");
-    helmet.transformMatrix = glm::mat4{ 1.0f };
-    renderables.push_back(helmet);
+    RenderObject sponza;
+    sponza.model = engine->_meshManager->get_model("sponza");
+    sponza.material = engine->_materialManager->get_material("pbrTextureMaterial");
+    sponza.transformMatrix = glm::mat4{ 1.0f };
+    renderables.push_back(sponza);
 
     return renderables;
 }
