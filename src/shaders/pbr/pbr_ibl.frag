@@ -1,9 +1,11 @@
 #version 460
 // #extension GL_EXT_debug_printf : disable
 // #extension GL_ARB_shading_language_include : require
-#define shadow_ambient 0.1
+#extension GL_GOOGLE_include_directive : enable
 
-const float PI = 3.14159265359;
+#include "../common/brdf.glsl"
+#include "../common/filters.glsl"
+
 const int MAX_LIGHT = 8;
 const int enablePCF = 0;
 
@@ -50,48 +52,6 @@ const mat4 biasMat = mat4(
 0.0, 0.0, 1.0, 0.0,
 0.5, 0.5, 0.0, 1.0 );
 
-float textureProj(vec4 P, vec2 off, float layer) {
-    vec4 shadowCoord = P / P.w; //  w = 1 for orthographic. Divide by w to emulate perspective.
-    float cosTheta = clamp(dot(inNormal, -inFragPos), 0.0, 1.0);
-    float bias = 0.005 * tan(acos(cosTheta));
-
-    bias = clamp(bias, 0, 0.01);
-
-    float shadow = 1.0; // default coefficient, bias handled outside.
-    if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) // depth in valid [-1, 1] interval
-    {
-        float dist = texture(shadowMap, vec3(shadowCoord.st + off, layer) ).r; // get depth map distance to light at coord st + off
-        if ( shadowCoord.w > 0.0 && dist < shadowCoord.z - bias) // if opaque & current depth > than closest obstacle
-        {
-            shadow = shadow_ambient;
-        }
-    }
-    return shadow;
-}
-
-float filterPCF(vec4 sc, float layer) {
-    ivec2 texDim = textureSize(shadowMap, 0).xy; // get depth map dimension
-    float scale = 1.0;
-    float dx = scale * 1.0 / float(texDim.x); // x offset = (1 / width) * scale
-    float dy = scale * 1.0 / float(texDim.y); // y offset = (1 / height) * scale
-
-    float shadowFactor = 0.0;
-    int count = 0;
-    int range = 1;
-
-    for (int x = -range; x <= range; x++) // -1, 0, 1
-    {
-        for (int y = -range; y <= range; y++) // -1, 0, 1
-        {
-            // float index = pseudo_random(vec4(gl_FragCoord.xy, x, y));
-            shadowFactor += textureProj(sc, vec2(dx * x, dy * y), layer); // coord + offset = samples center + 8 neighbours
-            count++;
-        }
-
-    }
-    return shadowFactor / count;
-}
-
 vec3 shadow(vec3 color, int type) {
     float layer_offset = 0;
     vec4 shadowCoord;
@@ -107,35 +67,10 @@ vec3 shadow(vec3 color, int type) {
             shadowCoord = biasMat * depthData.directional_mvp[i] * vec4(inFragPos, 1.0);
         }
 
-        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowCoord, layer_offset + i) : textureProj(shadowCoord, vec2(0.0), layer_offset + i);
+        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowMap, inNormal, inFragPos, shadowCoord, layer_offset + i) : textureProj(shadowMap,  inNormal, inFragPos, shadowCoord, vec2(0.0), layer_offset + i);
         color *= shadowFactor;
     }
     return color;
-}
-
-float D_GGX(float dotNH, float roughness) {
-    float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-    float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
-    return (alpha2)/(PI * denom*denom);
-}
-
-float G_Smith(float dotNV, float dotNL, float roughness) {
-    float r = (roughness + 1.0);
-    float k = (r * r) / 8.0;
-    float ggx1 = dotNL / (dotNL * (1.0 - k) + k);
-    float ggx2 = dotNV / (dotNV * (1.0 - k) + k);
-    return ggx1 * ggx2;
-}
-
-vec3 F_Schlick(float cosTheta) {
-    vec3 F0 = mix(vec3(0.02), material.albedo.rgb, material.metallic);
-    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
-}
-
-vec3 F_SchlickR(float cosTheta, float roughness) {
-    vec3 F0 = mix(vec3(0.02), material.albedo.rgb, material.metallic);
-    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 vec3 prefiltered_reflection(vec3 R, float roughness) {
@@ -151,6 +86,8 @@ vec3 prefiltered_reflection(vec3 R, float roughness) {
 vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C) {
     vec3 color = vec3(0.0);
     float roughness = material.roughness;
+    vec3 F0 = mix(vec3(0.02), material.albedo.rgb, material.metallic);
+
 
     vec3 H = normalize(V + L);
     float dotNV = clamp(dot(N, V), 0.0, 1.0);
@@ -160,9 +97,9 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C) {
 
     if (dotNL > 0.0)
     {
-        float D = D_GGX(dotNH, roughness);
-        float G = G_Smith(dotNL, dotNV, roughness);
-        vec3 F = F_Schlick(dotHV); // dotNV
+        float D = D_GGX(dotNH, roughness * roughness);
+        float G = G_GGX(dotNL, dotNV, roughness);
+        vec3 F = F_Schlick(F0, dotHV); // dotNV
         vec3 spec = D * G * F / (4.0 * dotNL * dotNV + 0.001);
         vec3 kd = (vec3(1.0) - F) * (1.0 - material.metallic);
         color += (kd * material.albedo.rgb / PI + spec) * dotNL;
@@ -227,7 +164,8 @@ void main()
 
     vec3 diffuse = irradiance *  material.albedo.rgb;
 
-    vec3 F = F_SchlickR(max(dot(N, V), 0.0), roughness);
+    vec3 F0 = mix(vec3(0.02), material.albedo.rgb, material.metallic);
+    vec3 F = F_SchlickR(F0, max(dot(N, V), 0.0), roughness);
 
     vec3 specular = reflection * (F * brdf.x + brdf.y);
 

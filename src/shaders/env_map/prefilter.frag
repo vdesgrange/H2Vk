@@ -40,7 +40,7 @@ vec3 prefilter(vec3 N, float roughness, float resolution) {
             float dotVH = clamp(dot(V, H), 0.0, 1.0);
 
             float K = 1.0f; // other version : 4.0f;
-            float D = D_GGX(dotNH, roughness);
+            float D = D_GGX(dotNH, roughness * roughness);
             float pdf = D * dotNH / (4.0 * dotVH) + 0.0001; // other version : dotNL / PI;
             // Omega S - Solid angle of current sample
             float S = 1.0 / (float(numSamples) * pdf); // other version : 1.0 / pdf;

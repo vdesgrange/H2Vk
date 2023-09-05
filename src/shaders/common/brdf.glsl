@@ -78,8 +78,7 @@ vec3 F_Schlick(vec3 F0, float cosTheta) {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-vec3 F_SchlickR(float cosTheta, vec3 albedo, float metallic, float roughness) {
-    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+vec3 F_SchlickR(vec3 F0, float cosTheta, float roughness) {
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
