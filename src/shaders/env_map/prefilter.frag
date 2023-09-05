@@ -1,9 +1,8 @@
 #version 460
 #extension GL_EXT_debug_printf : disable
+#extension GL_GOOGLE_include_directive : enable
 
-//layout (set = 0, binding = 0) uniform Data {
-//    float roughness;
-//} data;
+#include "../common/brdf.glsl"
 
 layout (set = 0, binding = 0) uniform samplerCube inputImage;
 
@@ -15,74 +14,40 @@ layout (push_constant) uniform PushConsts {
     layout(offset = 128) float roughness;
 } consts;
 
-
-#define PI 3.1415926535897932384626433832795
-
-vec2 hammersley(uint i, uint N) {
-    uint bits = (i << 16u) | (i >> 16u);
-    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-    float rdi = float(bits) * 2.3283064365386963e-10; // / 0x100000000
-
-    return vec2(float(i)/float(N), rdi);
-}
-
-vec3 importance_sample_GGX(vec2 Xi, vec3 N, float roughness) {
-    float alpha = roughness * roughness;
-
-    float phi = 2.0 * PI * Xi.x; // + random(normal.xz) * 0.1
-    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (alpha * alpha - 1.0) * Xi.y));
-    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-
-    // from spherical coordinates to cartesian coordinates
-    vec3 H = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
-
-    // from tangent-space vector to world-space sample vector
-    vec3 up        = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangentX   = normalize(cross(up, N));
-    vec3 tangentY = cross(N, tangentX);
-
-    vec3 sampleVec = tangentX * H.x + tangentY * H.y + N * H.z;
-
-    return normalize(sampleVec);
-}
-
-float D_GGX(float dotNH, float roughness) {
-    float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-    float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
-    return (alpha2)/(PI * denom*denom);
-}
-
-void main()
-{
-    vec3 N = normalize(inPos);
-    vec3 R = N;
-    vec3 V = N;
-    float resolution = float(textureSize(inputImage, 0)[0]);
-    float roughness = consts.roughness;
-    uint numSamples = 1024u;
-    float totalWeight = 0.0;
-
+/**
+* Prefilter environment map
+* Shape of distribution changed based on viewing angle.
+* Approximation assume the angle is 0 : n = v = r
+* [Real Shading in Unreal Engine 4 - Epic Games]
+* [Chapter 20. GPU-Based Importance Sampling - GPU Gems 3]
+*/
+vec3 prefilter(vec3 N, float roughness, float resolution) {
+    vec3 V = N; // n = v = r
     vec3 prefiltered = vec3(0.0);
+
+    float totalWeight = 0.0;
+    uint numSamples = 1024u;
+
     for(uint i = 0u; i < numSamples; i++) {
         vec2 Xi = hammersley(i, numSamples);
-        vec3 H = importance_sample_GGX(Xi, N, roughness);
+        vec3 H = importance_sample_GGX(N, Xi, roughness);
         vec3 L = 2.0 * dot(V, H) * H - V;
         float dotNL = clamp(dot(N, L), 0.0, 1.0);
 
+        // Sample in upper atmosphere
         if(dotNL > 0.0) {
             float dotNH = clamp(dot(N, H), 0.0, 1.0);
             float dotVH = clamp(dot(V, H), 0.0, 1.0);
 
+            float K = 1.0f; // other version : 4.0f;
             float D = D_GGX(dotNH, roughness);
-            float pdf = D * dotNH / (4.0 * dotVH) + 0.0001;
+            float pdf = D * dotNH / (4.0 * dotVH) + 0.0001; // other version : dotNL / PI;
+            // Omega S - Solid angle of current sample
+            float S = 1.0 / (float(numSamples) * pdf); // other version : 1.0 / pdf;
+            // Omega P - Solid angle of current pixel
             float P  = 4.0 * PI / (6.0 * resolution * resolution);
-            float S = 1.0 / (float(numSamples) * pdf); // + 0.0001
 
-            float mipLevel = roughness == 0.0 ? 0.0 : max(0.5 * log2(S / P), 0.0f); // + 1.0
+            float mipLevel = roughness == 0.0 ? 0.0 : max(0.5 * log2(K * S / P), 0.0f);
 
             prefiltered += textureLod(inputImage, L, mipLevel).rgb * dotNL;
 
@@ -91,6 +56,18 @@ void main()
     }
 
     prefiltered /= max(totalWeight, 0.001f);
+
+    return prefiltered;
+}
+
+
+void main()
+{
+    vec3 N = normalize(inPos);
+    float resolution = float(textureSize(inputImage, 0)[0]);
+    float roughness = consts.roughness;
+
+    vec3 prefiltered = prefilter(N, roughness, resolution);
 
     outFragColor = vec4(prefiltered, 1.0);
 }

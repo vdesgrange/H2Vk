@@ -9,6 +9,7 @@ layout(local_size_x = 32, local_size_y = 32) in;
 
 /**
 * Environment BRDF - Pre-compute LUT
+* [Real Shading in Unreal Engine 4 - Epic Games]
 */
 vec2 BRDF(float dotNV, float roughness) {
     uint totalSamples = 1024u;
