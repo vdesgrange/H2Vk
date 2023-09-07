@@ -129,8 +129,8 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     engine->_lightingManager->clear_entities();
     engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
-    std::shared_ptr<ModelGLB> helmetModel = std::make_shared<ModelGLB>(engine->_device.get());
-    helmetModel->load_model(*engine->_device, engine->_uploadContext, "../assets/damaged_helmet/gltf_bin/DamagedHelmet.glb");
+    std::shared_ptr<ModelGLTF2> helmetModel = std::make_shared<ModelGLTF2>(engine->_device.get());
+    helmetModel->load_model(*engine->_device, engine->_uploadContext, "../assets/damaged_helmet/gltf/DamagedHelmet.gltf");
     engine->_meshManager->upload_mesh(*helmetModel);
     engine->_meshManager->add_entity("helmet", std::static_pointer_cast<Entity>(helmetModel));
 
@@ -174,7 +174,7 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     engine->_lightingManager->clear_entities();
     engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
-    std::shared_ptr<ModelGLTF> sponzaModel = std::make_shared<ModelGLTF>(engine->_device.get());
+    std::shared_ptr<ModelGLTF2> sponzaModel = std::make_shared<ModelGLTF2>(engine->_device.get());
     sponzaModel->load_model(*engine->_device, engine->_uploadContext, "../assets/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
 
     engine->_meshManager->upload_mesh(*sponzaModel);

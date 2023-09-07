@@ -91,7 +91,7 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
     float dotNH = clamp(dot(N, H), 0.0, 1.0);
     float dotHV = clamp(dot(H, V), 0.0, 1.0);
 
-    //if (dotNL > 0.0) {
+    if (dotNL > 0.0) {
         float D = D_GGX(dotNH, roughness * roughness);
         float G = G_GGX(dotNL, dotNV, roughness);
         vec3 F = F_Schlick(F0, dotHV);
@@ -99,7 +99,7 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
         vec3 kd = (vec3(1.0) - F) * (1.0 - metallic);
 
         color += (kd * albedo / PI + spec) * dotNL;
-    //}
+    }
 
     return color;
 }
@@ -143,7 +143,7 @@ vec3 spot_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, float met
 vec3 directional_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, float metallic) {
     for (int i = 0; i < lightingData.num_lights[1]; i++) {
         vec3 L = normalize(- lightingData.dir_direction[i].xyz);
-        vec3 C = lightingData.dir_color[i].rgb;
+        vec3 C = lightingData.dir_color[i].rgb / 255.0;
 
         Lo += BRDF(L, V, N, C, albedo, roughness, metallic);
     };
@@ -155,8 +155,8 @@ void main()
 {
     vec3 albedo = pow(texture(samplerAlbedoMap, inUV).rgb, vec3(2.2)); // gamma correction
     vec3 normal = texture(samplerNormalMap, inUV).rgb;
-    float metallic = texture(samplerMetalRoughnessMap, inUV).r;
     float roughness = texture(samplerMetalRoughnessMap, inUV).g;
+    float metallic = texture(samplerMetalRoughnessMap, inUV).b;
     float ao = texture(samplerAOMap, inUV).r;
     vec3 emissive = texture(samplerEmissiveMap, inUV).rgb;
 
@@ -186,12 +186,12 @@ void main()
 
     vec3 color = ambient + Lo;
 
-    color = uncharted2_tonemap(color);
+    // color = uncharted2_tonemap(color);
     color = color / (color + vec3(1.0)); // Reinhard operator
-    color = shadow(color, 0);
-    color = shadow(color, 1);
+//    color = shadow(color, 0);
+//    color = shadow(color, 1);
 
-    // color = color * (1.0f / uncharted2_tonemap(vec3(11.2f)));
+    color = color * (1.0f / uncharted2_tonemap(vec3(11.2f)));
 
     outFragColor = vec4(color, 1.0);
 }
