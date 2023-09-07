@@ -1,6 +1,6 @@
 ![workflow_linux](https://github.com/vdesgrange/h2vk/actions/workflows/cmake.yml/badge.svg?branch=main "Workflow Linux")
 
-# H2VK - A Vulkan based educational graphic engine 
+# H2VK - A Vulkan based educational rendering engine 
 
 ```
 H for Hydrogen. 
