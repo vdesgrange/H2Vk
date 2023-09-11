@@ -23,6 +23,7 @@ struct AllocatedBuffer {
 /**
  * Buffers are regions of memory used for storing arbitrary data that can be read by the graphics card.
  * @brief Provide functions to properly create a buffer
+ * todo - add mapping/unmapping, destruction, etc.
  */
 class Buffer final {
 public:

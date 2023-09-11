@@ -55,6 +55,10 @@ struct FrameData {
     AllocatedBuffer offscreenBuffer;
     VkDescriptorSet offscreenDescriptor;
 
+    AllocatedBuffer cascadedOffscreenBuffer;
+    VkDescriptorSet cascadedOffscreenDescriptor;
+    // std::array<VkDescriptorSet, 4> cascadedOffscreenDescriptor;
+
     VkDescriptorSet debugDescriptor;
 
     VkDescriptorSet atmosphereDescriptor;
