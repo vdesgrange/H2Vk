@@ -11,10 +11,10 @@ layout (location = 4) in vec4 vTangent;
 
 layout (location = 0) out vec2 outUV;
 
-const int CASCADE_COUNT = 4; // layout (constant_id = 0)
+const int CASCADE_COUNT = 1; // layout (constant_id = 0)
 
 layout (std140, set = 0, binding = 0) uniform ShadowData {
-    layout(offset = 16) mat4 cascadeMV[CASCADE_COUNT];
+    mat4 cascadeMV[CASCADE_COUNT];
 } shadowData;
 
 struct ObjectData {
@@ -35,6 +35,8 @@ void main()
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * pushData.model;
     mat4 transformMatrix = shadowData.cascadeMV[pushData.cascadeIndex] * modelMatrix;
 
-	outUV = vUV;
+    // debugPrintfEXT("Test %i", pushData.cascadeIndex);
+
+    outUV = vUV;
 	gl_Position =  transformMatrix * vec4(vPosition, 1.0);
 }

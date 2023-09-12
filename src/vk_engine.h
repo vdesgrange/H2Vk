@@ -50,6 +50,7 @@
 #include "scenes/vk_scene.h"
 
 #include "techniques/vk_shadow_map.h"
+#include "techniques/vk_cascaded_shadow_map.h"
 #include "techniques/vk_atmosphere.h"
 
 class Window;
@@ -102,6 +103,7 @@ public:
     std::unique_ptr<UInterface> _ui;
     std::unique_ptr<Skybox> _skybox;
     std::unique_ptr<ShadowMapping> _shadow;
+    std::unique_ptr<CascadedShadowMapping> _cascadedShadow;
     std::unique_ptr<Atmosphere> _atmosphere;
 
     std::unique_ptr<SystemManager> _systemManager;
@@ -119,6 +121,7 @@ public:
     struct {
         VkDescriptorSetLayout skybox;
         VkDescriptorSetLayout offscreen;
+        VkDescriptorSetLayout cascadedOffscreen;
         VkDescriptorSetLayout environment;
         VkDescriptorSetLayout matrices;
         VkDescriptorSetLayout textures;

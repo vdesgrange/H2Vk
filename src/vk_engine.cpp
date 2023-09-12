@@ -227,7 +227,7 @@ void VulkanEngine::setup_environment_descriptors() {
                 .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3) // 2
                 .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4) // 3
                 .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 5) // 4
-                .bind_image(_shadow->_offscreen_shadow._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  VK_SHADER_STAGE_FRAGMENT_BIT, 6)
+                .bind_image(_cascadedShadow->_offscreen_shadow._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  VK_SHADER_STAGE_FRAGMENT_BIT, 6)
                 .layout(_descriptorSetLayouts.environment)
                 .build(g_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 
@@ -239,18 +239,23 @@ void VulkanEngine::setup_environment_descriptors() {
  * @note Initialize descriptors used by skybox, scene, shadow. Create caching and allocation system.
  */
 void VulkanEngine::init_descriptors() {
-    _layoutCache = new DescriptorLayoutCache(*_device);
-    _allocator = new DescriptorAllocator(*_device);
+    _layoutCache = new DescriptorLayoutCache(*_device); // todo : make smart pointer
+    _allocator = new DescriptorAllocator(*_device); // todo : make smart pointer
 
     Camera::allocate_buffers(*_device);
     LightingManager::allocate_buffers(*_device);
     Scene::allocate_buffers(*_device);
     ShadowMapping::allocate_buffers(*_device);
+    CascadedShadowMapping::allocate_buffers(*_device);
 
     _skybox->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.skybox);
     _scene->setup_transformation_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.matrices);
-    _shadow->prepare_depth_map(*_device, _uploadContext,*_lightingManager); // problem : fixed number of shadows. Implement ECS first.
-    _shadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.offscreen);
+//    _shadow->prepare_depth_map(*_device, _uploadContext,*_lightingManager); // problem : fixed number of shadows. Implement ECS first.
+//    _shadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.offscreen);
+
+    _cascadedShadow->prepare_depth_map(*_device, _uploadContext, *_lightingManager); // todo : use class attributes
+    _cascadedShadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.cascadedOffscreen);
+
     this->setup_environment_descriptors();
 
     // === Clean up === // Why keep this here if buffered allocated in their respective related class?
@@ -260,6 +265,7 @@ void VulkanEngine::init_descriptors() {
             vmaDestroyBuffer(_device->_allocator, g_frames[i].lightingBuffer._buffer, g_frames[i].lightingBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].objectBuffer._buffer, g_frames[i].objectBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].offscreenBuffer._buffer, g_frames[i].offscreenBuffer._allocation);
+            vmaDestroyBuffer(_device->_allocator, g_frames[i].cascadedOffscreenBuffer._buffer, g_frames[i].cascadedOffscreenBuffer._allocation);
         }
 
         delete _layoutCache;
@@ -270,7 +276,8 @@ void VulkanEngine::init_descriptors() {
 void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
-    _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen, _descriptorSetLayouts.matrices}, *_renderPass);
+    // _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen, _descriptorSetLayouts.matrices}, *_renderPass);
+    _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices}, *_renderPass);
 
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
@@ -305,7 +312,8 @@ void VulkanEngine::init_scene() {
     _skybox->_type = Skybox::Type::box;
     _skybox->load();
 
-    _shadow = std::make_unique<ShadowMapping>(*_device);
+    // _shadow = std::make_unique<ShadowMapping>(*_device);
+    _cascadedShadow = std::make_unique<CascadedShadowMapping>(*_device);
 
     _atmosphere = std::make_unique<Atmosphere>(*_device, *_materialManager, *_lightingManager, _uploadContext);
 
@@ -409,17 +417,25 @@ void VulkanEngine::update_uniform_buffers() {
 
     char *data2;
     vmaMapMemory(_device->_allocator, frame.lightingBuffer._allocation,   (void **) &data2);
-    data2 += helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData)) * frameIndex;
+    data2 += helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData)) * frameIndex; // why by frame?
     memcpy(data2, &lightingData, sizeof(GPULightData));
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
 
     // Shadow
-    GPUShadowData offscreenData = _shadow->gpu_format(_lightingManager.get(), _camera.get());
+//    GPUShadowData offscreenData = _shadow->gpu_format(_lightingManager.get(), _camera.get());
+//
+//    void *data3;
+//    vmaMapMemory(_device->_allocator, frame.offscreenBuffer._allocation, &data3);
+//    memcpy(data3, &offscreenData, sizeof(GPUShadowData));
+//    vmaUnmapMemory(_device->_allocator, frame.offscreenBuffer._allocation);
 
-    void *data3;
-    vmaMapMemory(_device->_allocator, frame.offscreenBuffer._allocation, &data3);
-    memcpy(data3, &offscreenData, sizeof(GPUShadowData));
-    vmaUnmapMemory(_device->_allocator, frame.offscreenBuffer._allocation);
+    // Cascaded shadow
+    GPUCascadedShadowData cascadedOffscreenData = _cascadedShadow->gpu_format();
+
+    void *data4;
+    vmaMapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation, &data4);
+    memcpy(data4, &cascadedOffscreenData, sizeof(GPUCascadedShadowData));
+    vmaUnmapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation);
 }
 
 /**
@@ -486,7 +502,11 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
     VK_CHECK(vkBeginCommandBuffer(frame._commandBuffer->_commandBuffer, &cmdBeginInfo));
 
     // === Depth map render pass ===
-    _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
+    // _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
+
+    // === Cascaded depth map render pass ===
+    _cascadedShadow->compute_cascades(*_camera, *_lightingManager);
+    _cascadedShadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
 
     // === Atmosphere skyview computing (WIP) ===
     // _atmosphere->compute_resources(_frameNumber % FRAME_OVERLAP);
@@ -511,16 +531,16 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
             // Debug shadow map (WIP)
-            // this->_shadow->run_debug(frame);
+            this->_cascadedShadow->run_debug(frame);
 
             // === Skybox ===
-            this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
+            // this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
 
             // === Atmosphere (WIP) ===
             // this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &get_current_frame().atmosphereDescriptor);
 
             // === Meshes ===
-            this->render_objects(frame._commandBuffer->_commandBuffer);
+            // this->render_objects(frame._commandBuffer->_commandBuffer);
 
             // === UI ===
             this->ui_overlay();
@@ -647,7 +667,8 @@ void VulkanEngine::cleanup() {
         _scene->_renderables.clear();
         _atmosphere.reset();
         _skybox.reset();
-        _shadow.reset();
+        // _shadow.reset();
+        _cascadedShadow.reset();
         _ui.reset();
         _meshManager.reset();
         _materialManager.reset();

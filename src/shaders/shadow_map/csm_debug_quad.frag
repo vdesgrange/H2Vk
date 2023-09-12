@@ -18,5 +18,5 @@ float linearize_depth(float depth)
 void main()
 {
     float x = texture(depthMap, vec3(inUV, float(inCascadeIndex))).r;
-    outFragColor = vec4(inUV, 0.0, 1.0);
+    outFragColor = vec4(vec3(x), 1.0);
 }

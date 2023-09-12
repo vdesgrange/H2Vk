@@ -14,6 +14,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 #include "components/lighting/vk_light.h"
+#include "core/vk_framebuffers.h"
 #include "core/vk_texture.h"
 #include "core/vk_renderpass.h"
 #include "core/vk_shaders.h"
@@ -25,18 +26,22 @@ class MaterialManager;
 class Node;
 
 struct GPUCascadedShadowData {
-    glm::mat4 cascadeVP[4];
+    glm::mat4 cascadeVP[1];
 };
 
 
 class CascadedShadowMapping final {
     static const VkFormat DEPTH_FORMAT = VK_FORMAT_D16_UNORM;
-    static const uint32_t SHADOW_WIDTH = 1024;
-    static const uint32_t SHADOW_HEIGHT = 1024;
-    static const uint32_t CASCADE_COUNT = 4;
+    const uint32_t SHADOW_WIDTH = 1024;
+    const uint32_t SHADOW_HEIGHT = 1024;
+    static const uint32_t CASCADE_COUNT = 1;
 
 public:
     struct Cascade {
+        VkImageView _imageView;
+        std::unique_ptr<FrameBuffer> _frameBuffer;
+        VkDescriptorSet _descriptorSet;
+
         float splitDepth;
         glm::mat4 viewProj;
     };
@@ -52,9 +57,9 @@ public:
 
     // std::vector<DirectionalShadow> _directional_shadows;
     DirectionalShadow _directional_shadows {};
-    std::vector<VkImageView> _cascades_imageview;
-    std::vector<FrameBuffer> _cascades_framebuffer;
-    std::array<VkDescriptorSet, CASCADE_COUNT> _cascades_descriptor;
+//    std::vector<VkImageView> _cascades_imageview;
+//    std::vector<FrameBuffer> _cascades_framebuffer;
+//    std::array<VkDescriptorSet, CASCADE_COUNT> _cascades_descriptor;
 
     CascadedShadowMapping() = delete;
     CascadedShadowMapping(Device& device);

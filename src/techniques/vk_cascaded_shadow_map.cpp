@@ -17,6 +17,7 @@
 
 CascadedShadowMapping::CascadedShadowMapping(Device &device) : _device(device), _offscreen_pass(RenderPass(device)) {
     this->prepare_offscreen_pass(device);
+//    this->_offscreen_shadow = Texture();
 }
 
 CascadedShadowMapping::~CascadedShadowMapping() {
@@ -24,8 +25,12 @@ CascadedShadowMapping::~CascadedShadowMapping() {
     this->_offscreen_effect.reset();
     this->_debug_effect.reset();
 
-    for (auto& imageview: this->_cascades_imageview) {
-        vkDestroyImageView(_device._logicalDevice, imageview, nullptr);
+//    for (auto& imageview: this->_cascades_imageview) {
+//        vkDestroyImageView(_device._logicalDevice, imageview, nullptr);
+//    }
+
+    for (auto& c: this->_directional_shadows._cascades) {
+        vkDestroyImageView(_device._logicalDevice, c._imageView, nullptr);
     }
 }
 
@@ -70,12 +75,12 @@ void CascadedShadowMapping::prepare_offscreen_pass(Device& device) {
 
 void CascadedShadowMapping::prepare_depth_map(Device& device, UploadContext& uploadContext, LightingManager& lighting) {
     uint num_layers = CASCADE_COUNT;
-    this->_cascades_framebuffer.reserve(num_layers);
-    this->_cascades_imageview.reserve(num_layers);
-
-    for (int i=0; i < num_layers; i++) {
-        this->_cascades_imageview.push_back({});
-    }
+//    this->_cascades_framebuffer.reserve(num_layers);
+//    this->_cascades_imageview.reserve(num_layers);
+//
+//    for (int i=0; i < num_layers; i++) {
+//        this->_cascades_imageview.push_back({});
+//    }
 
     // Prepare image
     VkExtent3D imageExtent { SHADOW_WIDTH, SHADOW_HEIGHT, 1 };
@@ -127,13 +132,15 @@ void CascadedShadowMapping::prepare_depth_map(Device& device, UploadContext& upl
         // Create image view
         VkImageViewCreateInfo info = vkinit::imageview_create_info(DEPTH_FORMAT, this->_offscreen_shadow._image, VK_IMAGE_ASPECT_DEPTH_BIT);
         info.subresourceRange.baseArrayLayer = l;
-        vkCreateImageView(device._logicalDevice, &info, nullptr, &this->_cascades_imageview[l]);
+        // vkCreateImageView(device._logicalDevice, &info, nullptr, &this->_cascades_imageview[l]);
+        vkCreateImageView(device._logicalDevice, &info, nullptr, &this->_directional_shadows._cascades[l]._imageView);
 
-        std::vector<VkImageView> attachments = {_cascades_imageview[l]};
-        this->_cascades_framebuffer.emplace_back(FrameBuffer(_offscreen_pass, attachments, SHADOW_WIDTH, SHADOW_HEIGHT, 1));
+        // std::vector<VkImageView> attachments = {_cascades_imageview[l]};
+        // this->_cascades_framebuffer.emplace_back(FrameBuffer(_offscreen_pass, attachments, SHADOW_WIDTH, SHADOW_HEIGHT, 1));
+        std::vector<VkImageView> attachments = {this->_directional_shadows._cascades[l]._imageView};
+        this->_directional_shadows._cascades[l]._frameBuffer = std::make_unique<FrameBuffer>(_offscreen_pass, attachments, SHADOW_WIDTH, SHADOW_HEIGHT, 1);
     }
-
-
+    
 }
 
 void CascadedShadowMapping::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
@@ -225,9 +232,12 @@ void CascadedShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& en
 
     // Per layer
     for (int l = 0; l < CASCADE_COUNT; l++) {
-        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(this->_offscreen_pass._renderPass, extent, _cascades_framebuffer[l]._frameBuffer);
+        //VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(this->_offscreen_pass._renderPass, extent, _cascades_framebuffer[l]._frameBuffer);
+        VkRenderPassBeginInfo offscreenPassInfo = vkinit::renderpass_begin_info(this->_offscreen_pass._renderPass, extent, this->_directional_shadows._cascades[l]._frameBuffer->_frameBuffer);
         offscreenPassInfo.clearValueCount = clearValues.size();
         offscreenPassInfo.pClearValues = clearValues.data();
+
+        uint32_t pc = l;
 
         vkCmdBeginRenderPass(cmd, &offscreenPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         {
@@ -235,12 +245,12 @@ void CascadedShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& en
 
             uint32_t i = 0;
             std::shared_ptr<Model> lastModel = nullptr;
-            vkCmdPushConstants(cmd, this->_offscreen_effect->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), sizeof(uint32_t), &l);
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipelineLayout,0, 1, &frame.cascadedOffscreenDescriptor, 0, nullptr);
+            vkCmdPushConstants(cmd, this->_offscreen_effect->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), sizeof(uint32_t), &pc);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipelineLayout, 0, 1, &frame.cascadedOffscreenDescriptor, 0, nullptr);
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipelineLayout, 1, 1, &frame.objectDescriptor, 0, nullptr);
 
             for (auto const &object: entities) {
-                this->draw(*object.model, cmd, object.material->pipelineLayout, i,object.model.get() != lastModel.get());
+                this->draw(*object.model, cmd, object.material->pipelineLayout, i, object.model.get() != lastModel.get());
                 lastModel = object.model;
                 i++;
             }
