@@ -26,17 +26,19 @@ class MaterialManager;
 class Node;
 
 struct GPUCascadedShadowData {
-    glm::mat4 cascadeVP[1];
+    glm::mat4 cascadeVP[4];
+    glm::vec4 splitDepth;
+    bool colorCascades;
 };
 
 
 class CascadedShadowMapping final {
-    static const VkFormat DEPTH_FORMAT = VK_FORMAT_D16_UNORM;
-    const uint32_t SHADOW_WIDTH = 1024;
-    const uint32_t SHADOW_HEIGHT = 1024;
-    static const uint32_t CASCADE_COUNT = 1;
-
 public:
+    static const VkFormat DEPTH_FORMAT = VK_FORMAT_D16_UNORM;
+    const uint32_t SHADOW_WIDTH = 2048;
+    const uint32_t SHADOW_HEIGHT = 2048;
+    static const uint32_t CASCADE_COUNT = 4;
+
     struct Cascade {
         VkImageView _imageView;
         std::unique_ptr<FrameBuffer> _frameBuffer;
@@ -50,10 +52,15 @@ public:
         std::array<Cascade, CASCADE_COUNT> _cascades;
     };
 
+    bool _debug_depth_map = false;
+    bool _color_cascades = false;
+    float _lb = 0.95f; // split lambda
+    int _cascade_idx = 0;
+
     Texture _offscreen_shadow;
     RenderPass _offscreen_pass;
-    std::shared_ptr<Material> _offscreen_effect;
-    std::shared_ptr<Material> _debug_effect;
+    std::shared_ptr<Material> _offscreen_effect = nullptr;
+    std::shared_ptr<Material> _debug_effect = nullptr;
 
     // std::vector<DirectionalShadow> _directional_shadows;
     DirectionalShadow _directional_shadows {};

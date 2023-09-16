@@ -77,9 +77,9 @@ glm::vec3 Camera::get_rotation_vector() {
 
 glm::mat4 Camera::get_rotation_matrix() {
     glm::mat4 rot = glm::mat4{ 1.0f };
-    rot = glm::rotate(rot, glm::radians(this->rotation.x), {1, 0, 0});
-    rot = glm::rotate(rot, glm::radians(this->rotation.y), {0, 1, 0});
-    rot = glm::rotate(rot, glm::radians(this->rotation.z), {0, 0, 1});
+    rot = glm::rotate(rot, glm::radians(this->rotation.x), {1.0f, 0.0f, 0.0f});
+    rot = glm::rotate(rot, glm::radians(this->rotation.y), {0.0f, 1.0f, 0.0f});
+    rot = glm::rotate(rot, glm::radians(this->rotation.z), {0.0f, 0.0f, 1.0f});
     return rot;
 }
 

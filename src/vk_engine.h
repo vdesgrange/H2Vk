@@ -119,15 +119,15 @@ public:
     DescriptorAllocator* _allocator;
 
     struct {
-        VkDescriptorSetLayout skybox;
-        VkDescriptorSetLayout offscreen;
-        VkDescriptorSetLayout cascadedOffscreen;
-        VkDescriptorSetLayout environment;
-        VkDescriptorSetLayout matrices;
-        VkDescriptorSetLayout textures;
-        VkDescriptorSetLayout gui;
-        VkDescriptorSetLayout debug;
-        VkDescriptorSetLayout atmosphere;
+        VkDescriptorSetLayout skybox = VK_NULL_HANDLE;
+        VkDescriptorSetLayout offscreen = VK_NULL_HANDLE;
+        VkDescriptorSetLayout cascadedOffscreen = VK_NULL_HANDLE;
+        VkDescriptorSetLayout environment = VK_NULL_HANDLE;
+        VkDescriptorSetLayout matrices = VK_NULL_HANDLE;
+        VkDescriptorSetLayout textures = VK_NULL_HANDLE;
+        VkDescriptorSetLayout gui = VK_NULL_HANDLE;
+        VkDescriptorSetLayout debug = VK_NULL_HANDLE;
+        VkDescriptorSetLayout atmosphere = VK_NULL_HANDLE;
     } _descriptorSetLayouts;
 
     DeletionQueue _mainDeletionQueue;

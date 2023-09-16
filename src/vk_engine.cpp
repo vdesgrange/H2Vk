@@ -216,9 +216,12 @@ void VulkanEngine::setup_environment_descriptors() {
         lightingBInfo.buffer = g_frames[i].lightingBuffer._buffer;
         lightingBInfo.range = sizeof(GPULightData);
 
+//        VkDescriptorBufferInfo offscreenBInfo{};
+//        offscreenBInfo.buffer = g_frames[i].offscreenBuffer._buffer;
+//        offscreenBInfo.range = sizeof(GPUShadowData); // GPUDepthData
         VkDescriptorBufferInfo offscreenBInfo{};
-        offscreenBInfo.buffer = g_frames[i].offscreenBuffer._buffer;
-        offscreenBInfo.range = sizeof(GPUShadowData); // GPUDepthData
+        offscreenBInfo.buffer = g_frames[i].cascadedOffscreenBuffer._buffer;
+        offscreenBInfo.range = sizeof(GPUCascadedShadowData);
 
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
                 .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
@@ -531,16 +534,18 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
             // Debug shadow map (WIP)
-            this->_cascadedShadow->run_debug(frame);
+            if (this->_cascadedShadow->_debug_depth_map) {
+                this->_cascadedShadow->run_debug(frame);
+            } else {
+                // === Skybox ===
+                // this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
 
-            // === Skybox ===
-            // this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
+                // === Atmosphere (WIP) ===
+                // this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &get_current_frame().atmosphereDescriptor);
 
-            // === Atmosphere (WIP) ===
-            // this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &get_current_frame().atmosphereDescriptor);
-
-            // === Meshes ===
-            // this->render_objects(frame._commandBuffer->_commandBuffer);
+                // === Meshes ===
+                this->render_objects(frame._commandBuffer->_commandBuffer);
+            }
 
             // === UI ===
             this->ui_overlay();
@@ -563,6 +568,7 @@ void VulkanEngine::render(int imageIndex) {
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
         _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
         _scene->load_scene(_ui->get_settings().scene_index, *_camera);
+        // _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
         this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
     }
 

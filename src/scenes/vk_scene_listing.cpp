@@ -34,7 +34,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
     // === Init camera ===
     camera.inverse(false);
-    camera.set_position({ 0.f, 0.0f, 5.f });
+    camera.set_position({ 0.0f, 0.0f, 10.0f });
     camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.set_type(Camera::Type::look_at);
     camera.set_speed(10.0f);
@@ -56,7 +56,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
     std::vector<std::pair<ShaderType, const char*>> scene_modules {
             {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/depth_debug_scene.frag.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
     };
 
     std::vector<VkDescriptorSetLayout> shadowSetLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
@@ -81,13 +81,13 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
     RenderObject floor;
     floor.model = engine->_meshManager->get_model("floor");
-    floor.material = engine->_materialManager->get_material("pbrMaterial");
+    floor.material = engine->_materialManager->get_material("shadowScene");
     floor.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(floor);
 
     RenderObject wall;
     wall.model = engine->_meshManager->get_model("wall");
-    wall.material = engine->_materialManager->get_material("pbrMaterial");
+    wall.material = engine->_materialManager->get_material("shadowScene");
     wall.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(wall);
 
@@ -104,7 +104,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
             RenderObject sphere;
             sphere.model = engine->_meshManager->get_model(name);
-            sphere.material = engine->_materialManager->get_material("pbrMaterial");
+            sphere.material = engine->_materialManager->get_material("shadowScene");
             glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x - 3, y - 3, 0));
             glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.5, 0.5, 0.5));
             sphere.transformMatrix = translation * scale;

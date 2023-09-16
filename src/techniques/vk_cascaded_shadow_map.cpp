@@ -117,7 +117,7 @@ void CascadedShadowMapping::prepare_depth_map(Device& device, UploadContext& upl
     });
 
     // Sampler for cascade depth read
-    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
     samplerInfo.maxLod = 1.0f;
     samplerInfo.maxAnisotropy = 1.0f;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -178,12 +178,25 @@ void CascadedShadowMapping::setup_descriptors(DescriptorLayoutCache& layoutCache
 }
 
 void CascadedShadowMapping::setup_pipelines(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass) {
+    for (const auto& l : setLayouts) {
+        if (l == VK_NULL_HANDLE) {
+            return;
+        }
+    }
+
     // Compute depth map
     GraphicPipeline offscreenPipeline = GraphicPipeline(device, this->_offscreen_pass);
     offscreenPipeline._dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_DEPTH_BIAS };
     offscreenPipeline._colorBlending.attachmentCount = 0;
     offscreenPipeline._colorBlending.pAttachments = nullptr;
-    offscreenPipeline._rasterizer.depthBiasEnable = VK_TRUE;
+    // offscreenPipeline._rasterizer.depthClampEnable = VK_FALSE; // not supported
+    offscreenPipeline._rasterizer.depthBiasEnable = VK_FALSE;
+
+    VkPipelineRasterizationDepthClipStateCreateInfoEXT ext{};
+    ext.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT;
+    ext.depthClipEnable = VK_TRUE;
+
+    offscreenPipeline._rasterizer.pNext = &ext;
 
     std::vector<std::pair<ShaderType, const char*>> offscreen_module {
             {ShaderType::VERTEX, "../src/shaders/shadow_map/csm_offscreen.vert.spv"},
@@ -213,6 +226,10 @@ void CascadedShadowMapping::setup_pipelines(Device& device, MaterialManager& mat
 }
 
 void CascadedShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& entities, LightingManager& lighting) {
+    if (this->_offscreen_effect.get() == nullptr) {
+        return;
+    }
+
     VkCommandBuffer& cmd = frame._commandBuffer->_commandBuffer;
     
     std::array<VkClearValue, 1> clearValues{};
@@ -228,7 +245,7 @@ void CascadedShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& en
     VkRect2D scissor = vkinit::get_scissor((float) CascadedShadowMapping::SHADOW_WIDTH, (float) CascadedShadowMapping::SHADOW_HEIGHT);
     vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-    vkCmdSetDepthBias(cmd, 1.25f, 0.0f, 1.75f);
+    // vkCmdSetDepthBias(cmd, 1.25f, 0.0f, 1.75f);
 
     // Per layer
     for (int l = 0; l < CASCADE_COUNT; l++) {
@@ -250,7 +267,8 @@ void CascadedShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& en
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipelineLayout, 1, 1, &frame.objectDescriptor, 0, nullptr);
 
             for (auto const &object: entities) {
-                this->draw(*object.model, cmd, object.material->pipelineLayout, i, object.model.get() != lastModel.get());
+                object.model->draw(cmd, object.material->pipelineLayout, i, object.model.get() != lastModel.get());
+                // this->draw(*object.model, cmd, object.material->pipelineLayout, i, object.model.get() != lastModel.get());
                 lastModel = object.model;
                 i++;
             }
@@ -303,66 +321,60 @@ void CascadedShadowMapping::draw_node(Node* node, VkCommandBuffer& commandBuffer
  */
 void CascadedShadowMapping::compute_cascades(Camera& camera, LightingManager& lighting) {
     float cascadeSplits[CASCADE_COUNT];
-    float lambda = 0.95f;
     float zNear = camera.get_z_near();
     float zFar = camera.get_z_far();
     float clipRange = zFar - zNear;
     float clipRatio = zFar / zNear;
 
-
     for (uint32_t i = 0; i < CASCADE_COUNT; i++) {
         float p = (i + 1) / static_cast<float>(CASCADE_COUNT);
         float cLog = zNear * pow(clipRatio, p);
         float cUni = zNear + clipRange * p;
-        float c = lambda * (cLog - cUni) + cUni;
+        float c = _lb * (cLog - cUni) + cUni;
         cascadeSplits[i] = (c - zNear) / clipRange;
     }
-
-    glm::mat4 invViewProj = glm::inverse(camera.get_projection_matrix() * camera.get_view_matrix());
-
-	glm::vec3 frustumCorners[8] = { // NDC Space
-		glm::vec3(-1.0f,  1.0f, 0.0f), // left-bottom-front
-		glm::vec3( 1.0f,  1.0f, 0.0f), // right-bottom-front
-		glm::vec3( 1.0f, -1.0f, 0.0f), // right-top-front
-		glm::vec3(-1.0f, -1.0f, 0.0f), // left-top-front
-		glm::vec3(-1.0f,  1.0f,  1.0f), // left-bottom-back
-		glm::vec3( 1.0f,  1.0f,  1.0f), // right-bottom-back
-		glm::vec3( 1.0f, -1.0f,  1.0f), // right-top-back
-		glm::vec3(-1.0f, -1.0f,  1.0f), // left-top-back
-	};
-
-    for (uint8_t i; i < 8; i++) {
-        glm::vec4 invCorner = invViewProj * glm::vec4(frustumCorners[i], 1.0f);
-        frustumCorners[i] = invCorner / invCorner.w;
-    }
-
 
 	float lastSplitDist = 0.0;
     for (uint32_t i = 0; i < CASCADE_COUNT; i++) {
         float splitDist = cascadeSplits[i];
+
+        glm::vec3 frustumCorners[8] = { // NDC Space
+                glm::vec3(-1.0f,  1.0f, 0.0f), // left-bottom-front
+                glm::vec3( 1.0f,  1.0f, 0.0f), // right-bottom-front
+                glm::vec3( 1.0f, -1.0f, 0.0f), // right-top-front
+                glm::vec3(-1.0f, -1.0f, 0.0f), // left-top-front
+                glm::vec3(-1.0f,  1.0f,  1.0f), // left-bottom-back
+                glm::vec3( 1.0f,  1.0f,  1.0f), // right-bottom-back
+                glm::vec3( 1.0f, -1.0f,  1.0f), // right-top-back
+                glm::vec3(-1.0f, -1.0f,  1.0f), // left-top-back
+        };
+
+        glm::mat4 invViewProj = glm::inverse(camera.get_projection_matrix() * camera.get_view_matrix());
+        for (uint32_t j = 0; j < 8; j++) {
+            glm::vec4 invCorner = invViewProj * glm::vec4(frustumCorners[j], 1.0f);
+            frustumCorners[j] = invCorner / invCorner.w;
+        }
+
         // Compute new frustum corners
-	    for (uint32_t j = 0; j < 4; j++) {
-		    glm::vec3 dist = frustumCorners[j + 4] - frustumCorners[j]; // back - front
-		    frustumCorners[j + 4] = frustumCorners[j] + (dist * splitDist); // re-adjust back corner
-		    frustumCorners[j] = frustumCorners[j] + (dist * lastSplitDist); // re-adjust front corner
+        for (uint32_t j = 0; j < 4; j++) {
+            glm::vec3 dist = frustumCorners[j + 4] - frustumCorners[j]; // back - front
+            frustumCorners[j + 4] = frustumCorners[j] + (dist * splitDist); // re-adjust back corner
+            frustumCorners[j] = frustumCorners[j] + (dist * lastSplitDist); // re-adjust front corner
         }
 
         // Compute new frustum center
         glm::vec3 frustumCenter = glm::vec3(0.0f); // center assumed at 0.
         for (uint32_t j = 0; j < 8; j++) {
-			frustumCenter += frustumCorners[j];
-		}
+            frustumCenter += frustumCorners[j];
+        }
 		frustumCenter /= 8.0f;
 
         float radius = 0.0f;
-		for (uint32_t i = 0; i < 8; i++) {
-			float distance = glm::length(frustumCorners[i] - frustumCenter);
+		for (uint32_t j = 0; j < 8; j++) {
+			float distance = glm::length(frustumCorners[j] - frustumCenter);
 			radius = glm::max(radius, distance);
 		}
 		radius = std::ceil(radius * 16.0f) / 16.0f;
-
-        glm::vec3 maxExtents = glm::vec3(radius);
-		glm::vec3 minExtents = -maxExtents;
 
         // Process directional lights
         uint32_t lightIndex = 0;
@@ -371,7 +383,7 @@ void CascadedShadowMapping::compute_cascades(Camera& camera, LightingManager& li
             if (light->get_type() == Light::DIRECTIONAL) {
 
                 glm::vec3 dir = normalize(light->get_rotation());
-                glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+                glm::vec3 up = std::abs(glm::dot(dir, glm::vec3(0.0f, 1.0f, 0.0f))) == 1.0f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
                 glm::mat4 view = glm::lookAt(frustumCenter - dir * radius, frustumCenter, up);
                 glm::mat4 proj = glm::ortho(-radius, radius, -radius, radius, 0.0f, 2.0f * radius);
 
@@ -391,8 +403,10 @@ GPUCascadedShadowData CascadedShadowMapping::gpu_format() {
     GPUCascadedShadowData offscreenData{};
 
     //for (auto& l : _directional_shadows) {
-        for (uint8_t j = 0; j < _directional_shadows._cascades.size(); j++) {
+        for (uint8_t j = 0; j < CASCADE_COUNT; j++) {
             offscreenData.cascadeVP[j] = _directional_shadows._cascades.at(j).viewProj;
+            offscreenData.splitDepth[j] = _directional_shadows._cascades.at(j).splitDepth;
+            offscreenData.colorCascades = this->_color_cascades;
         }
     //}
 
@@ -400,9 +414,14 @@ GPUCascadedShadowData CascadedShadowMapping::gpu_format() {
 }
 
 void CascadedShadowMapping::run_debug(FrameData& frame) {
-    uint32_t idx = 0;
-    vkCmdPushConstants(frame._commandBuffer->_commandBuffer, this->_offscreen_effect->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), sizeof(uint32_t), &idx);
-    vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_debug_effect->pipelineLayout, 0, 1, &frame.debugDescriptor, 0, nullptr);
-    vkCmdBindPipeline(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_debug_effect->pipeline);
-    vkCmdDraw(frame._commandBuffer->_commandBuffer, 3, 1, 0, 0);
+    if (this->_debug_effect.get() != nullptr) {
+        // uint32_t idx = 2;
+        vkCmdPushConstants(frame._commandBuffer->_commandBuffer, this->_offscreen_effect->pipelineLayout,
+                           VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), sizeof(uint32_t), &_cascade_idx);
+        vkCmdBindDescriptorSets(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                this->_debug_effect->pipelineLayout, 0, 1, &frame.debugDescriptor, 0, nullptr);
+        vkCmdBindPipeline(frame._commandBuffer->_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          this->_debug_effect->pipeline);
+        vkCmdDraw(frame._commandBuffer->_commandBuffer, 3, 1, 0, 0);
+    }
 }
