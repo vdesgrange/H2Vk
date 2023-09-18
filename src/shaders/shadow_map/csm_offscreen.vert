@@ -1,5 +1,7 @@
 #version 460
-#extension GL_EXT_debug_printf : enable
+#extension GL_GOOGLE_include_directive : enable
+
+#include "../common/constants.glsl"
 
 layout (location = 0) in vec3 vPosition;
 layout (location = 1) in vec3 vNormal;
@@ -9,10 +11,8 @@ layout (location = 4) in vec4 vTangent;
 
 layout (location = 0) out vec2 outUV;
 
-const int CASCADE_COUNT = 4; // layout (constant_id = 0)
-
 layout (std140, set = 0, binding = 0) uniform ShadowData {
-    mat4 cascadeMV[CASCADE_COUNT];
+    mat4 cascadeVP[CASCADE_COUNT];
     vec4 splitDepth;
 } shadowData;
 
@@ -32,11 +32,8 @@ layout (push_constant) uniform PushConstants {
 void main()
 {
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * pushData.model;
-    mat4 transformMatrix = shadowData.cascadeMV[pushData.cascadeIndex] * modelMatrix;
-
-    // debugPrintfEXT("Test %i", pushData.cascadeIndex);
+    mat4 transformMatrix = shadowData.cascadeVP[pushData.cascadeIndex] * modelMatrix;
 
     outUV = vUV;
-	gl_Position =  shadowData.cascadeMV[pushData.cascadeIndex] * vec4(vec3(modelMatrix * vec4(vPosition, 1.0)), 1.0);
-    // gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
+    gl_Position = transformMatrix * vec4(vPosition, 1.0);
 }

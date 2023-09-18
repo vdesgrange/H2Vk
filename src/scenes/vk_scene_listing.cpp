@@ -35,7 +35,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     // === Init camera ===
     camera.inverse(false);
     camera.set_position({ 0.0f, 0.0f, 10.0f });
-    camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
+    camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 50.0f);
     camera.set_type(Camera::Type::look_at);
     camera.set_speed(10.0f);
 

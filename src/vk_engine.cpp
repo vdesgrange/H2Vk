@@ -154,7 +154,7 @@ void VulkanEngine::init_default_renderpass() {
  * Images used for the framebuffer attachment must be created for every images in the swap chain (ie. color + depth).
  */
 void VulkanEngine::init_framebuffers() {
-    _frameBuffers.clear();
+    // _frameBuffers.clear(); // todo fix destructor
     _frameBuffers.reserve(_swapchain->_swapChainImages.size());
 
     for (int i = 0; i < _swapchain->_swapChainImages.size(); i++) {
@@ -351,7 +351,7 @@ void VulkanEngine::recreate_swap_chain() {
 
     init_swapchain();
     init_default_renderpass();
-    init_framebuffers();
+    init_framebuffers(); // framebuffers depend on renderpass for device for creation and destruction
     _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass); // todo: messy, rework
     _materialManager->_pipelineBuilder = _pipelineBuilder.get();
 

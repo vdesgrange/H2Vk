@@ -1,16 +1,16 @@
 #version 460
+#extension GL_GOOGLE_include_directive : enable
+
+#include "../common/constants.glsl"
 
 #define ambient 0.1
-
-const int CASCADE_COUNT = 4;
-const int MAX_LIGHT = 8;
-const int enablePCF = 0;
 
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec3 inFragPos;
 layout (location = 4) in vec3 inCameraPos;
+layout (location = 5) in vec3 inViewPos;
 
 layout (location = 0) out vec4 outFragColor;
 
@@ -30,33 +30,20 @@ layout(std140, set = 0, binding = 1) uniform LightingData {
 //} depthData;
 
 layout (std140, set = 0, binding = 2) uniform ShadowData {
-    mat4 cascadeMV[CASCADE_COUNT];
+    mat4 cascadeVP[CASCADE_COUNT];
     vec4 splitDepth;
     bool color_cascades;
 } depthData;
 
 layout (set = 0, binding = 6) uniform sampler2DArray shadowMap;
 
-const mat4 biasMat = mat4(
-0.5, 0.0, 0.0, 0.0,
-0.0, 0.5, 0.0, 0.0,
-0.0, 0.0, 1.0, 0.0,
-0.5, 0.5, 0.0, 1.0 );
-
-vec2 poissonDisk[4] = vec2[](
-    vec2( -0.94201624, -0.39906216 ),
-    vec2( 0.94558609, -0.76890725 ),
-    vec2( -0.094184101, -0.92938870 ),
-    vec2( 0.34495938, 0.29387760 )
-);
-
 float texture_projection(vec4 coord, vec2 offset, float layer) {
     float shadow = 1.0;
-    // float cosTheta = clamp(dot(normalize(inNormal), normalize(lightingData.dir_direction[0].xyz)), 0.0, 1.0);
-    float bias = 0.005; // * tan(acos(cosTheta));
-    // bias = clamp(bias, 0, 0.1);
+    float cosTheta = clamp(dot(normalize(inNormal), normalize(lightingData.dir_direction[0].xyz)), 0.0, 1.0);
+    float bias = 0.005 * tan(acos(cosTheta));
+    bias = clamp(bias, 0, 0.1);
 
-    if ( coord.z > -1.0 && coord.z < 1.0 )
+    if ( coord.z >= -1.0 && coord.z <= 1.0 )
     {
         float dist = texture(shadowMap, vec3(coord.st + offset, layer) ).r;
         if ( coord.w > 0.0 && dist < coord.z - bias)
@@ -110,18 +97,21 @@ void main()
 {
     uint cascadeIndex = 0;
     for(uint i = 0; i < CASCADE_COUNT - 1; ++i) {
-        if(inCameraPos.z < depthData.splitDepth[i]) {
+        if(inViewPos.z < depthData.splitDepth[i]) {
             cascadeIndex = i + 1;
         }
     }
 
-    vec4 coord = biasMat * depthData.cascadeMV[cascadeIndex] * vec4(inFragPos, 1.0);
+//    vec4 res = step(depthData.splitDepth, vec4(inViewPos.z));
+//    uint cascadeIndex = int(res.x + res.y + res.z + res.w);
+
+    vec4 coord = biasMat * depthData.cascadeVP[cascadeIndex] * vec4(inFragPos, 1.0);
     float shadow = texture_projection(coord / coord.w, vec2(0.0), cascadeIndex);
 
     vec3 N = normalize(inNormal);
     vec3 L = normalize(-lightingData.dir_direction[0].xyz);
-    vec3 H = normalize(L + inFragPos);
-    vec3 V = normalize(inCameraPos - inFragPos);
+    vec3 H = normalize(L + inViewPos);
+    // vec3 V = normalize(inCameraPos - inFragPos);
     float diffuse = max(dot(N, L), ambient);
     vec3 lightColor = vec3(1.0);
     outFragColor.rgb = max(lightColor * (diffuse * inColor.rgb), vec3(0.0));
@@ -145,6 +135,4 @@ void main()
         }
     }
 
-    // color = directional_light(color, N, V);
-//    outFragColor = vec4(color, 1.0);
 }

@@ -44,8 +44,12 @@ Device::Device(Window& window) {
     }
 
     // Select a GPU
-    //We want a GPU that can write to the SDL surface and supports Vulkan 1.1
+    //We want a GPU that can write to the GLFW surface and supports Vulkan 1.1
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
+    VkPhysicalDeviceFeatures required_features {};
+    required_features.depthClamp = VK_TRUE;
+    selector.set_required_features(required_features);
+
     vkb::PhysicalDevice physicalDevice = selector
             .set_minimum_version(1, 1)
             .set_surface(_surface)
@@ -57,23 +61,20 @@ Device::Device(Window& window) {
             .value();
 
     //create the final Vulkan device
-    vkb::DeviceBuilder deviceBuilder{ physicalDevice };
-
-//    VkDebugUtilsMessengerCreateInfoEXT DebugInfo = {};
-//    VkValidationFeatureEnableEXT enables[] = {VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT};
-//    VkValidationFeaturesEXT validation_features = {};
-//    validation_features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-//    validation_features.enabledValidationFeatureCount = 1;
-//    validation_features.pEnabledValidationFeatures = enables;
-//    validation_features.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&DebugInfo;
-
     VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features = {};
     shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
     shader_draw_parameters_features.pNext = nullptr;
     shader_draw_parameters_features.shaderDrawParameters = VK_TRUE;
 
+    VkPhysicalDeviceFeatures2 physical_features2 = {};
+    physical_features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    physical_features2.pNext = &shader_draw_parameters_features;
+    vkGetPhysicalDeviceFeatures2(physicalDevice, &physical_features2);
+
+    vkb::DeviceBuilder deviceBuilder{ physicalDevice };
+
     vkb::Device vkbDevice = deviceBuilder
-            .add_pNext(&shader_draw_parameters_features)
+            .add_pNext(&physical_features2)
             .build()
             .value();
 

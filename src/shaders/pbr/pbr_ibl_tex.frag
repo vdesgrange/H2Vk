@@ -1,12 +1,10 @@
 #version 460
 #extension GL_GOOGLE_include_directive : enable
 
+#include "../common/constants.glsl"
 #include "../common/brdf.glsl"
 #include "../common/filters.glsl"
 #include "../common/tonemaps.glsl"
-
-const int MAX_LIGHT = 8;
-const int enablePCF = 0;
 
 layout(std140, set = 0, binding = 1) uniform LightingData {
     layout(offset = 0) vec2 num_lights;
@@ -42,12 +40,6 @@ layout (location = 4) in vec3 inCameraPos; // camera/view position
 layout (location = 5) in vec4 inTangent;
 
 layout (location = 0) out vec4 outFragColor;
-
-const mat4 biasMat = mat4(
-0.5, 0.0, 0.0, 0.0,
-0.0, 0.5, 0.0, 0.0,
-0.0, 0.0, 1.0, 0.0,
-0.5, 0.5, 0.0, 1.0 );
 
 vec3 shadow(vec3 color, int type) {
     float layer_offset = 0;
