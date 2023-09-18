@@ -42,7 +42,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     // === Init shader materials ===
     std::vector<PushConstant> constants {
             {sizeof(glm::mat4), ShaderType::VERTEX},
-            {sizeof(Materials::Properties), ShaderType::FRAGMENT}
+            {sizeof(Materials::Factors), ShaderType::FRAGMENT}
     };
 
     std::vector<std::pair<ShaderType, const char*>> pbr_modules {
@@ -69,13 +69,13 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 //    engine->_lightingManager->add_entity("spot", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.f, 0.f), glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 //    engine->_lightingManager->add_entity("light2", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(2.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 
-    PBRProperties blank = {{1.0f,  1.0f, 1.0, 1.0f}, 0.0f,  1.0f, 1.0f};
+    Materials blank = {{1.0f, 1.0f, 1.0, 1.0f}, 0.0f,  1.0f, 0.0f};
 
-    std::shared_ptr<Model> floorModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, 4.0f, -6.0f}, {4.0f, 4.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, blank); // , {1.0f, 1.0f, 1.0f}
+    std::shared_ptr<Model> floorModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, 4.0f, -6.0f}, {4.0f, 4.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, blank);
     engine->_meshManager->upload_mesh(*floorModel);
     engine->_meshManager->add_entity("floor", std::static_pointer_cast<Entity>(floorModel));
 
-    std::shared_ptr<Model> wallModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, -4.0f, -6.0f}, {4.0f, 4.0f, -6.0f}, {1.0f, 1.0f, 1.0f}, blank); // , {1.0f, 1.0f, 1.0f}
+    std::shared_ptr<Model> wallModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, -4.0f, -6.0f}, {4.0f, 4.0f, -6.0f}, {1.0f, 1.0f, 1.0f}, blank);
     engine->_meshManager->upload_mesh(*wallModel);
     engine->_meshManager->add_entity("wall", std::static_pointer_cast<Entity>(wallModel));
 
@@ -95,7 +95,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
         for (int y = 0; y <= 6; y++) {
             float ratio_x = float(x) / 6.0f;
             float ratio_y = float(y) / 6.0f;
-            PBRProperties gold = {{1.0f,  0.765557f, 0.336057f, 1.0f}, ratio_y * 1.0f, ratio_x * 1.0f, 1.0f};
+            Materials gold = {{1.0f,  0.765557f, 0.336057f, 1.0f}, ratio_y * 1.0f, ratio_x * 1.0f, 1.0f};
             std::string name = "sphere_" + std::to_string(x) + "_" + std::to_string(y);
             std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f}, gold);
 

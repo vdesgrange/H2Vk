@@ -10,7 +10,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "glm/vec3.hpp"
+// #include "glm/vec3.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtx/hash.hpp"
@@ -90,10 +90,12 @@ struct Image {
 };
 
 struct Materials {
-    glm::vec4 baseColorFactor = glm::vec4(1.0f);
-    float metallicFactor = 1.0f;
-    float roughnessFactor = 1.0f;
-    float alphaCutoff = 1.0f;
+    struct Factors {
+        glm::vec4 baseColorFactor = glm::vec4(1.0f);
+        float metallicFactor = 1.0f;
+        float roughnessFactor = 1.0f;
+        float alphaCutoff = 1.0f;
+    } factors;
 
     uint32_t baseColorTextureIndex;
     uint32_t normalTextureIndex;
@@ -111,14 +113,17 @@ struct Materials {
 
     bool pbr = false;
 
-    struct Properties {
-        glm::vec4 albedo; // rgb + w for opacity
-        float metallic;
-        float roughness;
-        float ao;
-    } properties;
+    Materials() {};
+    Materials(glm::vec4 c, float m, float r, float a) {
+        this->factors.baseColorFactor = c;
+        this->factors.metallicFactor = m;
+        this->factors.roughnessFactor = r;
+        this->factors.alphaCutoff = a;
+        this->pbr = true;
+    };
+
 };
-typedef Materials::Properties PBRProperties;
+//typedef Materials::Properties PBRProperties;
 
 struct Textures {
     int32_t imageIndex;
