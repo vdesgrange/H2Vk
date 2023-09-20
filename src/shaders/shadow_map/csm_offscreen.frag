@@ -1,6 +1,6 @@
 #version 450
-// #extension GL_EXT_debug_printf : enable
-//layout (set = 2, binding = 0) uniform sampler2D colorMap;
+
+layout (set = 2, binding = 0) uniform sampler2D colorMap;
 
 layout (location = 0) in vec2 inUV;
 

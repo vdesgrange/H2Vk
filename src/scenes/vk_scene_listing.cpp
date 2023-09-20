@@ -39,35 +39,25 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     camera.set_type(Camera::Type::look_at);
     camera.set_speed(10.0f);
 
-    // === Init shader materials ===
-    std::vector<PushConstant> constants {
-            {sizeof(glm::mat4), ShaderType::VERTEX},
-            {sizeof(Materials::Factors), ShaderType::FRAGMENT}
-    };
 
-    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
-            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibl.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl.frag.spv"},
-    };
+    //std::shared_ptr<ModelGLTF2> emptyModel = std::make_shared<ModelGLTF2>(engine->_device.get());
+    //emptyModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    //std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
+    //engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
+    //engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, pbr_modules);
 
-    std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
-    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
-    engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, pbr_modules);
-
-    std::vector<std::pair<ShaderType, const char*>> scene_modules {
-            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
-    };
-
-    std::vector<VkDescriptorSetLayout> shadowSetLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
-    // engine->_materialManager->_pipelineBuilder = &scenePipeline;
-    engine->_materialManager->create_material("shadowScene", shadowSetLayouts, constants, scene_modules);
+//    std::vector<std::pair<ShaderType, const char*>> scene_modules {
+//            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
+//            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
+//    };
+//
+//    std::vector<VkDescriptorSetLayout> shadowSetLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
+//    // engine->_materialManager->_pipelineBuilder = &scenePipeline;
+//    engine->_materialManager->create_material("shadowScene", shadowSetLayouts, constants, scene_modules);
 
     // === Add entities ===
     engine->_lightingManager->clear_entities();
     engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.0f, 0.f),glm::vec4(1.f)));
-//    engine->_lightingManager->add_entity("spot", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.f, 0.f), glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
-//    engine->_lightingManager->add_entity("light2", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f), glm::vec4(2.f, 0.f, 0.f, 0.f), glm::vec4(1.f)));
 
     Materials blank = {{1.0f, 1.0f, 1.0, 1.0f}, 0.0f,  1.0f, 0.0f};
 
@@ -79,15 +69,49 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     engine->_meshManager->upload_mesh(*wallModel);
     engine->_meshManager->add_entity("wall", std::static_pointer_cast<Entity>(wallModel));
 
+
+    // === Init shader materials ===
+    unsigned char pixels[] = {0, 0, 0, 1};
+    Texture emptyTexture{};
+    emptyTexture.load_image_from_buffer(*engine->_device, engine->_uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1); // ctx?
+
+    std::vector<PushConstant> constants {
+            {sizeof(glm::mat4), ShaderType::VERTEX},
+            {sizeof(Materials::Factors), ShaderType::FRAGMENT}
+    };
+
+    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
+            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibl.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl.frag.spv"},
+    };
+
+    std::vector<std::pair<ShaderType, const char*>> scene_modules {
+            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
+    };
+
+    floorModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
+    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
+    engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, scene_modules);
+
+    wallModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
+    engine->_materialManager->create_material("pbrMaterial2", setLayouts, constants, scene_modules);
+
+
+    std::vector<VkDescriptorSetLayout> shadowSetLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
+    engine->_materialManager->create_material("shadowScene", shadowSetLayouts, constants, scene_modules);
+
     RenderObject floor;
     floor.model = engine->_meshManager->get_model("floor");
-    floor.material = engine->_materialManager->get_material("shadowScene");
+    floor.material = engine->_materialManager->get_material("pbrMaterial");
     floor.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(floor);
 
     RenderObject wall;
     wall.model = engine->_meshManager->get_model("wall");
-    wall.material = engine->_materialManager->get_material("shadowScene");
+    wall.material = engine->_materialManager->get_material("pbrMaterial2");
     wall.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(wall);
 
@@ -99,12 +123,16 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
             std::string name = "sphere_" + std::to_string(x) + "_" + std::to_string(y);
             std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f}, gold);
 
+            sphereModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+            engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
+            engine->_materialManager->create_material("pbrMaterial3", setLayouts, constants, scene_modules);
+
             engine->_meshManager->upload_mesh(*sphereModel);
             engine->_meshManager->add_entity(name, std::static_pointer_cast<Entity>(sphereModel));
 
             RenderObject sphere;
             sphere.model = engine->_meshManager->get_model(name);
-            sphere.material = engine->_materialManager->get_material("shadowScene");
+            sphere.material = engine->_materialManager->get_material("pbrMaterial3");
             glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x - 3, y - 3, 0));
             glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.5, 0.5, 0.5));
             sphere.transformMatrix = translation * scale;
@@ -117,6 +145,11 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
 Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
+
+    // === Empty texture ===
+    unsigned char pixels[] = {0, 0, 0, 1};
+    Texture emptyTexture{};
+    emptyTexture.load_image_from_buffer(*engine->_device, engine->_uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1); // ctx?
 
     // === Init camera ===
     camera.inverse(true);
@@ -137,6 +170,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     // === Init shader materials ===
     std::vector<PushConstant> constants {
             {sizeof(glm::mat4), ShaderType::VERTEX},
+            {sizeof(Materials::Factors), ShaderType::FRAGMENT}
     };
 
     std::vector<std::pair<ShaderType, const char*>> pbr_modules {
@@ -144,9 +178,9 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
             {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_tex.frag.spv"},
     };
 
-    VkDescriptorSetLayout textures{};
-    helmetModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures);
-    std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, textures};
+    // VkDescriptorSetLayout textures{}; // todo : stop duplicate with _scene->setup_texture_descriptors
+    helmetModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
     engine->_materialManager->create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
 
@@ -162,6 +196,11 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
 
 Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
+
+    // === Empty texture ===
+    unsigned char pixels[] = {0, 0, 0, 1};
+    Texture emptyTexture{};
+    emptyTexture.load_image_from_buffer(*engine->_device, engine->_uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1); // ctx?
 
     // === Init camera ===
     camera.inverse(true);
@@ -183,6 +222,7 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     // === Init shader materials ===
     std::vector<PushConstant> constants {
             {sizeof(glm::mat4), ShaderType::VERTEX},
+            {sizeof(Materials::Factors), ShaderType::FRAGMENT}
     };
 
     std::vector<std::pair<ShaderType, const char*>> pbr_modules {
@@ -190,8 +230,13 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
             {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_tex.frag.spv"},
     };
 
+//    std::vector<std::pair<ShaderType, const char*>> scene_modules {
+//            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
+//            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
+//    };
+
     VkDescriptorSetLayout textures{};
-    sponzaModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures);
+    sponzaModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures, emptyTexture);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, textures};
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
     engine->_materialManager->create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);

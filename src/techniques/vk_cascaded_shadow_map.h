@@ -35,8 +35,8 @@ struct GPUCascadedShadowData {
 class CascadedShadowMapping final {
 public:
     static const VkFormat DEPTH_FORMAT = VK_FORMAT_D16_UNORM;
-    const uint32_t SHADOW_WIDTH = 2048;
-    const uint32_t SHADOW_HEIGHT = 2048;
+    const uint32_t SHADOW_WIDTH = 1024;
+    const uint32_t SHADOW_HEIGHT = 1024;
     static const uint32_t CASCADE_COUNT = 4;
 
     struct Cascade {
@@ -73,7 +73,6 @@ public:
     ~CascadedShadowMapping();
 
     static void allocate_buffers(Device& device);
-    void prepare_offscreen_pass(Device& device);
     void prepare_depth_map(Device& device, UploadContext& uploadContext, LightingManager& lighting);
     void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
     void setup_pipelines(Device& device, MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);
@@ -87,8 +86,6 @@ public:
 private:
     class Device& _device;
 
-    void draw(Model& model, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);
-    void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);
-
+    void prepare_offscreen_pass(Device& device);
 };
 

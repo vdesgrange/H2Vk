@@ -114,7 +114,7 @@ void main()
     // vec3 V = normalize(inCameraPos - inFragPos);
     float diffuse = max(dot(N, L), ambient);
     vec3 lightColor = vec3(1.0);
-    outFragColor.rgb = max(lightColor * (diffuse * inColor.rgb), vec3(0.0));
+    outFragColor.rgb = max(lightColor * (diffuse * vec3(1.0)), vec3(0.0));
     outFragColor.rgb *= shadow;
     outFragColor.a = 1.0;
 

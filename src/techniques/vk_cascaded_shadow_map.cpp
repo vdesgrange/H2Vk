@@ -17,7 +17,6 @@
 
 CascadedShadowMapping::CascadedShadowMapping(Device &device) : _device(device), _offscreen_pass(RenderPass(device)) {
     this->prepare_offscreen_pass(device);
-//    this->_offscreen_shadow = Texture();
 }
 
 CascadedShadowMapping::~CascadedShadowMapping() {
@@ -143,7 +142,7 @@ void CascadedShadowMapping::prepare_depth_map(Device& device, UploadContext& upl
 void CascadedShadowMapping::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
     std::vector<VkDescriptorPoolSize> offscreenPoolSizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6}
     };
 
 //    for (int i = 0; i < CASCADE_COUNT; i ++) {
@@ -158,7 +157,6 @@ void CascadedShadowMapping::setup_descriptors(DescriptorLayoutCache& layoutCache
 //                .layout(setLayout)
 //                .build(_directional_shadows._cascades[i]._descriptorSet, setLayout, offscreenPoolSizes);
 //    }
-
 
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         VkDescriptorBufferInfo offscreenBInfo{};
@@ -203,12 +201,6 @@ void CascadedShadowMapping::setup_pipelines(Device& device, MaterialManager& mat
     offscreenPipeline._rasterizer.depthClampEnable = VK_TRUE; // not supported
     offscreenPipeline._rasterizer.depthBiasEnable = VK_TRUE;
 
-//    VkPipelineRasterizationDepthClipStateCreateInfoEXT ext{};
-//    ext.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT;
-//    ext.depthClipEnable = VK_FALSE;
-//
-//    offscreenPipeline._rasterizer.pNext = &ext;
-
     std::vector<std::pair<ShaderType, const char*>> offscreen_module {
             {ShaderType::VERTEX, "../src/shaders/shadow_map/csm_offscreen.vert.spv"},
             {ShaderType::FRAGMENT, "../src/shaders/shadow_map/csm_offscreen.frag.spv"},
@@ -216,6 +208,7 @@ void CascadedShadowMapping::setup_pipelines(Device& device, MaterialManager& mat
 
     std::vector<PushConstant> constants {
             {sizeof(glm::mat4) + sizeof(uint32_t), ShaderType::VERTEX},
+            {sizeof(Materials::Factors), ShaderType::FRAGMENT},
     };
 
     materialManager._pipelineBuilder = &offscreenPipeline;
@@ -278,8 +271,7 @@ void CascadedShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& en
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipelineLayout, 1, 1, &frame.objectDescriptor, 0, nullptr);
 
             for (auto const &object: entities) {
-                // object.model->draw(cmd, object.material->pipelineLayout, i, object.model.get() != lastModel.get()); // todo fix texture for all objects
-                this->draw(*object.model, cmd, object.material->pipelineLayout, i, object.model.get() != lastModel.get());
+                object.model->draw(cmd, this->_offscreen_effect->pipelineLayout, sizeof(glm::mat4) + sizeof(uint32_t), i, object.model.get() != lastModel.get());
                 lastModel = object.model;
                 i++;
             }
@@ -287,41 +279,6 @@ void CascadedShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& en
         vkCmdEndRenderPass(cmd);
     }
 
-}
-
-void CascadedShadowMapping::draw(Model& model, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind) {
-    if (bind) {
-        VkDeviceSize offsets[1] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &model._vertexBuffer._buffer, offsets);
-        vkCmdBindIndexBuffer(commandBuffer, model._indexBuffer.allocation._buffer, 0, VK_INDEX_TYPE_UINT32);
-    }
-
-    for (auto& node : model._nodes) {
-        draw_node(node, commandBuffer, pipelineLayout, instance);
-    }
-}
-
-void CascadedShadowMapping::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance) {
-    if (!node->mesh.primitives.empty()) {
-        glm::mat4 nodeMatrix = node->matrix;
-        Node* parent = node->parent;
-        while (parent) {
-            nodeMatrix = parent->matrix * nodeMatrix;
-            parent = parent->parent;
-        }
-
-        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
-
-        for (Primitive& primitive : node->mesh.primitives) { // to do : consider material for transparency
-            if (primitive.indexCount > 0) {
-                vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance);
-            }
-        }
-    }
-
-    for (auto& child : node->children) {
-        draw_node(child, commandBuffer, pipelineLayout, instance);
-    }
 }
 
 /**
@@ -336,6 +293,7 @@ void CascadedShadowMapping::compute_cascades(Camera& camera, LightingManager& li
     float zFar = camera.get_z_far();
     float clipRange = zFar - zNear;
     float clipRatio = zFar / zNear;
+    glm::vec4 f = camera.get_flip() ? glm::vec4(-1.0f) : glm::vec4(1.0f);
 
     for (uint32_t i = 0; i < CASCADE_COUNT; i++) {
         float p = static_cast<float>(i + 1.0f) / static_cast<float>(CASCADE_COUNT);
@@ -360,7 +318,10 @@ void CascadedShadowMapping::compute_cascades(Camera& camera, LightingManager& li
                 glm::vec3(-1.0f, -1.0f,  1.0f), // left-top-back
         };
 
-        glm::mat4 invViewProj = glm::inverse(camera.get_projection_matrix() * camera.get_view_matrix());
+        glm::mat4 proj = camera.get_projection_matrix();
+//        proj[1][1] *= camera.get_flip() ? -1.0f : 1.0f;
+
+        glm::mat4 invViewProj = glm::inverse(proj * camera.get_view_matrix());
         for (uint32_t j = 0; j < 8; j++) {
             glm::vec4 invCorner = invViewProj * glm::vec4(frustumCorners[j], 1.0f);
             frustumCorners[j] = invCorner / invCorner.w;
@@ -385,7 +346,7 @@ void CascadedShadowMapping::compute_cascades(Camera& camera, LightingManager& li
 			float distance = glm::length(frustumCorners[j] - frustumCenter);
 			radius = glm::max(radius, distance);
 		}
-		// radius = std::ceil(radius * 16.0f) / 16.0f;
+		radius = std::ceil(radius * 16.0f) / 16.0f;
 
         // Process directional lights
         uint32_t lightIndex = 0;
@@ -393,7 +354,7 @@ void CascadedShadowMapping::compute_cascades(Camera& camera, LightingManager& li
             std::shared_ptr<Light> light = std::static_pointer_cast<Light>(l.second);
             if (light->get_type() == Light::DIRECTIONAL) {
 
-                glm::vec3 dir = normalize(light->get_rotation());
+                glm::vec3 dir = normalize(f * light->get_rotation());
                 glm::vec3 up = std::abs(glm::dot(dir, glm::vec3(0.0f, 1.0f, 0.0f))) == 1.0f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
                 glm::mat4 view = glm::lookAt(frustumCenter - dir * radius, frustumCenter, up);
                 glm::mat4 proj = glm::ortho(-radius, radius, -radius, radius, 0.0f, 2.0f * radius);

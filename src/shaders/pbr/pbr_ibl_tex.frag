@@ -5,6 +5,7 @@
 #include "../common/brdf.glsl"
 #include "../common/filters.glsl"
 #include "../common/tonemaps.glsl"
+#include "../common/debug.glsl"
 
 layout(std140, set = 0, binding = 1) uniform LightingData {
     layout(offset = 0) vec2 num_lights;
@@ -15,10 +16,16 @@ layout(std140, set = 0, binding = 1) uniform LightingData {
     layout(offset = 528) vec4 spot_color[MAX_LIGHT];
 } lightingData;
 
+//layout (std140, set = 0, binding = 2) uniform ShadowData {
+//    layout(offset = 0) vec2  num_lights;
+//    layout(offset = 16) mat4 directional_mvp[MAX_LIGHT];
+//    layout(offset = 528) mat4 spot_mvp[MAX_LIGHT];
+//} depthData;
+
 layout (std140, set = 0, binding = 2) uniform ShadowData {
-    layout(offset = 0) vec2  num_lights;
-    layout(offset = 16) mat4 directional_mvp[MAX_LIGHT];
-    layout(offset = 528) mat4 spot_mvp[MAX_LIGHT];
+    mat4 cascadeVP[CASCADE_COUNT];
+    vec4 splitDepth;
+    bool color_cascades;
 } depthData;
 
 layout(set = 0, binding = 3) uniform samplerCube irradianceMap; // aka. environment map
@@ -37,30 +44,31 @@ layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec3 inFragPos; // fragment/world position
 layout (location = 4) in vec3 inCameraPos; // camera/view position
-layout (location = 5) in vec4 inTangent;
+layout (location = 5) in vec3 inViewPos;
+layout (location = 6) in vec4 inTangent;
 
 layout (location = 0) out vec4 outFragColor;
 
-vec3 shadow(vec3 color, int type) {
-    float layer_offset = 0;
-    vec4 shadowCoord;
-
-    if (type == 1) {
-        layer_offset = depthData.num_lights[0];
-    }
-
-    for (int i=0; i < depthData.num_lights[type]; i++) {
-        if (type == 0) {
-            shadowCoord = biasMat * depthData.spot_mvp[i] * vec4(inFragPos, 1.0);
-        } else if (type == 1) {
-            shadowCoord = biasMat * depthData.directional_mvp[i] * vec4(inFragPos, 1.0);
-        }
-
-        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowMap, inNormal, inFragPos, shadowCoord, layer_offset + i) : textureProj(shadowMap, inNormal, inFragPos, shadowCoord, vec2(0.0), layer_offset + i);
-        color *= shadowFactor;
-    }
-    return color;
-}
+//vec3 shadow(vec3 color, int type) {
+//    float layer_offset = 0;
+//    vec4 shadowCoord;
+//
+//    if (type == 1) {
+//        layer_offset = depthData.num_lights[0];
+//    }
+//
+//    for (int i=0; i < depthData.num_lights[type]; i++) {
+//        if (type == 0) {
+//            shadowCoord = biasMat * depthData.spot_mvp[i] * vec4(inFragPos, 1.0);
+//        } else if (type == 1) {
+//            shadowCoord = biasMat * depthData.directional_mvp[i] * vec4(inFragPos, 1.0);
+//        }
+//
+//        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowMap, inNormal, inFragPos, shadowCoord, layer_offset + i) : texture_projection(shadowMap, inNormal, inFragPos, shadowCoord, vec2(0.0), layer_offset + i);
+//        color *= shadowFactor;
+//    }
+//    return color;
+//}
 
 
 vec3 prefiltered_reflection(vec3 R, float roughness) {
@@ -159,7 +167,7 @@ void main()
     vec2 uv = sample_spherical_map(N);
 
     vec3 Lo = vec3(0.0);
-    Lo = spot_light(Lo, N, V, albedo, roughness, metallic);
+    // Lo = spot_light(Lo, N, V, albedo, roughness, metallic);
     Lo = directional_light(Lo, N, V, albedo, roughness, metallic);
 
     vec2 brdf = texture(brdfMap, vec2(max(dot(N, V), 0.01), roughness)).rg;
@@ -184,6 +192,21 @@ void main()
 //    color = shadow(color, 1);
 
     color = color * (1.0f / uncharted2_tonemap(vec3(11.2f)));
+
+    // Cascaded shadow mapping
+    uint cascadeIndex = 0;
+    for(uint i = 0; i < CASCADE_COUNT - 1; ++i) {
+        if(inViewPos.z < depthData.splitDepth[i]) {
+            cascadeIndex = i + 1;
+        }
+    }
+
+    vec4 coord = biasMat * depthData.cascadeVP[cascadeIndex] * vec4(inFragPos, 1.0);
+    vec3 L = normalize(lightingData.dir_direction[0].xyz);
+    float shadow = texture_projection(shadowMap, N, L, coord / coord.w, vec2(0.0), cascadeIndex);
+    color.rgb *= shadow;
+
+    debug_cascades(depthData.color_cascades, cascadeIndex, color);
 
     outFragColor = vec4(color, 1.0);
 }

@@ -280,7 +280,7 @@ void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
     // _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen, _descriptorSetLayouts.matrices}, *_renderPass);
-    _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices}, *_renderPass);
+    // _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
 
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
@@ -488,7 +488,7 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
 
         if (object.model) {
             bool bind = object.model.get() != lastModel.get(); // degueulasse sortir de la boucle de rendu
-            object.model->draw(commandBuffer, object.material->pipelineLayout, i, bind); // object.model != lastModel
+            object.model->draw(commandBuffer, object.material->pipelineLayout, sizeof(glm::mat4), i, bind); // object.model != lastModel
             lastModel = bind ? object.model : lastModel;
         }
     }
@@ -566,9 +566,14 @@ void VulkanEngine::render(int imageIndex) {
 
     // === Scene ===
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
-        _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
+        unsigned char pixels[] = {0, 0, 0, 0};
+        Texture emptyTexture{};
+        emptyTexture.load_image_from_buffer(*_device, _uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
+
+        _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures, emptyTexture);
         _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-        // _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+        _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+
         this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
     }
 

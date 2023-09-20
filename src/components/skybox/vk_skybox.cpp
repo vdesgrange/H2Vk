@@ -229,7 +229,7 @@ void Skybox::setup_pipeline(MaterialManager& materialManager, std::vector<VkDesc
 }
 
 void Skybox::draw(VkCommandBuffer& commandBuffer) {
-    _model->draw(commandBuffer, _material->pipelineLayout, 0, true);
+    _model->draw(commandBuffer, _material->pipelineLayout, sizeof(glm::mat4), 0, true);
 }
 
 void Skybox::build_command_buffer(VkCommandBuffer& commandBuffer, VkDescriptorSet* descriptor) {

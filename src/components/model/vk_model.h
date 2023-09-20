@@ -160,12 +160,12 @@ public:
     virtual bool load_model(const Device& device, const UploadContext& ctx, const char *filename) { return false; };
 
     void destroy();
-    void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);
+    void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t offset, uint32_t instance, bool bind);
     VkDescriptorImageInfo get_texture_descriptor(const size_t index);
-    void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
+    void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, Texture& empty);
 
 protected:
-    void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);
+    void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t offset, uint32_t instance);
 
 private:
     Device* _device {nullptr};

@@ -49,8 +49,8 @@ void Scene::setup_transformation_descriptors(DescriptorLayoutCache& layoutCache,
     }
 }
 
-void Scene::setup_texture_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
+void Scene::setup_texture_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, Texture& emptyTexture) {
     for (auto &renderable: this->_renderables) {
-        renderable.model->setup_descriptors(layoutCache, allocator, setLayout);
+        renderable.model->setup_descriptors(layoutCache, allocator, setLayout,emptyTexture);
     }
 }

@@ -9,9 +9,10 @@ layout (location = 4) in vec4 vTangent;
 layout (location = 0) out vec3 outColor;
 layout (location = 1) out vec2 outUV;
 layout (location = 2) out vec3 outNormal;
-layout (location = 3) out vec3 outFragPos; // fragment position
-layout (location = 4) out vec3 outCameraPos; // fragment position
-layout (location = 5) out vec4 outTangent;
+layout (location = 3) out vec3 outFragPos;
+layout (location = 4) out vec3 outCameraPos;
+layout (location = 5) out vec3 outViewPos;
+layout (location = 6) out vec4 outTangent;
 
 layout(set = 0, binding = 0) uniform  CameraBuffer
 {
@@ -37,12 +38,15 @@ void main()
 {
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * nodeData.model;
     mat4 transformMatrix = (cameraData.proj * cameraData.view * modelMatrix);
+    vec4 pos = modelMatrix * vec4(vPosition.xyz, 1.0f);
+
     gl_Position = transformMatrix * vec4(vPosition , 1.0f);
 
     outColor = vColor;
     outUV = vUV;
     outNormal = vNormal;
     outTangent = vTangent;
-    outFragPos = vec3(modelMatrix * vec4(vPosition.xyz , 1.0f));
+    outFragPos = pos.xyz; // vec3(modelMatrix * vec4(vPosition.xyz , 1.0f));
     outCameraPos = cameraData.pos;
+    outViewPos = (cameraData.view * vec4(pos.xyz, 1.0)).xyz;
 }

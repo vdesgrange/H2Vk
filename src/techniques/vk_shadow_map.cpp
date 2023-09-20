@@ -255,7 +255,7 @@ void ShadowMapping::run_offscreen_pass(FrameData& frame, Renderables& entities, 
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_offscreen_effect->pipelineLayout, 1, 1, &frame.objectDescriptor, 0, nullptr);
 
             for (auto const &object: entities) {
-                this->draw(*object.model, cmd, object.material->pipelineLayout, i,object.model.get() != lastModel.get());
+                this->draw(*object.model, cmd, object.material->pipelineLayout, i, object.model.get() != lastModel.get());
                 lastModel = object.model;
                 i++;
             }

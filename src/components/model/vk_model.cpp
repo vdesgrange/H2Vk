@@ -10,6 +10,7 @@
 #include "core/vk_device.h"
 #include "core/vk_command_buffer.h"
 #include "components/camera/vk_camera.h"
+#include "core/vk_descriptor_allocator.h"
 
 std::atomic<uint32_t> Model::nextID {0};
 
@@ -80,7 +81,7 @@ VkDescriptorImageInfo Model::get_texture_descriptor(const size_t index)
     return _images[index]._texture._descriptor;
 }
 
-void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance) {
+void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t offset, uint32_t instance) {
     if (!node->mesh.primitives.empty()) {
         glm::mat4 nodeMatrix = node->matrix;
         Node* parent = node->parent;
@@ -95,11 +96,11 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
             if (primitive.indexCount > 0) {
                 if (!_materials.empty() && primitive.materialIndex != -1) { // handle non-gltf meshes // !_textures.empty()
                     Materials material = _materials[primitive.materialIndex];
-                    if (material.pbr) {
-                        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Materials::Factors), &material.factors);
-                    } else {
+                    // if (material.pbr) {
+                        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, offset, sizeof(Materials::Factors), &material.factors);
+                    // } else {
                         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &material._descriptorSet, 0, nullptr);
-                    }
+                    // }
                 }
                 vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, instance);
             }
@@ -107,11 +108,11 @@ void Model::draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayo
     }
 
     for (auto& child : node->children) {
-        draw_node(child, commandBuffer, pipelineLayout, instance);
+        draw_node(child, commandBuffer, pipelineLayout, offset, instance);
     }
 }
 
-void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind) {
+void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t offset, uint32_t instance, bool bind) {
     if (bind) {
         VkDeviceSize offsets[1] = {0};
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBuffer._buffer, offsets);
@@ -119,22 +120,22 @@ void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayou
     }
 
     for (auto& node : _nodes) {
-        draw_node(node, commandBuffer, pipelineLayout, instance);
+        draw_node(node, commandBuffer, pipelineLayout, offset, instance);
     }
 }
 
-void Model::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
+void Model::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, Texture& emptyTexture) {
     std::vector<VkDescriptorPoolSize> poolSizes = {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>( this->_images.size() ) }
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>( 5 ) } // this->_images.size()
     };
 
     for (auto &material: this->_materials) {
-        if (material.pbr == false) {
-            VkDescriptorImageInfo colorMap = material.baseColorTexture->_texture._descriptor; // this->_images[material.baseColorTextureIndex]._texture._descriptor;
-            VkDescriptorImageInfo normalMap = material.normalTexture->_texture._descriptor; // this->_images[material.normalTextureIndex]._texture._descriptor;
-            VkDescriptorImageInfo metallicRoughnessMap = material.metallicRoughnessTexture->_texture._descriptor; // this->_images[material.metallicRoughnessTextureIndex]._texture._descriptor;
-            VkDescriptorImageInfo aoMap = material.aoTexture->_texture._descriptor; // this->_images[material.aoTextureIndex]._texture._descriptor;
-            VkDescriptorImageInfo emissiveMap = material.emissiveTexture->_texture._descriptor; // this->_images[material.emissiveTextureIndex]._texture._descriptor;
+        // if (material.pbr == false) {
+            VkDescriptorImageInfo colorMap = material.baseColorTexture ? material.baseColorTexture->_texture._descriptor : emptyTexture._descriptor ;
+            VkDescriptorImageInfo normalMap = material.normalTexture ? material.normalTexture->_texture._descriptor : emptyTexture._descriptor;
+            VkDescriptorImageInfo metallicRoughnessMap = material.metallicRoughnessTexture ? material.metallicRoughnessTexture->_texture._descriptor : emptyTexture._descriptor;
+            VkDescriptorImageInfo aoMap = material.aoTexture ? material.aoTexture->_texture._descriptor : emptyTexture._descriptor;
+            VkDescriptorImageInfo emissiveMap = material.emissiveTexture ? material.emissiveTexture->_texture._descriptor : emptyTexture._descriptor;
 
             DescriptorBuilder::begin(layoutCache, allocator)
                     .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
@@ -143,8 +144,8 @@ void Model::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllo
                     .bind_image(aoMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
                     .bind_image(emissiveMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
                     .layout(setLayout)
-                    .build(material._descriptorSet, setLayout, poolSizes); // _images[material.baseColorTextureIndex]._descriptorSet
-        }
+                    .build(material._descriptorSet, setLayout, poolSizes);
+        // }
     }
 }
 
