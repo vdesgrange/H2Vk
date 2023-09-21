@@ -25,10 +25,10 @@ layout (std140, set = 0, binding = 2) uniform ShadowData {
 } depthData;
 
 
-layout(set = 0, binding = 3) uniform samplerCube irradianceMap; // aka. environment map
-layout(set = 0, binding = 4) uniform samplerCube prefilteredMap; // aka. prefiltered map
-layout(set = 0, binding = 5) uniform sampler2D brdfMap; // aka. prefilter map
-layout(set = 0, binding = 6) uniform sampler2DArray shadowMap;
+layout(set = 0, binding = 4) uniform samplerCube irradianceMap; // aka. environment map
+layout(set = 0, binding = 5) uniform samplerCube prefilteredMap; // aka. prefiltered map
+layout(set = 0, binding = 6) uniform sampler2D brdfMap; // aka. prefilter map
+layout(set = 0, binding = 7) uniform sampler2DArray shadowMap;
 
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
@@ -67,7 +67,7 @@ vec3 shadow(vec3 color, int type) {
             shadowCoord = biasMat * depthData.directional_mvp[i] * vec4(inFragPos, 1.0);
         }
 
-        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowMap, inNormal, inFragPos, shadowCoord, layer_offset + i) : textureProj(shadowMap,  inNormal, inFragPos, shadowCoord, vec2(0.0), layer_offset + i);
+        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowMap, inNormal, inFragPos, shadowCoord, layer_offset + i) : texture_projection(shadowMap,  inNormal, inFragPos, shadowCoord, vec2(0.0), layer_offset + i);
         color *= shadowFactor;
     }
     return color;

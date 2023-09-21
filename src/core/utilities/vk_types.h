@@ -23,6 +23,12 @@ class CommandBuffer;
 class DescriptorLayoutCache;
 class DescriptorAllocator;
 
+struct GPUEnabledFeaturesData{
+    alignas(bool) bool shadowMapping;
+    alignas(bool) bool skybox;
+    alignas(bool) bool atmosphere;
+};
+
 struct GPUObjectData {
     glm::mat4 model;
 };
@@ -44,6 +50,8 @@ struct FrameData {
     CommandBuffer* _commandBuffer;
 
     VkDescriptorSet skyboxDescriptor;
+
+    AllocatedBuffer enabledFeaturesBuffer;
 
     AllocatedBuffer cameraBuffer;
     AllocatedBuffer lightingBuffer;

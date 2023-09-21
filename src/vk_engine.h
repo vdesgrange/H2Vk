@@ -130,6 +130,14 @@ public:
         VkDescriptorSetLayout atmosphere = VK_NULL_HANDLE;
     } _descriptorSetLayouts;
 
+    struct {
+        bool shadowMapping = false;
+        bool skybox = false;
+        bool atmosphere = false;
+        bool meshes = true;
+        bool ui = true;
+    } _enabledFeatures;
+
     DeletionQueue _mainDeletionQueue;
 
     UploadContext _uploadContext;
@@ -165,4 +173,11 @@ private:
     void draw();
     Statistics monitoring();
     FrameData& get_current_frame();
+
+    void allocate_buffers(Device& device) {
+        for (int i = 0; i < FRAME_OVERLAP; i++) {
+            const size_t depthBufferSize =  helper::pad_uniform_buffer_size(device, sizeof(GPUEnabledFeaturesData));
+            g_frames[i].enabledFeaturesBuffer = Buffer::create_buffer(device, depthBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        }
+    }
 };

@@ -28,7 +28,7 @@ layout (std140, set = 0, binding = 2) uniform ShadowData {
     layout(offset = 528) mat4 spot_mvp[MAX_LIGHT];
 } depthData;
 
-layout (set = 0, binding = 6) uniform sampler2DArray shadowMap;
+layout (set = 0, binding = 7) uniform sampler2DArray shadowMap;
 
 const mat4 biasMat = mat4(
 0.5, 0.0, 0.0, 0.0,

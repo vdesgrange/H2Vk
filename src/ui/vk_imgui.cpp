@@ -27,7 +27,7 @@ UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine
     this->p_open.emplace(VIEW_EDITOR, false);
     this->p_open.emplace(LIGHT_EDITOR, false);
     this->p_open.emplace(LOG_CONSOLE, false);
-    this->p_open.emplace(SKYBOX_EDITOR, true);
+    this->p_open.emplace(SKYBOX_EDITOR, false);
     this->p_open.emplace(SHADOW_EDITOR, false);
 
     _layoutCache = new DescriptorLayoutCache(*engine._device);
@@ -148,12 +148,31 @@ bool UInterface::interface(Statistics statistics) {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Tools")) {
             updated |= ImGui::MenuItem("View tools", nullptr, &this->p_open[VIEW_EDITOR]);
-            updated |= ImGui::MenuItem("Scene editor", nullptr, &this->p_open[SCENE_EDITOR]);
-            updated |= ImGui::MenuItem("Shadow editor", nullptr, &this->p_open[SHADOW_EDITOR]);
+            if (_engine._enabledFeatures.meshes) {
+                updated |= ImGui::MenuItem("Scene editor", nullptr, &this->p_open[SCENE_EDITOR]);
+            }
+
+            if (_engine._enabledFeatures.shadowMapping) {
+                updated |= ImGui::MenuItem("Shadow editor", nullptr, &this->p_open[SHADOW_EDITOR]);
+            }
+
             updated |= ImGui::MenuItem("Performances", nullptr, &this->p_open[STATS_VIEWER]);
-            updated |= ImGui::MenuItem("Enable skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
+
+            if (_engine._enabledFeatures.skybox) {
+                updated |= ImGui::MenuItem("Enable skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
+            }
             ImGui::EndMenu();
         }
+
+        if (ImGui::BeginMenu("Features")) {
+            updated |= ImGui::MenuItem("Shadow Mapping (WIP)", nullptr, &this->_engine._enabledFeatures.shadowMapping);
+            updated |= ImGui::MenuItem("Skybox", nullptr, &this->_engine._enabledFeatures.skybox);
+            updated |= ImGui::MenuItem("Atmosphere (WIP)", nullptr, &this->_engine._enabledFeatures.atmosphere);
+            updated |= ImGui::MenuItem("Scene meshes", nullptr, &this->_engine._enabledFeatures.meshes);
+
+            ImGui::EndMenu();
+        }
+
         ImGui::EndMainMenuBar();
     }
 

@@ -35,7 +35,7 @@ layout (std140, set = 0, binding = 2) uniform ShadowData {
     bool color_cascades;
 } depthData;
 
-layout (set = 0, binding = 6) uniform sampler2DArray shadowMap;
+layout (set = 0, binding = 7) uniform sampler2DArray shadowMap;
 
 float texture_projection(vec4 coord, vec2 offset, float layer) {
     float shadow = 1.0;
