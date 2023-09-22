@@ -125,14 +125,14 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
             sphereModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
             engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
-            engine->_materialManager->create_material("pbrMaterial3", setLayouts, constants, scene_modules);
+            engine->_materialManager->create_material("spherePbrMaterial_" + std::to_string(7 * x + y), setLayouts, constants, scene_modules);
 
             engine->_meshManager->upload_mesh(*sphereModel);
             engine->_meshManager->add_entity(name, std::static_pointer_cast<Entity>(sphereModel));
 
             RenderObject sphere;
             sphere.model = engine->_meshManager->get_model(name);
-            sphere.material = engine->_materialManager->get_material("pbrMaterial3");
+            sphere.material = engine->_materialManager->get_material("spherePbrMaterial_" + std::to_string(7 * x + y));
             glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x - 3, y - 3, 0));
             glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.5, 0.5, 0.5));
             sphere.transformMatrix = translation * scale;
@@ -140,6 +140,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
         }
     }
 
+    emptyTexture.destroy(*engine->_device); // todo - generate problems when clean-up 
     return renderables;
 }
 
@@ -190,6 +191,8 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     helmet.material = engine->_materialManager->get_material("pbrTextureMaterial");
     helmet.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(helmet);
+
+    emptyTexture.destroy(*engine->_device); // todo - generate problems when clean-up 
 
     return renderables;
 }
@@ -247,6 +250,8 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     sponza.material = engine->_materialManager->get_material("pbrTextureMaterial");
     sponza.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(sponza);
+
+    emptyTexture.destroy(*engine->_device); // todo - generate problems when clean-up 
 
     return renderables;
 }

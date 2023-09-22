@@ -10,12 +10,12 @@
 #define GLFW_INCLUDE_VULKAN
 #endif
 
-#ifndef VMA_IMPLEMENTATION
-#define VMA_IMPLEMENTATION
-#endif
-
 #ifndef GLM_ENABLE_EXPERIMENTAL
 #define GLM_ENABLE_EXPERIMENTAL
+#endif
+
+#ifndef VMA_IMPLEMENTATION
+#define VMA_IMPLEMENTATION
 #endif
 
 #ifndef VMA_DEBUG_LOG
@@ -236,9 +236,9 @@ void VulkanEngine::setup_environment_descriptors() {
                 .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
                 .bind_buffer(offscreenBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 2)
                 .bind_buffer(featuresBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
-                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 5)
-                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 6)
+                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4) // precomputed no need to be binded every frame
+                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 5) // precomputed no need to be binded every frame
+                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 6) // precomputed no need to be binded every frame
                 .bind_image(_cascadedShadow->_offscreen_shadow._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  VK_SHADER_STAGE_FRAGMENT_BIT, 7)
                 .layout(_descriptorSetLayouts.environment)
                 .build(g_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
@@ -291,7 +291,7 @@ void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
     // _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen, _descriptorSetLayouts.matrices}, *_renderPass);
-    // _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+    _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
 
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
@@ -459,7 +459,7 @@ void VulkanEngine::update_uniform_buffers() {
 
     void *data5;
     vmaMapMemory(_device->_allocator, frame.enabledFeaturesBuffer._allocation, &data5);
-    memcpy(data5, &cascadedOffscreenData, sizeof(GPUEnabledFeaturesData));
+    memcpy(data5, &featuresData, sizeof(GPUEnabledFeaturesData));
     vmaUnmapMemory(_device->_allocator, frame.enabledFeaturesBuffer._allocation);
 }
 
@@ -610,6 +610,7 @@ void VulkanEngine::render(int imageIndex) {
         _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
 
         this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
+        emptyTexture.destroy(*_device);
     }
 
     // === Update required uniform buffers
