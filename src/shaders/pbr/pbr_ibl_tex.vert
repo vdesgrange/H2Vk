@@ -39,13 +39,15 @@ void main()
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * nodeData.model;
     mat4 transformMatrix = (cameraData.proj * cameraData.view * modelMatrix);
     vec4 pos = modelMatrix * vec4(vPosition.xyz, 1.0f);
+    float f = cameraData.flip ? -1.0f : 1.0f;
 
     gl_Position = transformMatrix * vec4(vPosition , 1.0f);
+    // gl_Position.y = f * gl_Position.y; 
 
     outColor = vColor;
     outUV = vUV;
-    outNormal = vNormal;
-    outTangent = vTangent;
+    outNormal = normalize(modelMatrix * vec4(vNormal, 0.0f)).xyz; // instead of outNormal = vNormal;
+    outTangent = normalize(modelMatrix * vTangent); // instead of outTangent = vTangent;
     outFragPos = pos.xyz; // vec3(modelMatrix * vec4(vPosition.xyz , 1.0f));
     outCameraPos = cameraData.pos;
     outViewPos = (cameraData.view * vec4(pos.xyz, 1.0)).xyz;

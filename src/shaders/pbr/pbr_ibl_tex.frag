@@ -157,8 +157,76 @@ vec3 directional_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, fl
     return Lo;
 }
 
+float textureProj(vec4 shadowCoord, vec2 offset, uint cascadeIndex)
+{
+	float shadow = 1.0;
+	float bias = 0.005;
+
+	if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) {
+		float dist = texture(shadowMap, vec3(shadowCoord.st + offset, cascadeIndex)).r;
+		if (shadowCoord.w > 0 && dist < shadowCoord.z - bias) {
+			shadow = 0.1f;
+		}
+	}
+	return shadow;
+
+}
+
 void main()
 {
+
+    // vec4 color = texture(samplerAlbedoMap, inUV);
+	// if (color.a < 0.5) {
+	// 	discard;
+	// }
+
+	// // Get cascade index for the current fragment's view position
+	// uint cascadeIndex = 0;
+	// for(uint i = 0; i < CASCADE_COUNT - 1; ++i) {
+	// 	if(inViewPos.z < depthData.splitDepth[i]) {	
+	// 		cascadeIndex = i + 1;
+	// 	}
+	// }
+
+	// // Depth compare for shadowing
+	// vec4 shadowCoord = (biasMat * depthData.cascadeVP[cascadeIndex]) * vec4(inFragPos, 1.0);	
+
+	// float shadow = 0;
+	// shadow = textureProj(shadowCoord / shadowCoord.w, vec2(0.0), cascadeIndex);
+
+	// // Directional light
+	// vec3 N = normalize(inNormal);
+	// vec3 L = normalize(lightingData.dir_direction[0].xyz);
+	// vec3 H = normalize(L + inViewPos);
+	// float diffuse = max(dot(N, L), 0.1f);
+	// vec3 lightColor = vec3(1.0);
+	// outFragColor.rgb = max(lightColor * (diffuse * color.rgb), vec3(0.0));
+	// outFragColor.rgb *= shadow;
+	// outFragColor.a = color.a;
+
+	// // Color cascades (if enabled)
+	// if (depthData.color_cascades) {
+	// 	switch(cascadeIndex) {
+	// 		case 0 : 
+	// 			outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f);
+	// 			break;
+	// 		case 1 : 
+	// 			outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f);
+	// 			break;
+	// 		case 2 : 
+	// 			outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f);
+	// 			break;
+	// 		case 3 : 
+	// 			outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
+	// 			break;
+	// 	}
+	// }
+
+    float alpha = texture(samplerAlbedoMap, inUV).a;
+    if (alpha < 0.5) {
+        discard;
+    }
+
     vec3 albedo = pow(texture(samplerAlbedoMap, inUV).rgb, vec3(2.2)); // gamma correction
     vec3 normal = texture(samplerNormalMap, inUV).rgb;
     float roughness = texture(samplerMetalRoughnessMap, inUV).g;
@@ -192,11 +260,7 @@ void main()
 
     vec3 color = ambient + Lo;
 
-    // color = uncharted2_tonemap(color);
     color = color / (color + vec3(1.0)); // Reinhard operator
-//    color = shadow(color, 0);
-//    color = shadow(color, 1);
-
     color = color * (1.0f / uncharted2_tonemap(vec3(11.2f)));
 
     if (enabledFeaturesData.shadowMapping) {

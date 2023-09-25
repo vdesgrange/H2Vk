@@ -48,6 +48,7 @@ Device::Device(Window& window) {
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
     VkPhysicalDeviceFeatures required_features {};
     required_features.depthClamp = VK_TRUE;
+    required_features.samplerAnisotropy = VK_TRUE;
     selector.set_required_features(required_features);
 
     vkb::PhysicalDevice physicalDevice = selector
