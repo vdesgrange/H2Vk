@@ -41,8 +41,8 @@ void main()
 
     outColor = vColor;
     outUV = vUV;
-    outNormal = vNormal;
-    outTangent = vTangent;
+    outNormal = normalize(modelMatrix * vec4(vNormal, 0.0f)).xyz; // instead of outNormal = vNormal;
+    outTangent = normalize(modelMatrix * vTangent); // instead of outTangent = vTangent;
     outFragPos = vec3(modelMatrix * vec4(vPosition.xyz , 1.0f));
     outCameraPos = cameraData.pos;
 }
