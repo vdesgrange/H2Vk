@@ -414,7 +414,7 @@ void VulkanEngine::ui_overlay() {
  * @note handle camera, lighting, shadow uniform buffer data.
  */
 void VulkanEngine::update_uniform_buffers() {
-    FrameData frame =  get_current_frame();
+    FrameData& frame =  get_current_frame();
     uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
 
     // === Camera & Objects & Environment ===
@@ -521,7 +521,7 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
  * @param frame
  * @param imageIndex
  */
-void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
+void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
     // Collection of attachments, subpasses, and dependencies between the subpasses
     VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     VK_CHECK(vkBeginCommandBuffer(frame._commandBuffer->_commandBuffer, &cmdBeginInfo));
@@ -531,7 +531,6 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 
     // === Cascaded depth map render pass ===
     if (_enabledFeatures.shadowMapping) {
-        _cascadedShadow->compute_cascades(*_camera, *_lightingManager);
         _cascadedShadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
     }
 
@@ -593,13 +592,28 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 }
 
 /**
+ * @brief Compute the next frame resources
+ */
+void VulkanEngine::compute() {
+    // === Cascaded shadow mapping ===
+    if (_enabledFeatures.shadowMapping) {
+        _cascadedShadow->compute_cascades(*_camera, *_lightingManager);
+    }
+
+    // === Atmosphere skyview computing (WIP) ===
+    if (_enabledFeatures.atmosphere) {
+        _atmosphere->compute_resources(_frameNumber % FRAME_OVERLAP);
+    }
+}
+ 
+/**
  * Perform computation for the next frame to be rendered
  * @brief Render the next frame
  * @param imageIndex current frame index
  */
 void VulkanEngine::render(int imageIndex) {
 
-    // === Scene ===
+    // === Update scene ===
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
         unsigned char pixels[] = {0, 0, 0, 0};
         Texture emptyTexture{};
@@ -613,14 +627,18 @@ void VulkanEngine::render(int imageIndex) {
         emptyTexture.destroy(*_device);
     }
 
-    // === Update required uniform buffers
+    // === Update resources ===
+    compute();
+
+    // === Update uniform buffers ===
     update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
 
-    // === Command Buffer ===
+    // === Render scene ===
     VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, 0));
+
     this->build_command_buffers(get_current_frame(), imageIndex);
 
-    // --- Submit queue
+    // === Submit queue
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     VkSubmitInfo submitInfo{};

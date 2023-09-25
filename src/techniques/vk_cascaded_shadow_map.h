@@ -26,18 +26,18 @@ class MaterialManager;
 class Node;
 
 struct GPUCascadedShadowData {
-    glm::mat4 cascadeVP[4];
-    glm::vec4 splitDepth;
-    bool colorCascades;
+    alignas(glm::mat4) glm::mat4 cascadeVP[3];
+    alignas(glm::vec4) glm::vec4 splitDepth;
+    alignas(bool) bool colorCascades;
 };
 
 
 class CascadedShadowMapping final {
 public:
-    static const VkFormat DEPTH_FORMAT = VK_FORMAT_D16_UNORM;
-    const uint32_t SHADOW_WIDTH = 1024;
-    const uint32_t SHADOW_HEIGHT = 1024;
-    static const uint32_t CASCADE_COUNT = 4;
+    static const VkFormat DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
+    const uint32_t SHADOW_WIDTH = 2048;
+    const uint32_t SHADOW_HEIGHT = 2048;
+    static const uint32_t CASCADE_COUNT = 3;
 
     struct Cascade {
         VkImageView _imageView;
@@ -87,5 +87,8 @@ private:
     class Device& _device;
 
     void prepare_offscreen_pass(Device& device);
+    void draw(Model& model, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);
+    void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);
+
 };
 

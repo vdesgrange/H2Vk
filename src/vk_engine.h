@@ -168,7 +168,8 @@ private:
     void update_uniform_buffers();
     void update_buffer_objects(RenderObject *first, int count);
     void render_objects(VkCommandBuffer commandBuffer);
-    void build_command_buffers(FrameData frame, int imageIndex);
+    void build_command_buffers(FrameData& frame, int imageIndex);
+    void compute();
     void render(int imageIndex);
     void draw();
     Statistics monitoring();

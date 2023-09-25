@@ -3,7 +3,7 @@
 * Apply color layer for each cascade index (out of 4)
 */
 void debug_cascades(in bool colorCascades, in uint cascadeIndex, inout vec3 color) {
-    if (colorCascades) {
+    if (colorCascades == true) {
         switch(cascadeIndex) {
             case 0 :
             color.rgb *= vec3(1.0f, 0.25f, 0.25f); // red
