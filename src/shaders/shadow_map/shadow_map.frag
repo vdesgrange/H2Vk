@@ -23,12 +23,6 @@ layout(std140, set = 0, binding = 1) uniform LightingData {
     layout(offset = 528) vec4 spot_color[MAX_LIGHT];
 } lightingData;
 
-//layout (std140, set = 0, binding = 2) uniform ShadowData {
-//    layout(offset = 0) vec2  num_lights;
-//    layout(offset = 16) mat4 directional_mvp[MAX_LIGHT];
-//    layout(offset = 528) mat4 spot_mvp[MAX_LIGHT];
-//} depthData;
-
 layout (std140, set = 0, binding = 2) uniform ShadowData {
     mat4 cascadeVP[CASCADE_COUNT];
     vec4 splitDepth;
@@ -39,59 +33,22 @@ layout (set = 0, binding = 7) uniform sampler2DArray shadowMap;
 
 float texture_projection(vec4 coord, vec2 offset, float layer) {
     float shadow = 1.0;
-    float cosTheta = clamp(dot(normalize(inNormal), normalize(lightingData.dir_direction[0].xyz)), 0.0, 1.0);
-    float bias = 0.005 * tan(acos(cosTheta));
-    bias = clamp(bias, 0, 0.1);
+    float bias = 0.005;
+
+    // float cosTheta = clamp(dot(normalize(inNormal), normalize(lightingData.dir_direction[0].xyz)), 0.0, 1.0);
+    // float bias = 0.005 * tan(acos(cosTheta));
+    // bias = clamp(bias, 0, 0.1);
 
     if ( coord.z >= -1.0 && coord.z <= 1.0 )
     {
         float dist = texture(shadowMap, vec3(coord.st + offset, layer) ).r;
         if ( coord.w > 0.0 && dist < coord.z - bias)
         {
-            // shadow -= 0.2 * (1.0 - dist);
             shadow = ambient;
         }
     }
     return shadow;
 }
-
-float pseudo_random(vec4 co) {
-    float dot_product = dot(co, vec4(12.9898, 78.233, 45.164, 94.673));
-    return fract(sin(dot_product) * 43758.5453);
-}
-
-float filter_pcf(vec4 sc, float layer)
-{
-    ivec2 texDim = textureSize(shadowMap, 0).xy;
-    float scale = 0.75;
-    float dx = scale * 1.0 / float(texDim.x);
-    float dy = scale * 1.0 / float(texDim.y);
-
-    float shadowFactor = 0.0;
-    int count = 0;
-    int range = 4;
-
-    for (int i = 0; i <= range; i++)
-    {
-        int index = int(16.0 * pseudo_random(vec4(gl_FragCoord.xyy, i))) % 16;
-        shadowFactor += texture_projection(sc, poissonDisk[index] / 700.0, layer); // coord + offset = samples center + 8 neighbours
-    }
-    return shadowFactor;
-}
-
-vec3 directional_light(vec3 color, vec3 N, vec3 V) {
-    vec3 L = normalize(- lightingData.dir_direction[0].xyz);
-    vec3 R = normalize(-reflect(L, N));
-    vec3 diffuse = max(dot(N, L), ambient) * color;
-
-    float NdotR = max(0.0, dot(R, V));
-    vec3 spec = vec3(pow(NdotR, 16.0) * 2.5);
-
-    color += (diffuse + spec) * lightingData.dir_color[0].rgb * inColor;
-
-    return color;
-}
-
 
 void main()
 {
@@ -102,16 +59,12 @@ void main()
         }
     }
 
-//    vec4 res = step(depthData.splitDepth, vec4(inViewPos.z));
-//    uint cascadeIndex = int(res.x + res.y + res.z + res.w);
-
     vec4 coord = biasMat * depthData.cascadeVP[cascadeIndex] * vec4(inFragPos, 1.0);
     float shadow = texture_projection(coord / coord.w, vec2(0.0), cascadeIndex);
 
     vec3 N = normalize(inNormal);
     vec3 L = normalize(-lightingData.dir_direction[0].xyz);
-    vec3 H = normalize(L + inViewPos);
-    // vec3 V = normalize(inCameraPos - inFragPos);
+
     float diffuse = max(dot(N, L), ambient);
     vec3 lightColor = vec3(1.0);
     outFragColor.rgb = max(lightColor * (diffuse * vec3(1.0)), vec3(0.0));

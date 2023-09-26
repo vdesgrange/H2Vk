@@ -23,6 +23,7 @@ const std::vector<std::pair<std::string, std::function<Renderables(Camera& camer
         {"Spheres", SceneListing::spheres},
         {"Damaged helmet", SceneListing::damagedHelmet},
         {"Sponza", SceneListing::sponza},
+        {"Field", SceneListing::field},
 };
 
 Renderables SceneListing::empty(Camera& camera, VulkanEngine* engine) {
@@ -233,7 +234,7 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
             {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_tex.frag.spv"},
     };
 
-//    std::vector<std::pair<ShaderType, const char*>> scene_modules {
+//    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
 //            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
 //            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
 //    };
@@ -242,14 +243,90 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     sponzaModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures, emptyTexture);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, textures};
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
-    engine->_materialManager->create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
+    engine->_materialManager->create_material("sponzaMaterial", setLayouts, constants, pbr_modules);
 
     // == Init scene ==
     RenderObject sponza;
     sponza.model = engine->_meshManager->get_model("sponza");
-    sponza.material = engine->_materialManager->get_material("pbrTextureMaterial");
+    sponza.material = engine->_materialManager->get_material("sponzaMaterial");
     sponza.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(sponza);
+
+    emptyTexture.destroy(*engine->_device); // todo - generate problems when clean-up 
+
+    return renderables;
+}
+
+Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
+    Renderables renderables{};
+
+    // === Empty texture ===
+    unsigned char pixels[] = {0, 0, 0, 1};
+    Texture emptyTexture{};
+    emptyTexture.load_image_from_buffer(*engine->_device, engine->_uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1); // ctx?
+
+    // === Init camera ===
+    camera.inverse(false);
+    camera.set_position({ 0.0f, -5.0f, 0.0f }); // Re-initialize position after scene change = camera jumping.
+    camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 70.0f);
+    camera.set_type(Camera::Type::pov);
+    camera.set_speed(10.0f);
+
+    // === Add entities ===
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
+
+    std::shared_ptr<ModelGLTF2> treeModel = std::make_shared<ModelGLTF2>(engine->_device.get());
+    treeModel->load_model(*engine->_device, engine->_uploadContext, "../assets/field/oaktree.gltf");
+    engine->_meshManager->upload_mesh(*treeModel);
+    engine->_meshManager->add_entity("tree", std::static_pointer_cast<Entity>(treeModel));
+
+    std::shared_ptr<ModelGLTF2> fieldModel = std::make_shared<ModelGLTF2>(engine->_device.get());
+    fieldModel->load_model(*engine->_device, engine->_uploadContext, "../assets/field/terrain_gridlines.gltf");
+    engine->_meshManager->upload_mesh(*fieldModel);
+    engine->_meshManager->add_entity("field", std::static_pointer_cast<Entity>(fieldModel));
+
+    // === Init shader materials ===
+    std::vector<PushConstant> constants {
+            {sizeof(glm::mat4), ShaderType::VERTEX},
+            {sizeof(Materials::Factors), ShaderType::FRAGMENT}
+    };
+
+    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
+            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibl_tex.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_tex.frag.spv"},
+    };
+
+//    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
+//            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
+//            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
+//    };
+
+
+    treeModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
+    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
+    engine->_materialManager->create_material("treeMaterial", setLayouts, constants, pbr_modules);
+
+    fieldModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
+    engine->_materialManager->create_material("fieldMaterial", setLayouts, constants, pbr_modules);
+
+
+    // == Init scene ==
+    RenderObject tree;
+    tree.model = engine->_meshManager->get_model("tree");
+    tree.material = engine->_materialManager->get_material("treeMaterial");
+    glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(1.25f, -0.25f, 1.25f));
+    glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(1.0f));
+    tree.transformMatrix = translation * scale;
+    renderables.push_back(tree);
+
+    RenderObject field;
+    field.model = engine->_meshManager->get_model("field");
+    field.material = engine->_materialManager->get_material("fieldMaterial");
+    field.transformMatrix = glm::mat4{ 1.0f };
+    renderables.push_back(field);
 
     emptyTexture.destroy(*engine->_device); // todo - generate problems when clean-up 
 

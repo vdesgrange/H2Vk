@@ -44,11 +44,11 @@ void main()
 
     outColor = inColor;
     outUV = inUV;
-    outNormal = inNormal;
+    outNormal = mat3(modelMatrix) * inNormal;
     outFragPos = pos.xyz;
     outCameraPos = cameraData.pos;
     outViewPos = (cameraData.view * vec4(pos.xyz, 1.0)).xyz;
 
     gl_Position = cameraMVP * vec4(inPosition.xyz, 1.0f);
-
+    // gl_Position.y = -gl_Position.y;
 }
