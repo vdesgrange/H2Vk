@@ -14,7 +14,7 @@ layout (location = 4) out vec3 outCameraPos;
 layout (location = 5) out vec3 outViewPos;
 layout (location = 6) out vec4 outTangent;
 
-layout(set = 0, binding = 0) uniform  CameraBuffer
+layout(set = 0, binding = 1) uniform  CameraBuffer
 {
     mat4 view;
     mat4 proj;

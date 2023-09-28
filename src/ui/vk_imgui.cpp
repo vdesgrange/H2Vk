@@ -501,22 +501,22 @@ bool UInterface::shadow_editor() {
         return false;
     }
 
-    ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
-    const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse;
-    if (ImGui::Begin("Shadow Editor", &this->p_open[VIEW_EDITOR], window_flags)) {
-        ImGui::Text("Cascaded shadow parameters");
-        ImGui::Separator();
-
-        updated |= ImGui::SliderFloat("Split lambda", UIController::get_lambda(*_engine._cascadedShadow), UIController::set_lambda(*_engine._cascadedShadow), 0.01f, 1.0f);
-        updated |= ImGui::Checkbox("Color cascades", &(_engine._cascadedShadow->_color_cascades));
-        updated |= ImGui::Checkbox("Debug depth map", &(_engine._cascadedShadow->_debug_depth_map));
-        if (_engine._cascadedShadow->_debug_depth_map) {
-            updated |= ImGui::SliderInt("Cascade layer", &(_engine._cascadedShadow->_cascade_idx), 0, CascadedShadowMapping::CASCADE_COUNT - 1);
-        }
-
-        ImGui::SameLine();
-    }
-    ImGui::End();
+//    ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
+//    const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse;
+//    if (ImGui::Begin("Shadow Editor", &this->p_open[VIEW_EDITOR], window_flags)) {
+//        ImGui::Text("Cascaded shadow parameters");
+//        ImGui::Separator();
+//
+//        updated |= ImGui::SliderFloat("Split lambda", UIController::get_lambda(*_engine._cascadedShadow), UIController::set_lambda(*_engine._cascadedShadow), 0.01f, 1.0f);
+//        updated |= ImGui::Checkbox("Color cascades", &(_engine._cascadedShadow->_color_cascades));
+//        updated |= ImGui::Checkbox("Debug depth map", &(_engine._cascadedShadow->_debug_depth_map));
+//        if (_engine._cascadedShadow->_debug_depth_map) {
+//            updated |= ImGui::SliderInt("Cascade layer", &(_engine._cascadedShadow->_cascade_idx), 0, CascadedShadowMapping::CASCADE_COUNT - 1);
+//        }
+//
+//        ImGui::SameLine();
+//    }
+//    ImGui::End();
 
     return updated;
 }

@@ -49,8 +49,7 @@
 #include "scenes/vk_scene_listing.h"
 #include "scenes/vk_scene.h"
 
-#include "techniques/vk_shadow_map.h"
-#include "techniques/vk_cascaded_shadow_map.h"
+// #include "techniques/vk_cascaded_shadow_map.h"
 #include "techniques/vk_atmosphere.h"
 
 class Window;
@@ -102,15 +101,14 @@ public:
     std::unique_ptr<Scene> _scene;
     std::unique_ptr<UInterface> _ui;
     std::unique_ptr<Skybox> _skybox;
-    std::unique_ptr<ShadowMapping> _shadow;
-    std::unique_ptr<CascadedShadowMapping> _cascadedShadow;
+    // std::unique_ptr<CascadedShadowMapping> _cascadedShadow;
     std::unique_ptr<Atmosphere> _atmosphere;
 
     std::unique_ptr<SystemManager> _systemManager;
     std::shared_ptr<MaterialManager> _materialManager;
     std::shared_ptr<MeshManager> _meshManager;
     std::shared_ptr<LightingManager> _lightingManager;
-    std::unique_ptr<Camera> _camera; // todo - camera manager for multi-viewport
+    std::unique_ptr<Camera> _camera;
 
     std::vector<FrameBuffer> _frameBuffers;
     std::vector<RenderObject> _renderables;

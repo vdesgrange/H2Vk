@@ -3,13 +3,11 @@
 // #extension GL_ARB_shading_language_include : require
 #extension GL_GOOGLE_include_directive : enable
 
+#include "../common/constants.glsl"
 #include "../common/brdf.glsl"
 #include "../common/filters.glsl"
 
-const int MAX_LIGHT = 8;
-const int enablePCF = 0;
-
-layout(std140, set = 0, binding = 1) uniform LightingData {
+layout(std140, set = 0, binding = 2) uniform LightingData {
     layout(offset = 0) vec2 num_lights;
     layout(offset = 16) vec4 dir_direction[MAX_LIGHT];
     layout(offset = 144) vec4 dir_color[MAX_LIGHT];
@@ -18,17 +16,17 @@ layout(std140, set = 0, binding = 1) uniform LightingData {
     layout(offset = 528) vec4 spot_color[MAX_LIGHT];
 } lightingData;
 
-layout (std140, set = 0, binding = 2) uniform ShadowData {
-    layout(offset = 0) vec2  num_lights;
-    layout(offset = 16) mat4 directional_mvp[MAX_LIGHT];
-    layout(offset = 528) mat4 spot_mvp[MAX_LIGHT];
-} depthData;
+//layout (std140, set = 0, binding = 3) uniform ShadowData {
+//    layout(offset = 0) vec2  num_lights;
+//    layout(offset = 16) mat4 directional_mvp[MAX_LIGHT];
+//    layout(offset = 528) mat4 spot_mvp[MAX_LIGHT];
+//} depthData;
 
 
-layout(set = 0, binding = 4) uniform samplerCube irradianceMap; // aka. environment map
-layout(set = 0, binding = 5) uniform samplerCube prefilteredMap; // aka. prefiltered map
-layout(set = 0, binding = 6) uniform sampler2D brdfMap; // aka. prefilter map
-layout(set = 0, binding = 7) uniform sampler2DArray shadowMap;
+layout(set = 0, binding = 3) uniform samplerCube irradianceMap; // aka. environment map
+layout(set = 0, binding = 4) uniform samplerCube prefilteredMap; // aka. prefiltered map
+layout(set = 0, binding = 5) uniform sampler2D brdfMap; // aka. prefilter map
+// layout(set = 0, binding = 7) uniform sampler2DArray shadowMap;
 
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
@@ -46,32 +44,27 @@ layout (push_constant) uniform Material {
 
 layout (location = 0) out vec4 outFragColor;
 
-const mat4 biasMat = mat4(
-0.5, 0.0, 0.0, 0.0,
-0.0, 0.5, 0.0, 0.0,
-0.0, 0.0, 1.0, 0.0,
-0.5, 0.5, 0.0, 1.0 );
 
-vec3 shadow(vec3 color, int type) {
-    float layer_offset = 0;
-    vec4 shadowCoord;
-
-    if (type == 1) {
-        layer_offset = depthData.num_lights[0];
-    }
-
-    for (int i=0; i < depthData.num_lights[type]; i++) {
-        if (type == 0) {
-            shadowCoord = biasMat * depthData.spot_mvp[i] * vec4(inFragPos, 1.0);
-        } else if (type == 1) {
-            shadowCoord = biasMat * depthData.directional_mvp[i] * vec4(inFragPos, 1.0);
-        }
-
-        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowMap, inNormal, inFragPos, shadowCoord, layer_offset + i) : texture_projection(shadowMap,  inNormal, inFragPos, shadowCoord, vec2(0.0), layer_offset + i);
-        color *= shadowFactor;
-    }
-    return color;
-}
+//vec3 shadow(vec3 color, int type) {
+//    float layer_offset = 0;
+//    vec4 shadowCoord;
+//
+//    if (type == 1) {
+//        layer_offset = depthData.num_lights[0];
+//    }
+//
+//    for (int i=0; i < depthData.num_lights[type]; i++) {
+//        if (type == 0) {
+//            shadowCoord = biasMat * depthData.spot_mvp[i] * vec4(inFragPos, 1.0);
+//        } else if (type == 1) {
+//            shadowCoord = biasMat * depthData.directional_mvp[i] * vec4(inFragPos, 1.0);
+//        }
+//
+//        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowMap, inNormal, inFragPos, shadowCoord, layer_offset + i) : texture_projection(shadowMap,  inNormal, inFragPos, shadowCoord, vec2(0.0), layer_offset + i);
+//        color *= shadowFactor;
+//    }
+//    return color;
+//}
 
 vec3 prefiltered_reflection(vec3 R, float roughness) {
     const float MAX_REFLECTION_LOD = 9.0;
@@ -174,8 +167,8 @@ void main()
 
     vec3 color = ambient + Lo;
     color = color / (color + vec3(1.0)); // Reinhard operator
-    color = shadow(color, 0);
-    color = shadow(color, 1);
+//    color = shadow(color, 0);
+//    color = shadow(color, 1);
 
     // Convert from linear to sRGB ! Do not use for Vulkan !
     // color = pow(color, vec3(0.4545)); // Gamma correction

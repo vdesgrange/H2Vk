@@ -99,12 +99,12 @@ std::function<void (std::array<float, 3>)> UIController::set_color(Light& light)
     };
 }
 
-std::function<float ()> UIController::get_lambda(CascadedShadowMapping& csm) {
-    return [&]() { return csm._lb; };
-}
-
-std::function<void (float)> UIController::set_lambda(CascadedShadowMapping& csm) {
-    return [&](float lb) {
-        csm._lb = lb;
-    };
-}
+//std::function<float ()> UIController::get_lambda(CascadedShadowMapping& csm) {
+//    return [&]() { return csm._lb; };
+//}
+//
+//std::function<void (float)> UIController::set_lambda(CascadedShadowMapping& csm) {
+//    return [&](float lb) {
+//        csm._lb = lb;
+//    };
+//}

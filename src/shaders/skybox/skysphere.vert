@@ -8,7 +8,7 @@ layout (location = 4) in vec4 vTangent;
 
 layout (location = 0) out vec2 outUV;
 
-layout(std140, set = 0, binding = 0) uniform  CameraBuffer
+layout(std140, set = 0, binding = 1) uniform  CameraBuffer
 {
     mat4 view;
     mat4 proj;

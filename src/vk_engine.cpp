@@ -211,6 +211,11 @@ void VulkanEngine::setup_environment_descriptors() {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         g_frames[i].environmentDescriptor = VkDescriptorSet();
 
+        VkDescriptorBufferInfo featuresBInfo{};
+        featuresBInfo.buffer = g_frames[i].enabledFeaturesBuffer._buffer;
+        featuresBInfo.offset = 0;
+        featuresBInfo.range = sizeof(GPUEnabledFeaturesData);
+
         VkDescriptorBufferInfo camBInfo{};
         camBInfo.buffer = g_frames[i].cameraBuffer._buffer;
         camBInfo.offset = 0;
@@ -221,25 +226,18 @@ void VulkanEngine::setup_environment_descriptors() {
         lightingBInfo.range = sizeof(GPULightData);
 
 //        VkDescriptorBufferInfo offscreenBInfo{};
-//        offscreenBInfo.buffer = g_frames[i].offscreenBuffer._buffer;
-//        offscreenBInfo.range = sizeof(GPUShadowData); // GPUDepthData
-        VkDescriptorBufferInfo offscreenBInfo{};
-        offscreenBInfo.buffer = g_frames[i].cascadedOffscreenBuffer._buffer;
-        offscreenBInfo.range = sizeof(GPUCascadedShadowData);
-
-        VkDescriptorBufferInfo featuresBInfo{};
-        featuresBInfo.buffer = g_frames[i].enabledFeaturesBuffer._buffer;
-        featuresBInfo.range = sizeof(GPUEnabledFeaturesData);
+//        offscreenBInfo.buffer = g_frames[i].cascadedOffscreenBuffer._buffer;
+//        offscreenBInfo.range = sizeof(GPUCascadedShadowData);
 
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
-                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-                .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-                .bind_buffer(offscreenBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-                .bind_buffer(featuresBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4) // precomputed no need to be binded every frame
-                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 5) // precomputed no need to be binded every frame
-                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 6) // precomputed no need to be binded every frame
-                .bind_image(_cascadedShadow->_offscreen_shadow._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  VK_SHADER_STAGE_FRAGMENT_BIT, 7)
+                .bind_buffer(featuresBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1)
+                .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+//                .bind_buffer(offscreenBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3) // precomputed no need to be binded every frame
+                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4) // precomputed no need to be binded every frame
+                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 5) // precomputed no need to be binded every frame
+//                .bind_image(_cascadedShadow->_offscreen_shadow._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  VK_SHADER_STAGE_FRAGMENT_BIT, 7)
                 .layout(_descriptorSetLayouts.environment)
                 .build(g_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 
@@ -258,16 +256,12 @@ void VulkanEngine::init_descriptors() {
     Camera::allocate_buffers(*_device);
     LightingManager::allocate_buffers(*_device);
     Scene::allocate_buffers(*_device);
-    ShadowMapping::allocate_buffers(*_device);
-    CascadedShadowMapping::allocate_buffers(*_device);
+    // CascadedShadowMapping::allocate_buffers(*_device);
 
     _skybox->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.skybox);
     _scene->setup_transformation_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.matrices);
-//    _shadow->prepare_depth_map(*_device, _uploadContext,*_lightingManager); // problem : fixed number of shadows. Implement ECS first.
-//    _shadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.offscreen);
-
-    _cascadedShadow->prepare_depth_map(*_device, _uploadContext, *_lightingManager); // todo : use class attributes
-    _cascadedShadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.cascadedOffscreen);
+//    _cascadedShadow->prepare_depth_map(*_device, _uploadContext, *_lightingManager); // todo : use class attributes
+//    _cascadedShadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.cascadedOffscreen);
 
     this->setup_environment_descriptors();
 
@@ -277,7 +271,7 @@ void VulkanEngine::init_descriptors() {
             vmaDestroyBuffer(_device->_allocator, g_frames[i].cameraBuffer._buffer, g_frames[i].cameraBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].lightingBuffer._buffer, g_frames[i].lightingBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].objectBuffer._buffer, g_frames[i].objectBuffer._allocation);
-            vmaDestroyBuffer(_device->_allocator, g_frames[i].offscreenBuffer._buffer, g_frames[i].offscreenBuffer._allocation);
+            // vmaDestroyBuffer(_device->_allocator, g_frames[i].offscreenBuffer._buffer, g_frames[i].offscreenBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].cascadedOffscreenBuffer._buffer, g_frames[i].cascadedOffscreenBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].enabledFeaturesBuffer._buffer, g_frames[i].enabledFeaturesBuffer._allocation);
         }
@@ -290,8 +284,7 @@ void VulkanEngine::init_descriptors() {
 void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
-    // _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen, _descriptorSetLayouts.matrices}, *_renderPass);
-    _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+    // _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
 
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
@@ -326,8 +319,7 @@ void VulkanEngine::init_scene() {
     _skybox->_type = Skybox::Type::box;
     _skybox->load();
 
-    // _shadow = std::make_unique<ShadowMapping>(*_device);
-    _cascadedShadow = std::make_unique<CascadedShadowMapping>(*_device);
+//    _cascadedShadow = std::make_unique<CascadedShadowMapping>(*_device);
 
     _atmosphere = std::make_unique<Atmosphere>(*_device, *_materialManager, *_lightingManager, _uploadContext);
 
@@ -435,21 +427,12 @@ void VulkanEngine::update_uniform_buffers() {
     memcpy(data2, &lightingData, sizeof(GPULightData));
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
 
-    // Shadow
-//    GPUShadowData offscreenData = _shadow->gpu_format(_lightingManager.get(), _camera.get());
-//
-//    void *data3;
-//    vmaMapMemory(_device->_allocator, frame.offscreenBuffer._allocation, &data3);
-//    memcpy(data3, &offscreenData, sizeof(GPUShadowData));
-//    vmaUnmapMemory(_device->_allocator, frame.offscreenBuffer._allocation);
-
     // Cascaded shadow
-    GPUCascadedShadowData cascadedOffscreenData = _cascadedShadow->gpu_format();
-
-    void *data4;
-    vmaMapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation, &data4);
-    memcpy(data4, &cascadedOffscreenData, sizeof(GPUCascadedShadowData));
-    vmaUnmapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation);
+//    GPUCascadedShadowData cascadedOffscreenData = _cascadedShadow->gpu_format();
+//    void *data4;
+//    vmaMapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation, &data4);
+//    memcpy(data4, &cascadedOffscreenData, sizeof(GPUCascadedShadowData));
+//    vmaUnmapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation);
 
     // === Enabled Features ===
     GPUEnabledFeaturesData featuresData{};
@@ -501,10 +484,9 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
             lastMaterial = object.material;
             uint32_t lightOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex;
-            uint32_t depthOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPUShadowData)) * frameIndex; // GPUDepthData
-            std::vector<uint32_t> dynOffsets = {lightOffset, 0};
+            std::vector<uint32_t> dynOffsets = {lightOffset};
 
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 2, dynOffsets.data());
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 1, dynOffsets.data());
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
         }
 
@@ -530,9 +512,9 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
     // _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
 
     // === Cascaded depth map render pass ===
-    if (_enabledFeatures.shadowMapping) {
-        _cascadedShadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
-    }
+//    if (_enabledFeatures.shadowMapping) {
+//        _cascadedShadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
+//    }
 
     // === Atmosphere skyview computing (WIP) ===
     if (_enabledFeatures.atmosphere) {
@@ -559,9 +541,9 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
             // Debug shadow map (WIP)
-            if (_enabledFeatures.shadowMapping && this->_cascadedShadow->_debug_depth_map) {
-                this->_cascadedShadow->run_debug(frame);
-            } else {
+//            if (_enabledFeatures.shadowMapping && this->_cascadedShadow->_debug_depth_map) {
+//                this->_cascadedShadow->run_debug(frame);
+//            } else {
                 // === Skybox ===
                 if (_enabledFeatures.skybox) {
                     this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
@@ -576,7 +558,7 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
                 if (_enabledFeatures.meshes) {
                     this->render_objects(frame._commandBuffer->_commandBuffer);
                 }
-            }
+//            }
 
             // === UI ===
             if (_enabledFeatures.ui) {
@@ -596,9 +578,9 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
  */
 void VulkanEngine::compute() {
     // === Cascaded shadow mapping ===
-    if (_enabledFeatures.shadowMapping) {
-        _cascadedShadow->compute_cascades(*_camera, *_lightingManager);
-    }
+//    if (_enabledFeatures.shadowMapping) {
+//        _cascadedShadow->compute_cascades(*_camera, *_lightingManager);
+//    }
 
     // === Atmosphere skyview computing (WIP) ===
     if (_enabledFeatures.atmosphere) {
@@ -621,7 +603,7 @@ void VulkanEngine::render(int imageIndex) {
 
         _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures, emptyTexture);
         _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-        _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+//        _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
 
         this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
         emptyTexture.destroy(*_device);
@@ -732,8 +714,7 @@ void VulkanEngine::cleanup() {
         _scene->_renderables.clear();
         _atmosphere.reset();
         _skybox.reset();
-        // _shadow.reset();
-        _cascadedShadow.reset();
+//        _cascadedShadow.reset();
         _ui.reset();
         _meshManager.reset();
         _materialManager.reset();
