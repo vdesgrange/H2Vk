@@ -19,11 +19,11 @@
 #include "core/vk_device.h"
 #include "core/vk_renderpass.h"
 #include "core/vk_shaders.h"
+#include "core/vk_framebuffers.h"
 
 class FrameData;
 class Device;
 class RenderPass;
-class FrameBuffer;
 class Camera;
 class LightingManager;
 class DescriptorLayoutCache;
@@ -33,8 +33,8 @@ class MaterialManager;
 class CascadedShadow final {
 public:
     bool _debug = false;
-    const uint32_t SHADOW_WIDTH = 1024;
-    const uint32_t SHADOW_HEIGHT = 1024;
+    const uint32_t SHADOW_WIDTH = 2048;
+    const uint32_t SHADOW_HEIGHT = 2048;
     static const uint8_t COUNT = 3;
     const VkFormat DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
     float _lb = 0.95f;
@@ -44,9 +44,15 @@ public:
     struct Cascade {
         VkImageView _view;
         std::unique_ptr<FrameBuffer> _framebuffer;
+        VkDescriptorSet _descriptor;
 
         float splitDepth;
         glm::mat4 viewProjMatrix;
+
+        void destroy(VkDevice device) {
+            vkDestroyImageView(device, _view, nullptr);
+            _framebuffer.reset();
+        }
     };
 
     struct GPUCascadedShadowData {

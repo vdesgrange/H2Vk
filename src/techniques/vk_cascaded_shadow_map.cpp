@@ -9,8 +9,6 @@
 #include "vk_cascaded_shadow_map.h"
 #include "core/utilities/vk_global.h"
 #include "core/vk_renderpass.h"
-#include "core/vk_texture.h"
-#include "core/vk_framebuffers.h"
 #include "core/vk_shaders.h"
 #include "core/vk_descriptor_builder.h"
 #include "core/vk_pipeline.h"
@@ -25,9 +23,11 @@ CascadedShadow::CascadedShadow(Device& device) : _device(device), _depthPass(Ren
 
 CascadedShadow::~CascadedShadow() {
     _depth.destroy(_device);
+    _depthEffect.reset();
+    _debugEffect.reset();
 
     for (auto& c : _cascades) {
-        vkDestroyImageView(_device._logicalDevice, c._view, nullptr);
+        c.destroy(_device._logicalDevice);
     }
 }
 
@@ -69,7 +69,8 @@ void CascadedShadow::prepare_resources(Device& device) {
     viewInfo.subresourceRange.layerCount = CascadedShadow::COUNT;
     vkCreateImageView(device._logicalDevice, &viewInfo, nullptr, &_depth._imageView);
 
-    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     samplerInfo.maxAnisotropy = 1.0f;
     samplerInfo.maxLod = 1.0f;
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
@@ -102,6 +103,19 @@ void CascadedShadow::setup_descriptors(DescriptorLayoutCache& layoutCache, Descr
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
     };
 
+    for (uint32_t i = 0; i < CascadedShadow::COUNT; i++) {
+        VkDescriptorBufferInfo info{};
+        info.buffer = g_frames[0].cascadedOffscreenBuffer._buffer;
+        info.offset = 0;
+        info.range = sizeof(GPUCascadedShadowData);
+
+        DescriptorBuilder::begin(layoutCache, allocator)
+                .bind_buffer(info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .bind_image(_depth._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .layout(setLayout)
+                .build(_cascades[i]._descriptor, setLayout, offscreenSizes);
+    }
+
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         g_frames[i].offscreenDescriptor = VkDescriptorSet();
 
@@ -110,11 +124,11 @@ void CascadedShadow::setup_descriptors(DescriptorLayoutCache& layoutCache, Descr
         info.offset = 0;
         info.range = sizeof(GPUCascadedShadowData);
 
-        DescriptorBuilder::begin(layoutCache, allocator)
-            .bind_buffer(info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .layout(setLayout)
-            .build(g_frames[i].cascadedOffscreenDescriptor, setLayout, offscreenSizes);
+//        DescriptorBuilder::begin(layoutCache, allocator)
+//            .bind_buffer(info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+//            .layout(setLayout)
+            // .build(g_frames[i].cascadedOffscreenDescriptor, setLayout, offscreenSizes);
 
         DescriptorBuilder::begin(layoutCache, allocator)
                 .bind_buffer(info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
@@ -200,7 +214,7 @@ void CascadedShadow::compute_resources(FrameData& frame, Renderables& renderable
             int i = 0; // a retirer? semble casser
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _depthEffect->pipeline);
             vkCmdPushConstants(cmd, _depthEffect->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), sizeof(int), &pc);
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _depthEffect->pipelineLayout, 0, 1, &frame.cascadedOffscreenDescriptor, 0, nullptr);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _depthEffect->pipelineLayout, 0, 1, &_cascades[l]._descriptor, 0, nullptr);
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _depthEffect->pipelineLayout, 1, 1, &frame.objectDescriptor, 0, nullptr);
             for (auto const &object: renderables) {
                 object.model->draw(cmd, _depthEffect->pipelineLayout, sizeof(glm::mat4) + sizeof(int), i, object.model.get() != lastModel.get());

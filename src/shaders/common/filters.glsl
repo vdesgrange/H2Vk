@@ -6,10 +6,10 @@
 * Divide by w to emulate perspective (w = 1 for orthographic).
 */
 float texture_projection(in sampler2DArray tex, vec3 N, vec3 R, vec4 coord, vec2 off, float layer) {
-    //float cosTheta = clamp(dot(N, -R), 0.0f, 1.0f);
-    //float bias = 0.005 * tan(acos(cosTheta));
-    //bias = clamp(bias, 0.0f, 0.01f);
-    float bias = 0.005;
+    float cosTheta = clamp(dot(N, -R), 0.0f, 1.0f);
+    float bias = 0.005 * tan(acos(cosTheta));
+    bias = clamp(bias, 0.0f, 0.01f);
+    // float bias = 0.005;
 
     float shadow = 1.0; // default coefficient, bias handled outside.
     if ( coord.z > -1.0 && coord.z < 1.0 ) // depth in valid [-1, 1] interval
@@ -17,7 +17,7 @@ float texture_projection(in sampler2DArray tex, vec3 N, vec3 R, vec4 coord, vec2
         float dist = texture(tex, vec3(coord.st + off, layer) ).r; // get depth map distance to light at coord st + off
         if ( coord.w > 0.0 && dist < coord.z - bias) // if opaque & current depth > than closest obstacle
         {
-            shadow -= shadow_ambient;
+            shadow = shadow_ambient;
         }
     }
     return shadow;
