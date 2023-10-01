@@ -278,7 +278,7 @@ void CascadedShadow::compute_cascades(Camera& camera, LightingManager& lightMana
         }
         frustumCenter /= 8.0f;
 
-        float radius = 0.0f;
+        float radius = 0.0f;g
         for (uint32_t i = 0; i < 8; i++) {
             float distance = glm::length(frustumCorners[i] - frustumCenter);
             radius = glm::max(radius, distance);

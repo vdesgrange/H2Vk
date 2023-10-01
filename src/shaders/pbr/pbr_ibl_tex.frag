@@ -28,17 +28,17 @@ layout (std140, set = 0, binding = 0) uniform EnabledFeaturesData {
     bool atmosphere;
 } enabledFeaturesData;
 
-//layout (std140, set = 0, binding = 3) uniform ShadowData {
-//    mat4 cascadeVP[CASCADE_COUNT];
-//    vec4 splitDepth;
-//    bool color_cascades;
-//} depthData;
+layout (std140, set = 0, binding = 3) uniform ShadowData {
+    mat4 cascadeVP[CASCADE_COUNT];
+    vec4 splitDepth;
+    bool color_cascades;
+} depthData;
 
 
 layout(set = 0, binding = 4) uniform samplerCube irradianceMap; // aka. environment map
 layout(set = 0, binding = 5) uniform samplerCube prefilteredMap;
 layout(set = 0, binding = 6) uniform sampler2D brdfMap;
-//layout(set = 0, binding = 7) uniform sampler2DArray shadowMap;
+layout(set = 0, binding = 7) uniform sampler2DArray shadowMap;
 
 layout(set = 2, binding = 0) uniform sampler2D samplerAlbedoMap;
 layout(set = 2, binding = 1) uniform sampler2D samplerNormalMap;
@@ -176,93 +176,94 @@ vec3 directional_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, fl
 void main()
 {
 
-    // vec4 color = texture(samplerAlbedoMap, inUV);
-	// if (color.a < 0.5) {
-	// 	discard;
-	// }
+     vec4 color = texture(samplerAlbedoMap, inUV);
+	 if (color.a < 0.5) {
+	 	discard;
+	 }
 
-	// // Get cascade index for the current fragment's view position
-	// uint cascadeIndex = 0;
-	// for(uint i = 0; i < CASCADE_COUNT - 1; ++i) {
-	// 	if(inViewPos.z < depthData.splitDepth[i]) {	
-	// 		cascadeIndex = i + 1;
-	// 	}
-	// }
+	 // Get cascade index for the current fragment's view position
+	 uint cascadeIndex = 0;
+	 for(uint i = 0; i < CASCADE_COUNT - 1; ++i) {
+	 	if(inViewPos.z < depthData.splitDepth[i]) {
+	 		cascadeIndex = i + 1;
+	 	}
+	 }
 
-	// // Depth compare for shadowing
-	// vec4 shadowCoord = (biasMat * depthData.cascadeVP[cascadeIndex]) * vec4(inFragPos, 1.0);	
+	 // Directional light
+	 vec3 N = normalize(inNormal);
+	 vec3 L = normalize(lightingData.dir_direction[0].xyz);
+	 vec3 H = normalize(L + inViewPos);
+	 float diffuse = max(dot(N, L), 0.1f);
+	 vec3 lightColor = vec3(1.0);
 
-	// float shadow = 0;
-	// shadow = textureProj(shadowCoord / shadowCoord.w, vec2(0.0), cascadeIndex);
+     // Depth compare for shadowing
+     vec4 shadowCoord = (biasMat * depthData.cascadeVP[cascadeIndex]) * vec4(inFragPos, 1.0);
+     float shadow = 0;
+     // shadow = textureProj(shadowCoord / shadowCoord.w, vec2(0.0), cascadeIndex);
+     shadow = texture_projection(shadowMap, N, L, shadowCoord / shadowCoord.w, vec2(0.0), cascadeIndex);
 
-	// // Directional light
-	// vec3 N = normalize(inNormal);
-	// vec3 L = normalize(lightingData.dir_direction[0].xyz);
-	// vec3 H = normalize(L + inViewPos);
-	// float diffuse = max(dot(N, L), 0.1f);
-	// vec3 lightColor = vec3(1.0);
-	// outFragColor.rgb = max(lightColor * (diffuse * color.rgb), vec3(0.0));
-	// outFragColor.rgb *= shadow;
-	// outFragColor.a = color.a;
+     outFragColor.rgb = max(lightColor * (diffuse * color.rgb), vec3(0.0));
+	 outFragColor.rgb *= shadow;
+	 outFragColor.a = color.a;
 
-	// // Color cascades (if enabled)
-	// if (depthData.color_cascades) {
-	// 	switch(cascadeIndex) {
-	// 		case 0 : 
-	// 			outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f);
-	// 			break;
-	// 		case 1 : 
-	// 			outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f);
-	// 			break;
-	// 		case 2 : 
-	// 			outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f);
-	// 			break;
-	// 		case 3 : 
-	// 			outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
-	// 			break;
-	// 	}
-	// }
+	 // Color cascades (if enabled)
+	 if (depthData.color_cascades) {
+	 	switch(cascadeIndex) {
+	 		case 0 :
+	 			outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f);
+	 			break;
+	 		case 1 :
+	 			outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f);
+	 			break;
+	 		case 2 :
+	 			outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f);
+	 			break;
+	 		case 3 :
+	 			outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
+	 			break;
+	 	}
+	 }
 
-    float alpha = texture(samplerAlbedoMap, inUV).a;
-    if (alpha < 0.5) {
-        discard;
-    }
+//    float alpha = texture(samplerAlbedoMap, inUV).a;
+//    if (alpha < 0.5) {
+//        discard;
+//    }
+//
+//    vec3 albedo = pow(texture(samplerAlbedoMap, inUV).rgb, vec3(2.2)); // gamma correction
+//    vec3 normal = texture(samplerNormalMap, inUV).rgb;
+//    float roughness = texture(samplerMetalRoughnessMap, inUV).g;
+//    float metallic = texture(samplerMetalRoughnessMap, inUV).b;
+//    float ao = texture(samplerAOMap, inUV).r;
+//    vec3 emissive = texture(samplerEmissiveMap, inUV).rgb;
+//
+//    vec3 V = normalize(inCameraPos - inFragPos);
+//    vec3 N = calculateNormal();
+//    vec3 R = reflect(-V, N);
+//
+//    vec2 uv = sample_spherical_map(N);
+//
+//    vec3 Lo = vec3(0.0);
+//    // Lo = spot_light(Lo, N, V, albedo, roughness, metallic);
+//    Lo = directional_light(Lo, N, V, albedo, roughness, metallic);
+//
+//    vec2 brdf = texture(brdfMap, vec2(max(dot(N, V), 0.01), roughness)).rg;
+//    vec3 reflection = prefiltered_reflection(R, roughness).rgb;
+//    vec3 irradiance = texture(irradianceMap, N).rgb;
+//
+//    vec3 diffuse = irradiance * albedo;
+//
+//    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+//    vec3 F = F_SchlickR(F0, max(dot(N, V), 0.0), roughness);
 
-    vec3 albedo = pow(texture(samplerAlbedoMap, inUV).rgb, vec3(2.2)); // gamma correction
-    vec3 normal = texture(samplerNormalMap, inUV).rgb;
-    float roughness = texture(samplerMetalRoughnessMap, inUV).g;
-    float metallic = texture(samplerMetalRoughnessMap, inUV).b;
-    float ao = texture(samplerAOMap, inUV).r;
-    vec3 emissive = texture(samplerEmissiveMap, inUV).rgb;
-
-    vec3 V = normalize(inCameraPos - inFragPos);
-    vec3 N = calculateNormal();
-    vec3 R = reflect(-V, N);
-
-    vec2 uv = sample_spherical_map(N);
-
-    vec3 Lo = vec3(0.0);
-    // Lo = spot_light(Lo, N, V, albedo, roughness, metallic);
-    Lo = directional_light(Lo, N, V, albedo, roughness, metallic);
-
-    vec2 brdf = texture(brdfMap, vec2(max(dot(N, V), 0.01), roughness)).rg;
-    vec3 reflection = prefiltered_reflection(R, roughness).rgb;
-    vec3 irradiance = texture(irradianceMap, N).rgb;
-
-    vec3 diffuse = irradiance * albedo;
-
-    vec3 F0 = mix(vec3(0.04), albedo, metallic);
-    vec3 F = F_SchlickR(F0, max(dot(N, V), 0.0), roughness);
-
-    vec3 specular = reflection * (F * brdf.x + brdf.y);
-
-    vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
-    vec3 ambient = (kD * diffuse + specular + emissive) * texture(samplerAOMap, inUV).rrr;
-
-    vec3 color = ambient + Lo;
-
-    color = color / (color + vec3(1.0)); // Reinhard operator
-    color = color * (1.0f / uncharted2_tonemap(vec3(11.2f)));
+//    vec3 specular = reflection * (F * brdf.x + brdf.y);
+//
+//    vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
+//    vec3 ambient = (kD * diffuse + specular + emissive) * texture(samplerAOMap, inUV).rrr;
+//
+//    vec3 color = ambient + Lo;
+//
+//    color = color / (color + vec3(1.0)); // Reinhard operator
+//    color = color * (1.0f / uncharted2_tonemap(vec3(11.2f)));
 
 //    if (enabledFeaturesData.shadowMapping) {
 //        // Cascaded shadow mapping
@@ -281,5 +282,5 @@ void main()
 //        debug_cascades(depthData.color_cascades, cascadeIndex, color);
 //    }
 
-    outFragColor = vec4(color, 1.0);
+//    outFragColor = vec4(color, 1.0);
 }
