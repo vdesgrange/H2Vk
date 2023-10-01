@@ -5,7 +5,7 @@ layout (location = 1) flat out uint outCascadeIndex;
 
 layout (push_constant) uniform PushConstants {
     layout(offset = 0) mat4 model;
-    layout(offset = 64) uint cascadeIndex;
+    layout(offset = 64) int cascadeIndex;
 } pushData;
 
 void main()

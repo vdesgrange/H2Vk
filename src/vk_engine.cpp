@@ -256,12 +256,12 @@ void VulkanEngine::init_descriptors() {
     Camera::allocate_buffers(*_device);
     LightingManager::allocate_buffers(*_device);
     Scene::allocate_buffers(*_device);
-    // CascadedShadowMapping::allocate_buffers(*_device);
+    CascadedShadow::allocate_buffers(*_device);
 
     _skybox->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.skybox);
     _scene->setup_transformation_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.matrices);
 //    _cascadedShadow->prepare_depth_map(*_device, _uploadContext, *_lightingManager); // todo : use class attributes
-//    _cascadedShadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.cascadedOffscreen);
+    _cascadedShadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.cascadedOffscreen);
 
     this->setup_environment_descriptors();
 
@@ -284,7 +284,7 @@ void VulkanEngine::init_descriptors() {
 void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
-    // _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+//     _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
 
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
@@ -319,7 +319,7 @@ void VulkanEngine::init_scene() {
     _skybox->_type = Skybox::Type::box;
     _skybox->load();
 
-//    _cascadedShadow = std::make_unique<CascadedShadowMapping>(*_device);
+   _cascadedShadow = std::make_unique<CascadedShadow>(*_device);
 
     _atmosphere = std::make_unique<Atmosphere>(*_device, *_materialManager, *_lightingManager, _uploadContext);
 
@@ -428,11 +428,11 @@ void VulkanEngine::update_uniform_buffers() {
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
 
     // Cascaded shadow
-//    GPUCascadedShadowData cascadedOffscreenData = _cascadedShadow->gpu_format();
-//    void *data4;
-//    vmaMapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation, &data4);
-//    memcpy(data4, &cascadedOffscreenData, sizeof(GPUCascadedShadowData));
-//    vmaUnmapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation);
+    CascadedShadow::GPUCascadedShadowData cascadedOffscreenData = _cascadedShadow->gpu_format();
+    void *data4;
+    vmaMapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation, &data4);
+    memcpy(data4, &cascadedOffscreenData, sizeof(CascadedShadow::GPUCascadedShadowData));
+    vmaUnmapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation);
 
     // === Enabled Features ===
     GPUEnabledFeaturesData featuresData{};
@@ -512,9 +512,10 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
     // _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
 
     // === Cascaded depth map render pass ===
-//    if (_enabledFeatures.shadowMapping) {
+    if (_enabledFeatures.shadowMapping) {
 //        _cascadedShadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
-//    }
+        _cascadedShadow->compute_resources(frame, _scene->_renderables);
+    }
 
     // === Atmosphere skyview computing (WIP) ===
     if (_enabledFeatures.atmosphere) {
@@ -541,9 +542,9 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
             // Debug shadow map (WIP)
-//            if (_enabledFeatures.shadowMapping && this->_cascadedShadow->_debug_depth_map) {
-//                this->_cascadedShadow->run_debug(frame);
-//            } else {
+            if (_enabledFeatures.shadowMapping && this->_cascadedShadow->_debug) {
+                this->_cascadedShadow->debug_depth(frame);
+            } else {
                 // === Skybox ===
                 if (_enabledFeatures.skybox) {
                     this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
@@ -558,7 +559,7 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
                 if (_enabledFeatures.meshes) {
                     this->render_objects(frame._commandBuffer->_commandBuffer);
                 }
-//            }
+            }
 
             // === UI ===
             if (_enabledFeatures.ui) {
@@ -578,9 +579,9 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
  */
 void VulkanEngine::compute() {
     // === Cascaded shadow mapping ===
-//    if (_enabledFeatures.shadowMapping) {
-//        _cascadedShadow->compute_cascades(*_camera, *_lightingManager);
-//    }
+    if (_enabledFeatures.shadowMapping) {
+        _cascadedShadow->compute_cascades(*_camera, *_lightingManager);
+    }
 
     // === Atmosphere skyview computing (WIP) ===
     if (_enabledFeatures.atmosphere) {
@@ -603,7 +604,7 @@ void VulkanEngine::render(int imageIndex) {
 
         _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures, emptyTexture);
         _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-//        _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+        _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
 
         this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
         emptyTexture.destroy(*_device);
@@ -714,7 +715,7 @@ void VulkanEngine::cleanup() {
         _scene->_renderables.clear();
         _atmosphere.reset();
         _skybox.reset();
-//        _cascadedShadow.reset();
+        _cascadedShadow.reset();
         _ui.reset();
         _meshManager.reset();
         _materialManager.reset();

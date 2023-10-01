@@ -71,21 +71,21 @@ void main()
 //    outFragColor.rgb *= shadow;
     outFragColor.a = 1.0;
 
-//    if (depthData.color_cascades) {
-        switch(cascadeIndex) {
-            case 0 :
-            outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f); // red
-            break;
-            case 1 :
-            outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f); // green
-            break;
-            case 2 :
-            outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f); // blue
-            break;
-            case 3 :
-            outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
-            break;
-        }
+//    if (depthData.color_cascades) { // data seems different per frame.
+//        switch(cascadeIndex) {
+//            case 0 :
+//            outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f); // red
+//            break;
+//            case 1 :
+//            outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f); // green
+//            break;
+//            case 2 :
+//            outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f); // blue
+//            break;
+//            case 3 :
+//            outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
+//            break;
+//        }
 //    }
 
 }

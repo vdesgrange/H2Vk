@@ -12,7 +12,7 @@
 #include <array>
 #include "components/camera/vk_camera.h"
 #include "components/lighting/vk_light.h"
-//#include "techniques/vk_cascaded_shadow_map.h"
+#include "techniques/vk_cascaded_shadow_map.h"
 
 class Camera;
 
@@ -34,6 +34,6 @@ public:
     static std::function<void (std::array<float, 3>)> set_rotation(Light& light);
     static std::function<std::array<float, 3> ()> get_color(Light& light);
     static std::function<void (std::array<float, 3>)> set_color(Light& light);
-//    static std::function<float ()> get_lambda(CascadedShadowMapping& csm);
-//    static std::function<void (float)> set_lambda(CascadedShadowMapping& csm);
+    static std::function<float ()> get_lambda(CascadedShadow& csm);
+    static std::function<void (float)> set_lambda(CascadedShadow& csm);
 };

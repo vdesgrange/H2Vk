@@ -266,7 +266,7 @@ Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
     emptyTexture.load_image_from_buffer(*engine->_device, engine->_uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1); // ctx?
 
     // === Init camera ===
-    camera.inverse(false);
+    camera.inverse(true);
     camera.set_position({ 0.0f, -5.0f, 0.0f }); // Re-initialize position after scene change = camera jumping.
     camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 70.0f);
     camera.set_type(Camera::Type::pov);
