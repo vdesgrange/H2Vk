@@ -35,9 +35,9 @@ layout (std140, set = 0, binding = 0) uniform EnabledFeaturesData {
 //} depthData;
 
 
-layout(set = 0, binding = 3) uniform samplerCube irradianceMap; // aka. environment map
-layout(set = 0, binding = 4) uniform samplerCube prefilteredMap;
-layout(set = 0, binding = 5) uniform sampler2D brdfMap;
+layout(set = 0, binding = 4) uniform samplerCube irradianceMap; // aka. environment map
+layout(set = 0, binding = 5) uniform samplerCube prefilteredMap;
+layout(set = 0, binding = 6) uniform sampler2D brdfMap;
 //layout(set = 0, binding = 7) uniform sampler2DArray shadowMap;
 
 layout(set = 2, binding = 0) uniform sampler2D samplerAlbedoMap;

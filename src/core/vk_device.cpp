@@ -54,7 +54,7 @@ Device::Device(Window& window) {
     vkb::PhysicalDevice physicalDevice = selector
             .set_minimum_version(1, 1)
             .set_surface(_surface)
-            .add_desired_extension(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME)
+            // .add_desired_extension(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME)
             .add_desired_extension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)
             .add_desired_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
             .add_desired_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)

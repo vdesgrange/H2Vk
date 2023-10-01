@@ -306,6 +306,7 @@ CascadedShadow::GPUCascadedShadowData CascadedShadow::gpu_format() {
         data.VPMat[i] = _cascades[i].viewProjMatrix;
         data.split[i] = _cascades[i].splitDepth;
     }
-
+    data.colorCascades = _colorCascades;
+    
     return data;
 }

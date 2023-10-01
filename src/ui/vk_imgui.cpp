@@ -508,7 +508,7 @@ bool UInterface::shadow_editor() {
         ImGui::Separator();
 
         updated |= ImGui::SliderFloat("Split lambda", UIController::get_lambda(*_engine._cascadedShadow), UIController::set_lambda(*_engine._cascadedShadow), 0.01f, 1.0f);
-//        updated |= ImGui::Checkbox("Color cascades", &(_engine._cascadedShadow->_color_cascades));
+        updated |= ImGui::Checkbox("Color cascades", &(_engine._cascadedShadow->_colorCascades));
         updated |= ImGui::Checkbox("Debug depth map", &(_engine._cascadedShadow->_debug));
         if (_engine._cascadedShadow->_debug) {
             updated |= ImGui::SliderInt("Cascade layer", &(_engine._cascadedShadow->_cascadeIdx), 0, CascadedShadow::COUNT - 1);

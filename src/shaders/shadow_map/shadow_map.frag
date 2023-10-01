@@ -23,44 +23,44 @@ layout(std140, set = 0, binding = 2) uniform LightingData {
     layout(offset = 528) vec4 spot_color[MAX_LIGHT];
 } lightingData;
 
-//layout (std140, set = 0, binding = 3) uniform ShadowData {
-//    mat4 cascadeVP[CASCADE_COUNT];
-//    vec4 splitDepth;
-//    bool color_cascades;
-//} depthData;
+layout (std140, set = 0, binding = 3) uniform ShadowData {
+   mat4 cascadeVP[CASCADE_COUNT];
+   vec4 splitDepth;
+   bool color_cascades;
+} depthData;
 
-//layout (set = 0, binding = 7) uniform sampler2DArray shadowMap;
+layout (set = 0, binding = 7) uniform sampler2DArray shadowMap;
 
-//float texture_projection(vec4 coord, vec2 offset, float layer) {
-//    float shadow = 1.0;
-//    float bias = 0.005;
-//
-//    // float cosTheta = clamp(dot(normalize(inNormal), normalize(lightingData.dir_direction[0].xyz)), 0.0, 1.0);
-//    // float bias = 0.005 * tan(acos(cosTheta));
-//    // bias = clamp(bias, 0, 0.1);
-//
-//    if ( coord.z >= -1.0 && coord.z <= 1.0 )
-//    {
-//        float dist = texture(shadowMap, vec3(coord.st + offset, layer) ).r;
-//        if ( coord.w > 0.0 && dist < coord.z - bias)
-//        {
-//            shadow = ambient;
-//        }
-//    }
-//    return shadow;
-//}
+float texture_projection(vec4 coord, vec2 offset, float layer) {
+   float shadow = 1.0;
+   float bias = 0.005;
+
+   // float cosTheta = clamp(dot(normalize(inNormal), normalize(lightingData.dir_direction[0].xyz)), 0.0, 1.0);
+   // float bias = 0.005 * tan(acos(cosTheta));
+   // bias = clamp(bias, 0, 0.1);
+
+   if ( coord.z >= -1.0 && coord.z <= 1.0 )
+   {
+       float dist = texture(shadowMap, vec3(coord.st + offset, layer) ).r;
+       if ( coord.w > 0.0 && dist < coord.z - bias)
+       {
+           shadow = ambient;
+       }
+   }
+   return shadow;
+}
 
 void main()
 {
     uint cascadeIndex = 0;
-//    for(uint i = 0; i < CASCADE_COUNT - 1; ++i) {
-//        if(inViewPos.z < depthData.splitDepth[i]) {
-//            cascadeIndex = i + 1;
-//        }
-//    }
-//
-//    vec4 coord = biasMat * depthData.cascadeVP[cascadeIndex] * vec4(inFragPos, 1.0);
-//    float shadow = texture_projection(coord / coord.w, vec2(0.0), cascadeIndex);
+    for(uint i = 0; i < CASCADE_COUNT - 1; ++i) {
+        if(inViewPos.z < depthData.splitDepth[i]) {
+            cascadeIndex = i + 1;
+        }
+    }
+
+    vec4 coord = biasMat * depthData.cascadeVP[cascadeIndex] * vec4(inFragPos, 1.0);
+    float shadow = texture_projection(coord / coord.w, vec2(0.0), cascadeIndex);
 
     vec3 N = normalize(inNormal);
     vec3 L = normalize(-lightingData.dir_direction[0].xyz);
@@ -68,24 +68,24 @@ void main()
     float diffuse = max(dot(N, L), ambient);
     vec3 lightColor = vec3(1.0);
     outFragColor.rgb = max(lightColor * (diffuse * vec3(1.0)), vec3(0.0));
-//    outFragColor.rgb *= shadow;
+    outFragColor.rgb *= shadow;
     outFragColor.a = 1.0;
 
-//    if (depthData.color_cascades) { // data seems different per frame.
-//        switch(cascadeIndex) {
-//            case 0 :
-//            outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f); // red
-//            break;
-//            case 1 :
-//            outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f); // green
-//            break;
-//            case 2 :
-//            outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f); // blue
-//            break;
-//            case 3 :
-//            outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
-//            break;
-//        }
-//    }
+   if (depthData.color_cascades) { // data seems different per frame.
+       switch(cascadeIndex) {
+           case 0 :
+           outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f); // red
+           break;
+           case 1 :
+           outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f); // green
+           break;
+           case 2 :
+           outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f); // blue
+           break;
+           case 3 :
+           outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
+           break;
+       }
+   }
 
 }

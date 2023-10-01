@@ -23,9 +23,9 @@ layout(std140, set = 0, binding = 2) uniform LightingData {
 //} depthData;
 
 
-layout(set = 0, binding = 3) uniform samplerCube irradianceMap; // aka. environment map
-layout(set = 0, binding = 4) uniform samplerCube prefilteredMap; // aka. prefiltered map
-layout(set = 0, binding = 5) uniform sampler2D brdfMap; // aka. prefilter map
+layout(set = 0, binding = 4) uniform samplerCube irradianceMap; // aka. environment map
+layout(set = 0, binding = 5) uniform samplerCube prefilteredMap; // aka. prefiltered map
+layout(set = 0, binding = 6) uniform sampler2D brdfMap; // aka. prefilter map
 // layout(set = 0, binding = 7) uniform sampler2DArray shadowMap;
 
 layout (location = 0) in vec3 inColor;

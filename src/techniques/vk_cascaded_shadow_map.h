@@ -39,6 +39,7 @@ public:
     const VkFormat DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
     float _lb = 0.95f;
     int _cascadeIdx = 0;
+    bool _colorCascades = false;
 
     struct Cascade {
         VkImageView _view;
@@ -50,7 +51,8 @@ public:
 
     struct GPUCascadedShadowData {
         glm::mat4 VPMat[COUNT];
-        float split[COUNT];
+        glm::vec4 split;
+        bool colorCascades;
     };
 
     std::array<Cascade, COUNT> _cascades;
