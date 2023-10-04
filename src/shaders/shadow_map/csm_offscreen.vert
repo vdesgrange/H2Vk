@@ -12,8 +12,8 @@ layout (location = 4) in vec4 vTangent;
 layout (location = 0) out vec2 outUV;
 
 layout (std140, set = 0, binding = 0) uniform ShadowData {
-    mat4 cascadeVP[CASCADE_COUNT];
-    vec4 splitDepth;
+    layout(offset = 0) mat4 cascadeVP[CASCADE_COUNT];
+    layout(offset = 256) vec4 splitDepth;
 } shadowData;
 
 struct ObjectData {

@@ -1,4 +1,4 @@
-const int CASCADE_COUNT = 3;
+const int CASCADE_COUNT = 4;
 const int MAX_LIGHT = 8;
 const int enablePCF = 0;
 

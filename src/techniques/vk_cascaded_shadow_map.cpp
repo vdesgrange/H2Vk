@@ -6,6 +6,10 @@
 * This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
 */
 
+#ifndef GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#endif
+
 #include "vk_cascaded_shadow_map.h"
 #include "core/utilities/vk_global.h"
 #include "core/vk_renderpass.h"
@@ -17,7 +21,7 @@
 #include "components/camera/vk_camera.h"
 #include "core/utilities/vk_initializers.h"
 
-CascadedShadow::CascadedShadow(Device& device) : _device(device), _depthPass(RenderPass(device)) {
+CascadedShadow::CascadedShadow(Device& device, UploadContext& uploadContext) : _device(device), _depthPass(RenderPass(device)), _uploadContext(uploadContext) {
     prepare_resources(device);
 }
 
@@ -48,7 +52,7 @@ void CascadedShadow::prepare_resources(Device& device) {
     dependencies.push_back({VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_DEPENDENCY_BY_REGION_BIT});
     dependencies.push_back({0, VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_DEPENDENCY_BY_REGION_BIT});
 
-    VkSubpassDescription subpass{}; // = _depthPass.subpass_description(colorRef, &depth.ref);
+    VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 0;
     subpass.pDepthStencilAttachment = &depth.ref; // link depth attachment to sub-pass
@@ -76,9 +80,6 @@ void CascadedShadow::prepare_resources(Device& device) {
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
     vkCreateSampler(device._logicalDevice, &samplerInfo, nullptr, &_depth._sampler);
 
-    _depth._imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    _depth.updateDescriptor();
-
     for (uint8_t i = 0; i < CascadedShadow::COUNT; i++) {
         VkImageViewCreateInfo view = vkinit::imageview_create_info(CascadedShadow::DEPTH_FORMAT, _depth._image, VK_IMAGE_ASPECT_DEPTH_BIT);
         view.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
@@ -88,6 +89,29 @@ void CascadedShadow::prepare_resources(Device& device) {
         std::vector<VkImageView> attachments = {_cascades[i]._view};
         _cascades[i]._framebuffer = std::make_unique<FrameBuffer>(_depthPass, attachments, CascadedShadow::SHADOW_WIDTH, CascadedShadow::SHADOW_HEIGHT, 1);
     }
+
+    // Required if CSM disabled
+     CommandBuffer::immediate_submit(device, _uploadContext, [&](VkCommandBuffer cmd) {
+         VkImageSubresourceRange range;
+         range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+         range.baseMipLevel = 0;
+         range.levelCount = 1;
+         range.baseArrayLayer = 0;
+         range.layerCount = CascadedShadow::COUNT;
+
+         VkImageMemoryBarrier imageBarrier = {};
+         imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+         imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+         imageBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+         imageBarrier.image = _depth._image;
+         imageBarrier.subresourceRange = range;
+         imageBarrier.srcAccessMask = 0;
+         imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier);
+
+         _depth._imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+         _depth.updateDescriptor();
+     });
 }
 
 void CascadedShadow::allocate_buffers(Device &device) {
@@ -99,8 +123,8 @@ void CascadedShadow::allocate_buffers(Device &device) {
 
 void CascadedShadow::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
     std::vector<VkDescriptorPoolSize> offscreenSizes = {
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 32},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32}
     };
 
     for (uint32_t i = 0; i < CascadedShadow::COUNT; i++) {
@@ -124,11 +148,11 @@ void CascadedShadow::setup_descriptors(DescriptorLayoutCache& layoutCache, Descr
         info.offset = 0;
         info.range = sizeof(GPUCascadedShadowData);
 
-//        DescriptorBuilder::begin(layoutCache, allocator)
-//            .bind_buffer(info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-//            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-//            .layout(setLayout)
-            // .build(g_frames[i].cascadedOffscreenDescriptor, setLayout, offscreenSizes);
+        DescriptorBuilder::begin(layoutCache, allocator)
+            .bind_buffer(info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .bind_none(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .layout(setLayout)
+            .build(g_frames[i].cascadedOffscreenDescriptor, setLayout, offscreenSizes);
 
         DescriptorBuilder::begin(layoutCache, allocator)
                 .bind_buffer(info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
@@ -197,6 +221,8 @@ void CascadedShadow::compute_resources(FrameData& frame, Renderables& renderable
     VkExtent2D extent{CascadedShadow::SHADOW_WIDTH, CascadedShadow::SHADOW_HEIGHT};
 
     VkViewport viewport = vkinit::get_viewport((float) CascadedShadow::SHADOW_WIDTH, (float) CascadedShadow::SHADOW_HEIGHT);
+//    viewport.height = - (float) CascadedShadow::SHADOW_HEIGHT;
+//    viewport.y = (float) CascadedShadow::SHADOW_HEIGHT;
     vkCmdSetViewport(frame._commandBuffer->_commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor = vkinit::get_scissor((float) CascadedShadow::SHADOW_WIDTH, (float) CascadedShadow::SHADOW_HEIGHT);
@@ -214,7 +240,7 @@ void CascadedShadow::compute_resources(FrameData& frame, Renderables& renderable
             int i = 0; // a retirer? semble casser
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _depthEffect->pipeline);
             vkCmdPushConstants(cmd, _depthEffect->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), sizeof(int), &pc);
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _depthEffect->pipelineLayout, 0, 1, &_cascades[l]._descriptor, 0, nullptr);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _depthEffect->pipelineLayout, 0, 1, &frame.cascadedOffscreenDescriptor, 0, nullptr);
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _depthEffect->pipelineLayout, 1, 1, &frame.objectDescriptor, 0, nullptr);
             for (auto const &object: renderables) {
                 object.model->draw(cmd, _depthEffect->pipelineLayout, sizeof(glm::mat4) + sizeof(int), i, object.model.get() != lastModel.get());
@@ -232,6 +258,7 @@ void CascadedShadow::compute_cascades(Camera& camera, LightingManager& lightMana
     float splits[COUNT];
     float zNear = camera.get_z_near();
     float zFar = camera.get_z_far();
+    float f = camera.get_flip() ? -1.0f : 1.0f;
 
     float range = zFar - zNear;
     float ratio = zFar / zNear;
@@ -259,7 +286,9 @@ void CascadedShadow::compute_cascades(Camera& camera, LightingManager& lightMana
                 glm::vec3(-1.0f, -1.0f,  1.0f),
         };
 
-        glm::mat4 invCam = glm::inverse(camera.get_projection_matrix() * camera.get_view_matrix());
+        glm::mat4 cameraProj = camera.get_projection_matrix();
+        cameraProj[1][1] *= f;
+        glm::mat4 invCam = glm::inverse(cameraProj * camera.get_view_matrix());
         for (uint32_t i = 0; i < 8; i++) {
             glm::vec4 invCorner = invCam * glm::vec4(frustumCorners[i], 1.0f);
             frustumCorners[i] = invCorner / invCorner.w;
@@ -278,7 +307,7 @@ void CascadedShadow::compute_cascades(Camera& camera, LightingManager& lightMana
         }
         frustumCenter /= 8.0f;
 
-        float radius = 0.0f;g
+        float radius = 0.0f;
         for (uint32_t i = 0; i < 8; i++) {
             float distance = glm::length(frustumCorners[i] - frustumCenter);
             radius = glm::max(radius, distance);
@@ -290,25 +319,29 @@ void CascadedShadow::compute_cascades(Camera& camera, LightingManager& lightMana
 
             if (light->get_type() == Light::Type::DIRECTIONAL) {
                 glm::vec3 lightDir = normalize(-light->get_rotation());
-                glm::mat4 lightViewMatrix = glm::lookAt(frustumCenter + lightDir * radius, frustumCenter, glm::vec3(0.0f, 1.0f, 0.0f));
-                glm::mat4 lightOrthoMatrix = glm::ortho(-radius, radius, -radius, radius, 0.0f, 2.0f * radius);
+                glm::vec3 up = glm::abs(glm::dot(lightDir, glm::vec3(0.0f, 1.0f, 0.0f))) == 1.0f ? glm::vec3(-1.0f, 0.0f, 0.0f) :  glm::vec3(0.0f, 1.0f, 0.0f);
+                glm::mat4 lightViewMatrix = glm::lookAt(frustumCenter - lightDir * radius, frustumCenter, up);
+                glm::mat4 lightOrthoMatrix = glm::ortho(-radius, radius, -f * radius, f * radius, 0.0f, 2.0f * radius);
 
                 // Store split distance and matrix in cascade
                 _cascades[i].splitDepth = (camera.get_z_near() + splitDist * range) * -1.0f;
                 _cascades[i].viewProjMatrix = lightOrthoMatrix * lightViewMatrix;
+
+                lastSplitDist = splits[i];
+                // _cascades[i].viewProjMatrix[1][1] *= f;
             }
         }
 
-        lastSplitDist = splits[i];
+        
     }
 }
 
 void CascadedShadow::debug_depth(FrameData& frame) {
     if (_debugEffect.get() != nullptr) {
         VkCommandBuffer cmd = frame._commandBuffer->_commandBuffer;
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _debugEffect->pipeline);
         vkCmdPushConstants(cmd, _debugEffect->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), sizeof(int), &_cascadeIdx);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _debugEffect->pipelineLayout, 0, 1, &frame.debugDescriptor, 0, nullptr);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _debugEffect->pipeline);
         vkCmdDraw(cmd, 3, 1, 0, 0);
     }
 }
@@ -316,9 +349,17 @@ void CascadedShadow::debug_depth(FrameData& frame) {
 CascadedShadow::GPUCascadedShadowData CascadedShadow::gpu_format() {
     GPUCascadedShadowData data{};
 
-    for (uint8_t i = 0; i < COUNT; i++) {
+    for (uint32_t i = 0; i < COUNT; i++) {
         data.VPMat[i] = _cascades[i].viewProjMatrix;
         data.split[i] = _cascades[i].splitDepth;
+        if (_colorCascades) {
+            std::cout << "X " << i << " = " << _cascades[i].viewProjMatrix[0].x << " " << _cascades[i].viewProjMatrix[0].y << " " << _cascades[i].viewProjMatrix[0].z << " " << _cascades[i].viewProjMatrix[0].w << std::endl;
+            std::cout << "Y " << i << " = " << _cascades[i].viewProjMatrix[1].x << " " << _cascades[i].viewProjMatrix[1].y << " " << _cascades[i].viewProjMatrix[1].z << " " << _cascades[i].viewProjMatrix[1].w << std::endl;
+            std::cout << "Z " << i << " = " << _cascades[i].viewProjMatrix[2].x << " " << _cascades[i].viewProjMatrix[2].y << " " << _cascades[i].viewProjMatrix[2].z << " " << _cascades[i].viewProjMatrix[2].w << std::endl;
+            std::cout << "W " << i << " = " << _cascades[i].viewProjMatrix[3].x << " " << _cascades[i].viewProjMatrix[3].y << " " << _cascades[i].viewProjMatrix[3].z << " " << _cascades[i].viewProjMatrix[3].w << std::endl;
+            
+            std::cout << "Split depth " << i << " = " << _cascades[i].splitDepth << std::endl;
+        }
     }
     data.colorCascades = _colorCascades;
     

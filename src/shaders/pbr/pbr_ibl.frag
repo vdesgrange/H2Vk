@@ -36,7 +36,7 @@ layout (location = 4) in vec3 inCameraPos;
 layout (location = 5) in vec4 inTangent;
 
 layout (push_constant) uniform Material {
-    layout(offset = 64) vec4 albedo; // w for opacity
+    layout(offset = 64) vec4 albedo; // update offset for csm
     layout(offset = 80) float metallic;
     layout(offset = 84) float roughness;
     layout(offset = 88) float ao;

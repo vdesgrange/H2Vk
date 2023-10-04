@@ -24,9 +24,9 @@ layout(std140, set = 0, binding = 2) uniform LightingData {
 } lightingData;
 
 layout (std140, set = 0, binding = 3) uniform ShadowData {
-   mat4 cascadeVP[CASCADE_COUNT];
-   vec4 splitDepth;
-   bool color_cascades;
+   layout(offset = 0) mat4 cascadeVP[CASCADE_COUNT];
+   layout(offset = 256) vec4 splitDepth;
+   layout(offset = 272) bool color_cascades;
 } depthData;
 
 layout (set = 0, binding = 7) uniform sampler2DArray shadowMap;

@@ -33,9 +33,9 @@ class MaterialManager;
 class CascadedShadow final {
 public:
     bool _debug = false;
-    const uint32_t SHADOW_WIDTH = 2048;
-    const uint32_t SHADOW_HEIGHT = 2048;
-    static const uint8_t COUNT = 3;
+    const uint32_t SHADOW_WIDTH = 1024;
+    const uint32_t SHADOW_HEIGHT = 1024;
+    static const uint8_t COUNT = 4;
     const VkFormat DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
     float _lb = 0.95f;
     int _cascadeIdx = 0;
@@ -46,8 +46,8 @@ public:
         std::unique_ptr<FrameBuffer> _framebuffer;
         VkDescriptorSet _descriptor;
 
-        float splitDepth;
-        glm::mat4 viewProjMatrix;
+        float splitDepth = 1.0f;
+        glm::mat4 viewProjMatrix = glm::mat4(0.0f);
 
         void destroy(VkDevice device) {
             vkDestroyImageView(device, _view, nullptr);
@@ -56,9 +56,9 @@ public:
     };
 
     struct GPUCascadedShadowData {
-        glm::mat4 VPMat[COUNT];
-        glm::vec4 split;
-        bool colorCascades;
+        glm::mat4 VPMat[COUNT]; // alignas(glm::mat4)
+        glm::vec4 split; // alignas(16)
+        bool colorCascades; // alignas(bool)
     };
 
     std::array<Cascade, COUNT> _cascades;
@@ -70,7 +70,7 @@ public:
     std::shared_ptr<Material> _debugEffect;
 
 
-    CascadedShadow(class Device& device);
+    CascadedShadow(class Device& device, UploadContext& uploadContext);
     ~CascadedShadow();
 
     void prepare_resources(Device& device);
@@ -84,4 +84,5 @@ public:
 
 private:
     const class Device& _device;
+    class UploadContext& _uploadContext;
 };

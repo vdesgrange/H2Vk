@@ -1,4 +1,5 @@
 #version 460
+#extension GL_EXT_debug_printf : enable
 #extension GL_GOOGLE_include_directive : enable
 
 #include "../common/constants.glsl"
@@ -29,9 +30,9 @@ layout (std140, set = 0, binding = 0) uniform EnabledFeaturesData {
 } enabledFeaturesData;
 
 layout (std140, set = 0, binding = 3) uniform ShadowData {
-    mat4 cascadeVP[CASCADE_COUNT];
-    vec4 splitDepth;
-    bool color_cascades;
+    layout(offset = 0) mat4 cascadeVP[CASCADE_COUNT];
+    layout(offset = 256) vec4 splitDepth;
+    layout(offset = 272) bool color_cascades;
 } depthData;
 
 
@@ -207,7 +208,7 @@ void main()
 	 outFragColor.a = color.a;
 
 	 // Color cascades (if enabled)
-	 if (depthData.color_cascades) {
+	 if (depthData.color_cascades == true) {
 	 	switch(cascadeIndex) {
 	 		case 0 :
 	 			outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f);
