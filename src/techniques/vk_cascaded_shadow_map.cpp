@@ -180,6 +180,7 @@ void CascadedShadow::setup_pipelines(Device& device, MaterialManager &materialMa
 
     std::vector<std::pair<ShaderType, const char*>> modules {
             {ShaderType::VERTEX, "../src/shaders/shadow_map/csm_offscreen.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/csm_offscreen.frag.spv"},
     };
 
     std::vector<PushConstant> constants {
@@ -352,14 +353,6 @@ CascadedShadow::GPUCascadedShadowData CascadedShadow::gpu_format() {
     for (uint32_t i = 0; i < COUNT; i++) {
         data.VPMat[i] = _cascades[i].viewProjMatrix;
         data.split[i] = _cascades[i].splitDepth;
-        if (_colorCascades) {
-            std::cout << "X " << i << " = " << _cascades[i].viewProjMatrix[0].x << " " << _cascades[i].viewProjMatrix[0].y << " " << _cascades[i].viewProjMatrix[0].z << " " << _cascades[i].viewProjMatrix[0].w << std::endl;
-            std::cout << "Y " << i << " = " << _cascades[i].viewProjMatrix[1].x << " " << _cascades[i].viewProjMatrix[1].y << " " << _cascades[i].viewProjMatrix[1].z << " " << _cascades[i].viewProjMatrix[1].w << std::endl;
-            std::cout << "Z " << i << " = " << _cascades[i].viewProjMatrix[2].x << " " << _cascades[i].viewProjMatrix[2].y << " " << _cascades[i].viewProjMatrix[2].z << " " << _cascades[i].viewProjMatrix[2].w << std::endl;
-            std::cout << "W " << i << " = " << _cascades[i].viewProjMatrix[3].x << " " << _cascades[i].viewProjMatrix[3].y << " " << _cascades[i].viewProjMatrix[3].z << " " << _cascades[i].viewProjMatrix[3].w << std::endl;
-            
-            std::cout << "Split depth " << i << " = " << _cascades[i].splitDepth << std::endl;
-        }
     }
     data.colorCascades = _colorCascades;
     

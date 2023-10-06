@@ -7,10 +7,10 @@ layout (location = 0) in vec2 inUV;
 void main() 
 {	
     // No shadow if transparency : BUG - segfault if use with non-pbr shader
-	// float alpha = texture(colorMap, inUV).a;
-	// if (alpha < 0.5) {
-	// 	discard;
-	// }
+	float alpha = texture(colorMap, inUV).a;
+	if (alpha < 0.5) {
+		discard;
+	}
 
 //	gl_FragDepth = 1.0;
 }

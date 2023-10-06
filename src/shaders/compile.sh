@@ -27,3 +27,4 @@ glslc shadow_map/csm_offscreen.vert -o shadow_map/csm_offscreen.vert.spv
 glslc shadow_map/csm_offscreen.frag -o shadow_map/csm_offscreen.frag.spv
 glslc shadow_map/csm_debug_quad.vert -o shadow_map/csm_debug_quad.vert.spv
 glslc shadow_map/csm_debug_quad.frag -o shadow_map/csm_debug_quad.frag.spv
+glslc shadow_map/scene_debug.frag -o shadow_map/scene_debug.frag.spv

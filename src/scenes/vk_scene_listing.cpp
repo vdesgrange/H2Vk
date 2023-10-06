@@ -88,21 +88,21 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
     std::vector<std::pair<ShaderType, const char*>> scene_modules {
             {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/scene_debug.frag.spv"},
     };
 
     floorModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
-    engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, scene_modules);
+    engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, pbr_modules);
 
     wallModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
-    engine->_materialManager->create_material("pbrMaterial2", setLayouts, constants, scene_modules);
+    engine->_materialManager->create_material("pbrMaterial2", setLayouts, constants, pbr_modules);
 
 
     std::vector<VkDescriptorSetLayout> shadowSetLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
-    engine->_materialManager->create_material("shadowScene", shadowSetLayouts, constants, scene_modules);
+    engine->_materialManager->create_material("shadowScene", shadowSetLayouts, constants, pbr_modules);
 
     RenderObject floor;
     floor.model = engine->_meshManager->get_model("floor");
@@ -230,14 +230,9 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     };
 
     std::vector<std::pair<ShaderType, const char*>> pbr_modules {
-            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibl_tex.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_tex.frag.spv"},
+            {ShaderType::VERTEX, "../src/shaders/pbr/depth_debug_scene.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/pbr/scene_debug.frag.spv"},
     };
-
-//    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
-//            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
-//            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
-//    };
 
     VkDescriptorSetLayout textures{};
     sponzaModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures, emptyTexture);
@@ -292,25 +287,20 @@ Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
             {sizeof(Materials::Factors), ShaderType::FRAGMENT}
     };
 
-    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
-            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibl_tex.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_tex.frag.spv"},
-    };
-
-//    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
-//            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
-//            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
-//    };
+   std::vector<std::pair<ShaderType, const char*>> modules {
+           {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
+           {ShaderType::FRAGMENT, "../src/shaders/shadow_map/scene_debug.frag.spv"},
+   };
 
 
     treeModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
-    engine->_materialManager->create_material("treeMaterial", setLayouts, constants, pbr_modules);
+    engine->_materialManager->create_material("treeMaterial", setLayouts, constants, modules);
 
     fieldModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
-    engine->_materialManager->create_material("fieldMaterial", setLayouts, constants, pbr_modules);
+    engine->_materialManager->create_material("fieldMaterial", setLayouts, constants, modules);
 
 
     // == Init scene ==
