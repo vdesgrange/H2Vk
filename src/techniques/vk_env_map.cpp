@@ -149,7 +149,7 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
         glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
     };
 
-    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
+    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, uploadContext, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
     meshManager.upload_mesh(*cube);
 
     for (int face = 0; face < count; face++) {
@@ -343,7 +343,7 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
             glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
     };
 
-    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
+    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, uploadContext, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
     meshManager.upload_mesh(*cube);
 
     // Command pool + command buffer for compute operations
@@ -532,7 +532,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
             glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
     };
 
-    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
+    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, uploadContext, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
     meshManager.upload_mesh(*cube);
 
     for (int mipLevel = 0; mipLevel < PRE_FILTER_MIP_LEVEL; mipLevel++) {

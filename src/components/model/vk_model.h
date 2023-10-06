@@ -123,7 +123,6 @@ struct Materials {
     };
 
 };
-//typedef Materials::Properties PBRProperties;
 
 struct Textures {
     int32_t imageIndex;
@@ -163,6 +162,7 @@ public:
     void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t offset, uint32_t instance, bool bind);
     VkDescriptorImageInfo get_texture_descriptor(const size_t index);
     void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, Texture& empty);
+    void load_empty(const Device& device, const UploadContext& ctx);
 
 protected:
     void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t offset, uint32_t instance);

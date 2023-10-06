@@ -42,7 +42,7 @@ void Skybox::load() {
     EnvMap envMap{};
 
     if (_type == Type::box) {
-        _model = ModelPOLY::create_cube(&_device, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
+        _model = ModelPOLY::create_cube(&_device, _uploadContext, {-100.0f, -100.0f, -100.0f},  {100.f, 100.f, 100.0f});
         Texture original {};
         Texture hdr {};
 
@@ -64,7 +64,7 @@ void Skybox::load() {
         Texture original {};
         Texture hdr {};
 
-        _model = ModelPOLY::create_uv_sphere(&_device, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
+        _model = ModelPOLY::create_uv_sphere(&_device, _uploadContext, {0.0f, 0.0f, 0.0f}, 100.0f, 32, 32);
 
         load_sphere_texture("../assets/skybox/grand_canyon_yuma_point_8k.jpg", _background);
         load_sphere_texture("../assets/skybox/GCanyon_C_YumaPoint_3k.hdr", hdr, VK_FORMAT_R8G8B8A8_SRGB);

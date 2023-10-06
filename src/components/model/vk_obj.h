@@ -21,4 +21,5 @@ public:
 
 private:
     void load_node(tinyobj::attrib_t attrib, std::vector<tinyobj::shape_t>& shapes);
+    void load_images(const Device& device, const UploadContext& ctx);
 };

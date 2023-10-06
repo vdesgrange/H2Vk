@@ -127,19 +127,6 @@ void CascadedShadow::setup_descriptors(DescriptorLayoutCache& layoutCache, Descr
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32}
     };
 
-    for (uint32_t i = 0; i < CascadedShadow::COUNT; i++) {
-        VkDescriptorBufferInfo info{};
-        info.buffer = g_frames[0].cascadedOffscreenBuffer._buffer;
-        info.offset = 0;
-        info.range = sizeof(GPUCascadedShadowData);
-
-        DescriptorBuilder::begin(layoutCache, allocator)
-                .bind_buffer(info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-                .bind_image(_depth._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-                .layout(setLayout)
-                .build(_cascades[i]._descriptor, setLayout, offscreenSizes);
-    }
-
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         g_frames[i].offscreenDescriptor = VkDescriptorSet();
 
@@ -287,9 +274,7 @@ void CascadedShadow::compute_cascades(Camera& camera, LightingManager& lightMana
                 glm::vec3(-1.0f, -1.0f,  1.0f),
         };
 
-        glm::mat4 cameraProj = camera.get_projection_matrix();
-        cameraProj[1][1] *= f;
-        glm::mat4 invCam = glm::inverse(cameraProj * camera.get_view_matrix());
+        glm::mat4 invCam = glm::inverse(camera.get_projection_matrix() * camera.get_view_matrix());
         for (uint32_t i = 0; i < 8; i++) {
             glm::vec4 invCorner = invCam * glm::vec4(frustumCorners[i], 1.0f);
             frustumCorners[i] = invCorner / invCorner.w;
@@ -329,7 +314,6 @@ void CascadedShadow::compute_cascades(Camera& camera, LightingManager& lightMana
                 _cascades[i].viewProjMatrix = lightOrthoMatrix * lightViewMatrix;
 
                 lastSplitDist = splits[i];
-                // _cascades[i].viewProjMatrix[1][1] *= f;
             }
         }
 

@@ -35,6 +35,7 @@ layout (location = 2) out vec3 outNormal;
 layout (location = 3) out vec3 outFragPos;
 layout (location = 4) out vec3 outCameraPos;
 layout (location = 5) out vec3 outViewPos;
+layout (location = 6) out vec4 outTangent;
 
 void main()
 {
@@ -48,6 +49,7 @@ void main()
     outFragPos = pos.xyz;
     outCameraPos = cameraData.pos;
     outViewPos = (cameraData.view * vec4(pos.xyz, 1.0)).xyz;
+    outTangent = inTangent;
 
     gl_Position = cameraMVP * vec4(inPosition.xyz, 1.0f);
     // gl_Position.y = -gl_Position.y;

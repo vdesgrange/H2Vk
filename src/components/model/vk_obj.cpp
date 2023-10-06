@@ -24,8 +24,19 @@ bool ModelOBJ::load_model(const Device& device, const UploadContext& ctx, const 
         return false;
     }
 
+    this->load_images(device, ctx);
     this->load_node(attrib, shapes);
     return true;
+}
+
+void ModelOBJ::load_images(const Device& device, const UploadContext& ctx) {
+    // === Empty texture ===
+    unsigned char pixels[] = {0, 0, 0, 1};
+    Image image;
+    image._texture.load_image_from_buffer(device, ctx, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
+    image._texture._name = "Empty";
+    image._texture._uri = "Unknown";
+    _images.emplace_back(std::move(image));
 }
 
 void ModelOBJ::load_node(tinyobj::attrib_t attrib, std::vector<tinyobj::shape_t>& shapes) {

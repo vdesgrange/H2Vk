@@ -40,33 +40,17 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     camera.set_type(Camera::Type::look_at);
     camera.set_speed(10.0f);
 
-
-    //std::shared_ptr<ModelGLTF2> emptyModel = std::make_shared<ModelGLTF2>(engine->_device.get());
-    //emptyModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
-    //std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
-    //engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
-    //engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, pbr_modules);
-
-//    std::vector<std::pair<ShaderType, const char*>> scene_modules {
-//            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
-//            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/shadow_map.frag.spv"},
-//    };
-//
-//    std::vector<VkDescriptorSetLayout> shadowSetLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
-//    // engine->_materialManager->_pipelineBuilder = &scenePipeline;
-//    engine->_materialManager->create_material("shadowScene", shadowSetLayouts, constants, scene_modules);
-
     // === Add entities ===
     engine->_lightingManager->clear_entities();
     engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.0f, 0.f),glm::vec4(1.f)));
 
     Materials blank = {{1.0f, 1.0f, 1.0, 1.0f}, 0.0f,  1.0f, 0.0f};
 
-    std::shared_ptr<Model> floorModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, 4.0f, -6.0f}, {4.0f, 4.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, blank);
+    std::shared_ptr<Model> floorModel = ModelPOLY::create_plane(engine->_device.get(), engine->_uploadContext, {-4.0f, 4.0f, -6.0f}, {4.0f, 4.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, blank);
     engine->_meshManager->upload_mesh(*floorModel);
     engine->_meshManager->add_entity("floor", std::static_pointer_cast<Entity>(floorModel));
 
-    std::shared_ptr<Model> wallModel = ModelPOLY::create_plane(engine->_device.get(), {-4.0f, -4.0f, -6.0f}, {4.0f, 4.0f, -6.0f}, {1.0f, 1.0f, 1.0f}, blank);
+    std::shared_ptr<Model> wallModel = ModelPOLY::create_plane(engine->_device.get(), engine->_uploadContext, {-4.0f, -4.0f, -6.0f}, {4.0f, 4.0f, -6.0f}, {1.0f, 1.0f, 1.0f}, blank);
     engine->_meshManager->upload_mesh(*wallModel);
     engine->_meshManager->add_entity("wall", std::static_pointer_cast<Entity>(wallModel));
 
@@ -81,28 +65,23 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
             {sizeof(Materials::Factors), ShaderType::FRAGMENT}
     };
 
-    std::vector<std::pair<ShaderType, const char*>> pbr_modules {
+    std::vector<std::pair<ShaderType, const char*>> modules {
             {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibl.vert.spv"},
             {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl.frag.spv"},
-    };
-
-    std::vector<std::pair<ShaderType, const char*>> scene_modules {
-            {ShaderType::VERTEX, "../src/shaders/shadow_map/depth_debug_scene.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/scene_debug.frag.spv"},
     };
 
     floorModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
-    engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, pbr_modules);
+    engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, modules);
 
     wallModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
-    engine->_materialManager->create_material("pbrMaterial2", setLayouts, constants, pbr_modules);
+    engine->_materialManager->create_material("pbrMaterial2", setLayouts, constants, modules);
 
 
     std::vector<VkDescriptorSetLayout> shadowSetLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
-    engine->_materialManager->create_material("shadowScene", shadowSetLayouts, constants, pbr_modules);
+    engine->_materialManager->create_material("shadowScene", shadowSetLayouts, constants, modules);
 
     RenderObject floor;
     floor.model = engine->_meshManager->get_model("floor");
@@ -122,11 +101,11 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
             float ratio_y = float(y) / 6.0f;
             Materials gold = {{1.0f,  0.765557f, 0.336057f, 1.0f}, ratio_y * 1.0f, ratio_x * 1.0f, 1.0f};
             std::string name = "sphere_" + std::to_string(x) + "_" + std::to_string(y);
-            std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f}, gold);
+            std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), engine->_uploadContext, {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f}, gold);
 
             sphereModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
             engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
-            engine->_materialManager->create_material("spherePbrMaterial_" + std::to_string(7 * x + y), setLayouts, constants, scene_modules);
+            engine->_materialManager->create_material("spherePbrMaterial_" + std::to_string(7 * x + y), setLayouts, constants, modules);
 
             engine->_meshManager->upload_mesh(*sphereModel);
             engine->_meshManager->add_entity(name, std::static_pointer_cast<Entity>(sphereModel));

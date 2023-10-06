@@ -124,28 +124,27 @@ void Model::draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayou
     }
 }
 
-void Model::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, Texture& emptyTexture) {
+void Model::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, Texture& tmp) {
     std::vector<VkDescriptorPoolSize> poolSizes = {
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>( 5 ) } // this->_images.size()
     };
+    Texture& emptyTexture = this->_images.back()._texture;
 
     for (auto &material: this->_materials) {
-        // if (material.pbr == false) {
-            VkDescriptorImageInfo colorMap = material.baseColorTexture ? material.baseColorTexture->_texture._descriptor : emptyTexture._descriptor ;
-            VkDescriptorImageInfo normalMap = material.normalTexture ? material.normalTexture->_texture._descriptor : emptyTexture._descriptor;
-            VkDescriptorImageInfo metallicRoughnessMap = material.metallicRoughnessTexture ? material.metallicRoughnessTexture->_texture._descriptor : emptyTexture._descriptor;
-            VkDescriptorImageInfo aoMap = material.aoTexture ? material.aoTexture->_texture._descriptor : emptyTexture._descriptor;
-            VkDescriptorImageInfo emissiveMap = material.emissiveTexture ? material.emissiveTexture->_texture._descriptor : emptyTexture._descriptor;
+        VkDescriptorImageInfo colorMap = material.baseColorTexture ? material.baseColorTexture->_texture._descriptor : emptyTexture._descriptor;
+        VkDescriptorImageInfo normalMap = material.normalTexture ? material.normalTexture->_texture._descriptor : emptyTexture._descriptor;
+        VkDescriptorImageInfo metallicRoughnessMap = material.metallicRoughnessTexture ? material.metallicRoughnessTexture->_texture._descriptor : emptyTexture._descriptor;
+        VkDescriptorImageInfo aoMap = material.aoTexture ? material.aoTexture->_texture._descriptor : emptyTexture._descriptor;
+        VkDescriptorImageInfo emissiveMap = material.emissiveTexture ? material.emissiveTexture->_texture._descriptor : emptyTexture._descriptor;
 
-            DescriptorBuilder::begin(layoutCache, allocator)
-                    .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
-                    .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-                    .bind_image(metallicRoughnessMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-                    .bind_image(aoMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
-                    .bind_image(emissiveMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
-                    .layout(setLayout)
-                    .build(material._descriptorSet, setLayout, poolSizes);
-        // }
+        DescriptorBuilder::begin(layoutCache, allocator)
+            .bind_image(colorMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+            .bind_image(normalMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .bind_image(metallicRoughnessMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+            .bind_image(aoMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+            .bind_image(emissiveMap, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4)
+            .layout(setLayout)
+            .build(material._descriptorSet, setLayout, poolSizes);
     }
 }
 
@@ -203,4 +202,14 @@ VertexInputDescription Vertex::get_vertex_description()
     description.attributes.push_back(tangentAttribute);
 
     return description;
+}
+
+void Model::load_empty(const Device& device, const UploadContext& ctx) {
+    // === Empty texture ===
+    unsigned char pixels[] = {255, 255, 255, 255};
+    Image image;
+    image._texture.load_image_from_buffer(device, ctx, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
+    image._texture._name = "Empty";
+    image._texture._uri = "Unknown";
+    _images.emplace_back(std::move(image));
 }

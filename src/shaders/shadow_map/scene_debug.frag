@@ -31,8 +31,8 @@ layout (set = 0, binding = 7) uniform sampler2DArray shadowMap;
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
-layout (location = 3) in vec3 inFragPos; // fragment/world position
-layout (location = 4) in vec3 inCameraPos; // camera/view position
+layout (location = 3) in vec3 inFragPos;
+layout (location = 4) in vec3 inCameraPos;
 layout (location = 5) in vec3 inViewPos;
 layout (location = 6) in vec4 inTangent;
 
@@ -72,5 +72,5 @@ void main() {
 	 // Color cascades (if enabled)
     debug_cascades(depthData.color_cascades, cascadeIndex, color);
 
-    outFragColor = vec4(color, alpha);
+    outFragColor = vec4(color, 1.0f);
 }

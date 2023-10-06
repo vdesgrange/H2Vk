@@ -1,11 +1,23 @@
 #version 460
-// #extension GL_EXT_debug_printf : disable
-// #extension GL_ARB_shading_language_include : require
 #extension GL_GOOGLE_include_directive : enable
 
 #include "../common/constants.glsl"
 #include "../common/brdf.glsl"
 #include "../common/filters.glsl"
+#include "../common/debug.glsl"
+
+layout (std140, set = 0, binding = 0) uniform EnabledFeaturesData {
+    bool shadowMapping;
+    bool skybox;
+    bool atmosphere;
+} enabledFeaturesData;
+
+
+layout (std140, set = 0, binding = 3) uniform ShadowData {
+    layout(offset = 0) mat4 cascadeVP[CASCADE_COUNT];
+    layout(offset = 256) vec4 splitDepth;
+    layout(offset = 272) bool color_cascades;
+} depthData;
 
 layout(std140, set = 0, binding = 2) uniform LightingData {
     layout(offset = 0) vec2 num_lights;
@@ -26,14 +38,15 @@ layout(std140, set = 0, binding = 2) uniform LightingData {
 layout(set = 0, binding = 4) uniform samplerCube irradianceMap; // aka. environment map
 layout(set = 0, binding = 5) uniform samplerCube prefilteredMap; // aka. prefiltered map
 layout(set = 0, binding = 6) uniform sampler2D brdfMap; // aka. prefilter map
-// layout(set = 0, binding = 7) uniform sampler2DArray shadowMap;
+layout(set = 0, binding = 7) uniform sampler2DArray shadowMap;
 
 layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec3 inFragPos;
 layout (location = 4) in vec3 inCameraPos;
-layout (location = 5) in vec4 inTangent;
+layout (location = 5) in vec3 inViewPos;
+layout (location = 6) in vec4 inTangent;
 
 layout (push_constant) uniform Material {
     layout(offset = 64) vec4 albedo; // update offset for csm
@@ -138,18 +151,11 @@ void main()
     vec3 R = reflect(-V, N);
 
     vec2 uv = sample_spherical_map(N);
-    vec3 A = texture(irradianceMap, N).rgb;  //  texture(irradianceMap, uv).rgb // if sampler2D
+    vec3 A = texture(irradianceMap, N).rgb;
 
     vec3 Lo = vec3(0.0);
-    Lo = spot_light(Lo, N, V);
+    // Lo = spot_light(Lo, N, V);
     Lo = directional_light(Lo, N, V);
-
-//    for (int i = 0; i < lightingData.num_lights[0]; i++) {
-//        vec3 L = normalize(lightingData.spot_position[i].xyz - inFragPos);
-//        vec3 C = lightingData.spot_color[i].rgb;
-//
-//        Lo += BRDF(L, V, N, C);
-//    };
 
     vec2 brdf = texture(brdfMap, vec2(max(dot(N, V), 0.0), roughness)).rg;
     vec3 reflection = prefiltered_reflection(R, roughness).rgb;
@@ -172,6 +178,24 @@ void main()
 
     // Convert from linear to sRGB ! Do not use for Vulkan !
     // color = pow(color, vec3(0.4545)); // Gamma correction
+
+    if (enabledFeaturesData.shadowMapping == true) {
+        // Cascaded shadow mapping
+        uint cascadeIndex = 0;
+        for(uint i = 0; i < CASCADE_COUNT - 1; ++i) {
+            if(inViewPos.z < depthData.splitDepth[i]) {
+                cascadeIndex = i + 1;
+            }
+        }
+
+        vec4 coord = biasMat * depthData.cascadeVP[cascadeIndex] * vec4(inFragPos, 1.0);
+        vec3 L = normalize(lightingData.dir_direction[0].xyz);
+        float shadow = texture_projection(shadowMap, N, L, coord / coord.w, vec2(0.0), cascadeIndex);
+        color.rgb *= shadow;
+
+        debug_cascades(depthData.color_cascades, cascadeIndex, color);
+    }
+
 
     outFragColor = vec4(color, 1.0);
 }
