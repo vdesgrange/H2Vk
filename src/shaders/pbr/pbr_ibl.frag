@@ -134,7 +134,7 @@ vec3 spot_light(vec3 Lo, vec3 N, vec3 V) {
 
 vec3 directional_light(vec3 Lo, vec3 N, vec3 V) {
     for (int i = 0; i < lightingData.num_lights[1]; i++) {
-        vec3 L = normalize(- lightingData.dir_direction[i].xyz);
+        vec3 L = normalize(lightingData.dir_direction[i].xyz);
         vec3 C = lightingData.dir_color[i].rgb;
 
         Lo += BRDF(L, V, N, C);
@@ -190,7 +190,8 @@ void main()
 
         vec4 coord = biasMat * depthData.cascadeVP[cascadeIndex] * vec4(inFragPos, 1.0);
         vec3 L = normalize(lightingData.dir_direction[0].xyz);
-        float shadow = texture_projection(shadowMap, N, L, coord / coord.w, vec2(0.0), cascadeIndex);
+        // float shadow = texture_projection(shadowMap, N, L, coord / coord.w, vec2(0.0), cascadeIndex);
+        float shadow = filterSPS(shadowMap, N, L, coord / coord.w, cascadeIndex);
         color.rgb *= shadow;
 
         debug_cascades(depthData.color_cascades, cascadeIndex, color);

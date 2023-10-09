@@ -209,8 +209,8 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     };
 
     std::vector<std::pair<ShaderType, const char*>> pbr_modules {
-            {ShaderType::VERTEX, "../src/shaders/pbr/depth_debug_scene.vert.spv"},
-            {ShaderType::FRAGMENT, "../src/shaders/pbr/scene_debug.frag.spv"},
+            {ShaderType::VERTEX, "../src/shaders/pbr/pbr_ibl_tex.vert.spv"},
+            {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl_tex.frag.spv"},
     };
 
     VkDescriptorSetLayout textures{};
