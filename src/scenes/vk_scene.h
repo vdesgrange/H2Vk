@@ -12,6 +12,7 @@
 
 class VulkanEngine;
 class Camera;
+class Texture;
 
 class Scene final {
 public:
@@ -24,7 +25,7 @@ public:
     void render_objects(VkCommandBuffer commandBuffer);
     static void allocate_buffers(Device& device);
     void setup_transformation_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
-    void setup_texture_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
+    void setup_texture_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, Texture& emptyTexture);
 private:
     VulkanEngine& _engine;
 };

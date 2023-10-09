@@ -221,6 +221,7 @@ VkPipelineDepthStencilStateCreateInfo vkinit::pipeline_depth_stencil_state_creat
     info.depthTestEnable = bDepthTest ? VK_TRUE : VK_FALSE; // z-culling = correct reproduction of depth perception:close object hides one further away
     info.depthWriteEnable = bDepthWrite ? VK_TRUE : VK_FALSE;
     info.depthCompareOp = bDepthTest ? compareOp : VK_COMPARE_OP_ALWAYS;
+    info.back.compareOp = VK_COMPARE_OP_ALWAYS;
     info.depthBoundsTestEnable = VK_FALSE;
     info.stencilTestEnable = VK_FALSE;
 

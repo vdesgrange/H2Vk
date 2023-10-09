@@ -10,7 +10,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "glm/vec3.hpp"
+// #include "glm/vec3.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtx/hash.hpp"
@@ -90,10 +90,12 @@ struct Image {
 };
 
 struct Materials {
-    glm::vec4 baseColorFactor = glm::vec4(1.0f);
-    float metallicFactor = 1.0f;
-    float roughnessFactor = 1.0f;
-    float alphaCutoff = 1.0f;
+    struct Factors {
+        glm::vec4 baseColorFactor = glm::vec4(1.0f);
+        float metallicFactor = 1.0f;
+        float roughnessFactor = 1.0f;
+        float alphaCutoff = 1.0f;
+    } factors;
 
     uint32_t baseColorTextureIndex;
     uint32_t normalTextureIndex;
@@ -111,14 +113,16 @@ struct Materials {
 
     bool pbr = false;
 
-    struct Properties {
-        glm::vec4 albedo; // rgb + w for opacity
-        float metallic;
-        float roughness;
-        float ao;
-    } properties;
+    Materials() {};
+    Materials(glm::vec4 c, float m, float r, float a) {
+        this->factors.baseColorFactor = c;
+        this->factors.metallicFactor = m;
+        this->factors.roughnessFactor = r;
+        this->factors.alphaCutoff = a;
+        this->pbr = true;
+    };
+
 };
-typedef Materials::Properties PBRProperties;
 
 struct Textures {
     int32_t imageIndex;
@@ -155,12 +159,13 @@ public:
     virtual bool load_model(const Device& device, const UploadContext& ctx, const char *filename) { return false; };
 
     void destroy();
-    void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance, bool bind);
+    void draw(VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t offset, uint32_t instance, bool bind);
     VkDescriptorImageInfo get_texture_descriptor(const size_t index);
-    void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
+    void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, Texture& empty);
+    void load_empty(const Device& device, const UploadContext& ctx);
 
 protected:
-    void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t instance);
+    void draw_node(Node* node, VkCommandBuffer& commandBuffer, VkPipelineLayout& pipelineLayout, uint32_t offset, uint32_t instance);
 
 private:
     Device* _device {nullptr};

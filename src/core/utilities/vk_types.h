@@ -23,6 +23,12 @@ class CommandBuffer;
 class DescriptorLayoutCache;
 class DescriptorAllocator;
 
+struct GPUEnabledFeaturesData{
+    alignas(bool) bool shadowMapping;
+    alignas(bool) bool skybox;
+    alignas(bool) bool atmosphere;
+};
+
 struct GPUObjectData {
     glm::mat4 model;
 };
@@ -45,6 +51,8 @@ struct FrameData {
 
     VkDescriptorSet skyboxDescriptor;
 
+    AllocatedBuffer enabledFeaturesBuffer;
+
     AllocatedBuffer cameraBuffer;
     AllocatedBuffer lightingBuffer;
     VkDescriptorSet environmentDescriptor;
@@ -54,6 +62,10 @@ struct FrameData {
 
     AllocatedBuffer offscreenBuffer;
     VkDescriptorSet offscreenDescriptor;
+
+    AllocatedBuffer cascadedOffscreenBuffer;
+    VkDescriptorSet cascadedOffscreenDescriptor;
+    // std::array<VkDescriptorSet, 4> cascadedOffscreenDescriptor;
 
     VkDescriptorSet debugDescriptor;
 

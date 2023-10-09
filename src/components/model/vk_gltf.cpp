@@ -86,15 +86,15 @@ void ModelGLTF::load_materials(tinygltf::Model &input) {
     for (uint32_t i = 0; i < input.materials.size(); i++) {
         tinygltf::Material gltfMaterial = input.materials[i];
         if (gltfMaterial.values.find("baseColorFactor") != gltfMaterial.values.end()) {
-            _materials[i].baseColorFactor = glm::make_vec4(gltfMaterial.values["baseColorFactor"].ColorFactor().data());
+            _materials[i].factors.baseColorFactor = glm::make_vec4(gltfMaterial.values["baseColorFactor"].ColorFactor().data());
         }
 
         if (gltfMaterial.values.find("metallicFactor") != gltfMaterial.values.end()) {
-            _materials[i].metallicFactor = static_cast<float>(gltfMaterial.values["metallicFactor"].Factor());
+            _materials[i].factors.metallicFactor = static_cast<float>(gltfMaterial.values["metallicFactor"].Factor());
         }
 
         if (gltfMaterial.values.find("roughnessFactor") != gltfMaterial.values.end()) {
-            _materials[i].roughnessFactor = static_cast<float>(gltfMaterial.values["roughnessFactor"].Factor());
+            _materials[i].factors.roughnessFactor = static_cast<float>(gltfMaterial.values["roughnessFactor"].Factor());
         }
 
         if (gltfMaterial.values.find("baseColorTexture") != gltfMaterial.values.end()) {

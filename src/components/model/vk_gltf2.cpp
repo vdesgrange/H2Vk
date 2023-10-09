@@ -107,7 +107,7 @@ void ModelGLTF2::load_materials(tinygltf::Model &input) {
     for (uint32_t i = 0; i < input.materials.size(); i++) {
         tinygltf::Material gltfMaterial = input.materials[i];
 
-        _materials[i].baseColorFactor = glm::make_vec4(gltfMaterial.pbrMetallicRoughness.baseColorFactor.data());
+        _materials[i].factors.baseColorFactor = glm::make_vec4(gltfMaterial.pbrMetallicRoughness.baseColorFactor.data());
 
         int baseColorTextureIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
         _materials[i].baseColorTextureIndex = baseColorTextureIndex;

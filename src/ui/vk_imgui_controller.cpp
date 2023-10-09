@@ -98,3 +98,13 @@ std::function<void (std::array<float, 3>)> UIController::set_color(Light& light)
         light.set_position(glm::vec4(c[0], c[1], c[2], 1.0f));
     };
 }
+
+std::function<float ()> UIController::get_lambda(CascadedShadow& csm) {
+    return [&]() { return csm._lb; };
+}
+
+std::function<void (float)> UIController::set_lambda(CascadedShadow& csm) {
+    return [&](float lb) {
+        csm._lb = lb;
+    };
+}

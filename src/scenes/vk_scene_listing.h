@@ -32,6 +32,7 @@ public:
     static Renderables spheres(Camera& camera, VulkanEngine* engine);
     static Renderables damagedHelmet(Camera& camera, VulkanEngine* engine);
     static Renderables sponza(Camera& camera, VulkanEngine* engine);
+    static Renderables field(Camera& camera, VulkanEngine* engine);
 
 private:
     static const class Device& _device;

@@ -27,7 +27,8 @@ UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine
     this->p_open.emplace(VIEW_EDITOR, false);
     this->p_open.emplace(LIGHT_EDITOR, false);
     this->p_open.emplace(LOG_CONSOLE, false);
-    this->p_open.emplace(SKYBOX_EDITOR, true);
+    this->p_open.emplace(SKYBOX_EDITOR, false);
+    this->p_open.emplace(SHADOW_EDITOR, false);
 
     _layoutCache = new DescriptorLayoutCache(*engine._device);
     _allocator = new DescriptorAllocator(*engine._device);
@@ -147,11 +148,31 @@ bool UInterface::interface(Statistics statistics) {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Tools")) {
             updated |= ImGui::MenuItem("View tools", nullptr, &this->p_open[VIEW_EDITOR]);
-            updated |= ImGui::MenuItem("Scene editor", nullptr, &this->p_open[SCENE_EDITOR]);
+            if (_engine._enabledFeatures.meshes) {
+                updated |= ImGui::MenuItem("Scene editor", nullptr, &this->p_open[SCENE_EDITOR]);
+            }
+
+            if (_engine._enabledFeatures.shadowMapping) {
+                updated |= ImGui::MenuItem("Shadow editor", nullptr, &this->p_open[SHADOW_EDITOR]);
+            }
+
             updated |= ImGui::MenuItem("Performances", nullptr, &this->p_open[STATS_VIEWER]);
-            updated |= ImGui::MenuItem("Enable skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
+
+            if (_engine._enabledFeatures.skybox) {
+                updated |= ImGui::MenuItem("Enable skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
+            }
             ImGui::EndMenu();
         }
+
+        if (ImGui::BeginMenu("Features")) {
+            updated |= ImGui::MenuItem("Shadow Mapping (WIP)", nullptr, &this->_engine._enabledFeatures.shadowMapping);
+            updated |= ImGui::MenuItem("Skybox", nullptr, &this->_engine._enabledFeatures.skybox);
+            updated |= ImGui::MenuItem("Atmosphere (WIP)", nullptr, &this->_engine._enabledFeatures.atmosphere);
+            updated |= ImGui::MenuItem("Scene meshes", nullptr, &this->_engine._enabledFeatures.meshes);
+
+            ImGui::EndMenu();
+        }
+
         ImGui::EndMainMenuBar();
     }
 
@@ -170,6 +191,8 @@ bool UInterface::interface(Statistics statistics) {
         updated |= this->stats_viewer(statistics);
 
         updated |= this->skybox_editor();
+
+        updated |= this->shadow_editor();
     }
 
     return updated;
@@ -467,6 +490,33 @@ bool UInterface::light_editor() {
 //        updated |= ImGui::SliderFloat("Ambient", &get_settings().ambient, 0.0f, 0.005f, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
 //        updated |= ImGui::SliderFloat("Specular", &get_settings().specular, 0.0f, 1.0f);
 //        updated |= ImGui::InputFloat3("Color (RGB)", get_settings().colors, "%.2f");
+
+    return updated;
+}
+
+bool UInterface::shadow_editor() {
+    bool updated = false;
+
+    if (!this->p_open[SHADOW_EDITOR]) {
+        return false;
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
+    const auto window_flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse;
+    if (ImGui::Begin("Shadow Editor", &this->p_open[SHADOW_EDITOR], window_flags)) {
+        ImGui::Text("Cascaded shadow parameters");
+        ImGui::Separator();
+
+        updated |= ImGui::SliderFloat("Split lambda", UIController::get_lambda(*_engine._cascadedShadow), UIController::set_lambda(*_engine._cascadedShadow), 0.01f, 1.0f);
+        updated |= ImGui::Checkbox("Color cascades", &(_engine._cascadedShadow->_colorCascades));
+        updated |= ImGui::Checkbox("Debug depth map", &(_engine._cascadedShadow->_debug));
+        if (_engine._cascadedShadow->_debug) {
+            updated |= ImGui::SliderInt("Cascade layer", &(_engine._cascadedShadow->_cascadeIdx), 0, CascadedShadow::COUNT - 1);
+        }
+
+        ImGui::SameLine();
+    }
+    ImGui::End();
 
     return updated;
 }

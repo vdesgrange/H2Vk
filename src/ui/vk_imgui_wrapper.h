@@ -43,4 +43,11 @@ namespace ImGui {
         if (updated) setter(current_item);
         return updated;
     }
+
+//    bool Checkbox(const char* label, const std::function<bool ()>& getter, const std::function<void (bool)>& setter) {
+//        bool current_item = getter();
+//        bool updated = ImGui::Checkbox(label, current_item);
+//        if (updated) setter(current_item);
+//        return updated;
+//    }
 }

@@ -149,7 +149,7 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
         glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
     };
 
-    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
+    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, uploadContext, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
     meshManager.upload_mesh(*cube);
 
     for (int face = 0; face < count; face++) {
@@ -185,7 +185,7 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
                 vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, converterPass->pipeline);
                 vkCmdPushConstants(commandBuffer._commandBuffer, converterPass->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), sizeof(glm::mat4), &viewProj);
                 vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, converterPass->pipelineLayout, 0,1, &descriptor, 0, nullptr);
-                cube->draw(commandBuffer._commandBuffer, converterPass->pipelineLayout, 0, true);
+                cube->draw(commandBuffer._commandBuffer, converterPass->pipelineLayout, sizeof(glm::mat4), 0, true);
             }
             vkCmdEndRenderPass(commandBuffer._commandBuffer);
         }
@@ -343,7 +343,7 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
             glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
     };
 
-    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
+    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, uploadContext, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
     meshManager.upload_mesh(*cube);
 
     // Command pool + command buffer for compute operations
@@ -382,7 +382,7 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
                                    sizeof(glm::mat4), sizeof(glm::mat4), &viewProj);
                 vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                         irradiancePass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
-                cube->draw(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, 0, true);
+                cube->draw(commandBuffer._commandBuffer, irradiancePass->pipelineLayout, sizeof(glm::mat4), 0, true);
             }
             vkCmdEndRenderPass(commandBuffer._commandBuffer);
         }
@@ -532,7 +532,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
             glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
     };
 
-    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
+    std::shared_ptr<Model> cube = ModelPOLY::create_cube(&device, uploadContext, {-1.0f, -1.0f, -1.0f},  {1.0f, 1.0f, 1.0f});
     meshManager.upload_mesh(*cube);
 
     for (int mipLevel = 0; mipLevel < PRE_FILTER_MIP_LEVEL; mipLevel++) {
@@ -615,7 +615,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
                     vkCmdPushConstants(commandBuffer._commandBuffer, prefilterPass->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,sizeof(glm::mat4), sizeof(glm::mat4), &viewProj);
                     vkCmdPushConstants(commandBuffer._commandBuffer, prefilterPass->pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 2 * sizeof(glm::mat4), sizeof(float), &roughness);
                     vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,prefilterPass->pipelineLayout, 0, 1, &descriptor, 0, nullptr);
-                    cube->draw(commandBuffer._commandBuffer, prefilterPass->pipelineLayout, 0, true);
+                    cube->draw(commandBuffer._commandBuffer, prefilterPass->pipelineLayout, sizeof(glm::mat4), 0, true);
                 }
                 vkCmdEndRenderPass(commandBuffer._commandBuffer);
             }

@@ -22,6 +22,7 @@ typedef enum UIConstants {
     VIEW_EDITOR = 3,
     LIGHT_EDITOR = 4,
     LOG_CONSOLE = 5,
+    SHADOW_EDITOR = 6,
 } UIConstants;
 
 struct Statistics final {
@@ -71,4 +72,5 @@ private:
     bool stats_viewer(const Statistics& statistics);
     bool skybox_editor();
     bool light_editor();
+    bool shadow_editor();
 };

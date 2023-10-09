@@ -23,3 +23,8 @@ glslc atmosphere/atmosphere.frag -o atmosphere/atmosphere.frag.spv
 glslc atmosphere/skyview.frag -o atmosphere/skyview.frag.spv
 glslc atmosphere/multiple_scattering.frag -o atmosphere/multiple_scattering.frag.spv
 glslc atmosphere/transmittance.comp -o atmosphere/transmittance.comp.spv
+glslc shadow_map/csm_offscreen.vert -o shadow_map/csm_offscreen.vert.spv
+glslc shadow_map/csm_offscreen.frag -o shadow_map/csm_offscreen.frag.spv
+glslc shadow_map/csm_debug_quad.vert -o shadow_map/csm_debug_quad.vert.spv
+glslc shadow_map/csm_debug_quad.frag -o shadow_map/csm_debug_quad.frag.spv
+glslc shadow_map/scene_debug.frag -o shadow_map/scene_debug.frag.spv

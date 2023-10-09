@@ -10,12 +10,16 @@
 #define GLFW_INCLUDE_VULKAN
 #endif
 
+#ifndef GLM_ENABLE_EXPERIMENTAL
+#define GLM_ENABLE_EXPERIMENTAL
+#endif
+
 #ifndef VMA_IMPLEMENTATION
 #define VMA_IMPLEMENTATION
 #endif
 
-#ifndef GLM_ENABLE_EXPERIMENTAL
-#define GLM_ENABLE_EXPERIMENTAL
+#ifndef VMA_DEBUG_LOG
+#define VMA_DEBUG_LOG
 #endif
 
 #include <GLFW/glfw3.h>
@@ -154,7 +158,7 @@ void VulkanEngine::init_default_renderpass() {
  * Images used for the framebuffer attachment must be created for every images in the swap chain (ie. color + depth).
  */
 void VulkanEngine::init_framebuffers() {
-    _frameBuffers.clear();
+    // _frameBuffers.clear(); // todo fix destructor
     _frameBuffers.reserve(_swapchain->_swapChainImages.size());
 
     for (int i = 0; i < _swapchain->_swapChainImages.size(); i++) {
@@ -207,6 +211,11 @@ void VulkanEngine::setup_environment_descriptors() {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         g_frames[i].environmentDescriptor = VkDescriptorSet();
 
+        VkDescriptorBufferInfo featuresBInfo{};
+        featuresBInfo.buffer = g_frames[i].enabledFeaturesBuffer._buffer;
+        featuresBInfo.offset = 0;
+        featuresBInfo.range = sizeof(GPUEnabledFeaturesData);
+
         VkDescriptorBufferInfo camBInfo{};
         camBInfo.buffer = g_frames[i].cameraBuffer._buffer;
         camBInfo.offset = 0;
@@ -216,18 +225,19 @@ void VulkanEngine::setup_environment_descriptors() {
         lightingBInfo.buffer = g_frames[i].lightingBuffer._buffer;
         lightingBInfo.range = sizeof(GPULightData);
 
-        VkDescriptorBufferInfo offscreenBInfo{};
-        offscreenBInfo.buffer = g_frames[i].offscreenBuffer._buffer;
-        offscreenBInfo.range = sizeof(GPUShadowData); // GPUDepthData
+       VkDescriptorBufferInfo offscreenBInfo{};
+       offscreenBInfo.buffer = g_frames[i].cascadedOffscreenBuffer._buffer;
+       offscreenBInfo.range = sizeof(CascadedShadow::GPUCascadedShadowData);
 
         DescriptorBuilder::begin(*_layoutCache, *_allocator)
-                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
-                .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-                .bind_buffer(offscreenBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 2)
-                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3) // 2
-                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4) // 3
-                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 5) // 4
-                .bind_image(_shadow->_offscreen_shadow._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  VK_SHADER_STAGE_FRAGMENT_BIT, 6)
+                .bind_buffer(featuresBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0)
+                .bind_buffer(camBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1)
+                .bind_buffer(lightingBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 2)
+                .bind_buffer(offscreenBInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 3)
+                .bind_image(_skybox->_environment._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4) // precomputed no need to be binded every frame
+                .bind_image(_skybox->_prefilter._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 5) // precomputed no need to be binded every frame
+                .bind_image(_skybox->_brdf._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 6) // precomputed no need to be binded every frame
+                .bind_image(_cascadedShadow->_depth._descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  VK_SHADER_STAGE_FRAGMENT_BIT, 7)
                 .layout(_descriptorSetLayouts.environment)
                 .build(g_frames[i].environmentDescriptor, _descriptorSetLayouts.environment, poolSizes);
 
@@ -239,18 +249,20 @@ void VulkanEngine::setup_environment_descriptors() {
  * @note Initialize descriptors used by skybox, scene, shadow. Create caching and allocation system.
  */
 void VulkanEngine::init_descriptors() {
-    _layoutCache = new DescriptorLayoutCache(*_device);
-    _allocator = new DescriptorAllocator(*_device);
+    _layoutCache = new DescriptorLayoutCache(*_device); // todo : make smart pointer
+    _allocator = new DescriptorAllocator(*_device); // todo : make smart pointer
 
+    VulkanEngine::allocate_buffers(*_device);
     Camera::allocate_buffers(*_device);
     LightingManager::allocate_buffers(*_device);
     Scene::allocate_buffers(*_device);
-    ShadowMapping::allocate_buffers(*_device);
+    CascadedShadow::allocate_buffers(*_device);
 
     _skybox->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.skybox);
     _scene->setup_transformation_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.matrices);
-    _shadow->prepare_depth_map(*_device, _uploadContext,*_lightingManager); // problem : fixed number of shadows. Implement ECS first.
-    _shadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.offscreen);
+//    _cascadedShadow->prepare_depth_map(*_device, _uploadContext, *_lightingManager); // todo : use class attributes
+    _cascadedShadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.cascadedOffscreen);
+
     this->setup_environment_descriptors();
 
     // === Clean up === // Why keep this here if buffered allocated in their respective related class?
@@ -259,7 +271,9 @@ void VulkanEngine::init_descriptors() {
             vmaDestroyBuffer(_device->_allocator, g_frames[i].cameraBuffer._buffer, g_frames[i].cameraBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].lightingBuffer._buffer, g_frames[i].lightingBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].objectBuffer._buffer, g_frames[i].objectBuffer._allocation);
-            vmaDestroyBuffer(_device->_allocator, g_frames[i].offscreenBuffer._buffer, g_frames[i].offscreenBuffer._allocation);
+            // vmaDestroyBuffer(_device->_allocator, g_frames[i].offscreenBuffer._buffer, g_frames[i].offscreenBuffer._allocation);
+            vmaDestroyBuffer(_device->_allocator, g_frames[i].cascadedOffscreenBuffer._buffer, g_frames[i].cascadedOffscreenBuffer._allocation);
+            vmaDestroyBuffer(_device->_allocator, g_frames[i].enabledFeaturesBuffer._buffer, g_frames[i].enabledFeaturesBuffer._allocation);
         }
 
         delete _layoutCache;
@@ -270,7 +284,7 @@ void VulkanEngine::init_descriptors() {
 void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
-    _shadow->setup_offscreen_pipeline(*_device, *_materialManager, {_descriptorSetLayouts.offscreen, _descriptorSetLayouts.matrices}, *_renderPass);
+    // _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
 
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
@@ -305,7 +319,7 @@ void VulkanEngine::init_scene() {
     _skybox->_type = Skybox::Type::box;
     _skybox->load();
 
-    _shadow = std::make_unique<ShadowMapping>(*_device);
+   _cascadedShadow = std::make_unique<CascadedShadow>(*_device, _uploadContext);
 
     _atmosphere = std::make_unique<Atmosphere>(*_device, *_materialManager, *_lightingManager, _uploadContext);
 
@@ -340,7 +354,7 @@ void VulkanEngine::recreate_swap_chain() {
 
     init_swapchain();
     init_default_renderpass();
-    init_framebuffers();
+    init_framebuffers(); // framebuffers depend on renderpass for device for creation and destruction
     _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass); // todo: messy, rework
     _materialManager->_pipelineBuilder = _pipelineBuilder.get();
 
@@ -392,7 +406,7 @@ void VulkanEngine::ui_overlay() {
  * @note handle camera, lighting, shadow uniform buffer data.
  */
 void VulkanEngine::update_uniform_buffers() {
-    FrameData frame =  get_current_frame();
+    FrameData& frame =  get_current_frame();
     uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
 
     // === Camera & Objects & Environment ===
@@ -407,19 +421,29 @@ void VulkanEngine::update_uniform_buffers() {
     // Light : write scene data into lighting buffer
     GPULightData lightingData = _lightingManager->gpu_format();
 
-    char *data2;
-    vmaMapMemory(_device->_allocator, frame.lightingBuffer._allocation,   (void **) &data2);
-    data2 += helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData)) * frameIndex;
+    void *data2;
+    vmaMapMemory(_device->_allocator, frame.lightingBuffer._allocation, &data2); //(void **) 
+    // data2 += helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData)) * frameIndex; // why by frame?
     memcpy(data2, &lightingData, sizeof(GPULightData));
     vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
 
-    // Shadow
-    GPUShadowData offscreenData = _shadow->gpu_format(_lightingManager.get(), _camera.get());
+    // Cascaded shadow
+    CascadedShadow::GPUCascadedShadowData cascadedOffscreenData = _cascadedShadow->gpu_format();
+    void *data4;
+    vmaMapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation, &data4);
+    memcpy(data4, &cascadedOffscreenData, sizeof(CascadedShadow::GPUCascadedShadowData));
+    vmaUnmapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation);
 
-    void *data3;
-    vmaMapMemory(_device->_allocator, frame.offscreenBuffer._allocation, &data3);
-    memcpy(data3, &offscreenData, sizeof(GPUShadowData));
-    vmaUnmapMemory(_device->_allocator, frame.offscreenBuffer._allocation);
+    // === Enabled Features ===
+    GPUEnabledFeaturesData featuresData{};
+    featuresData.shadowMapping = _enabledFeatures.shadowMapping;
+    featuresData.atmosphere = _enabledFeatures.atmosphere;
+    featuresData.skybox = _enabledFeatures.skybox;
+
+    void *data5;
+    vmaMapMemory(_device->_allocator, frame.enabledFeaturesBuffer._allocation, &data5);
+    memcpy(data5, &featuresData, sizeof(GPUEnabledFeaturesData));
+    vmaUnmapMemory(_device->_allocator, frame.enabledFeaturesBuffer._allocation);
 }
 
 /**
@@ -459,9 +483,8 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
         if (object.material != lastMaterial) { // Same material = (shaders/pipeline/descriptors) for multiple objects part of the same scene (e.g. monkey + triangles)
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
             lastMaterial = object.material;
-            uint32_t lightOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex;
-            uint32_t depthOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPUShadowData)) * frameIndex; // GPUDepthData
-            std::vector<uint32_t> dynOffsets = {lightOffset, 0};
+            // uint32_t lightOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex;
+            std::vector<uint32_t> dynOffsets = {0, 0};
 
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 2, dynOffsets.data());
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
@@ -469,7 +492,7 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
 
         if (object.model) {
             bool bind = object.model.get() != lastModel.get(); // degueulasse sortir de la boucle de rendu
-            object.model->draw(commandBuffer, object.material->pipelineLayout, i, bind); // object.model != lastModel
+            object.model->draw(commandBuffer, object.material->pipelineLayout, sizeof(glm::mat4), i, bind); // object.model != lastModel
             lastModel = bind ? object.model : lastModel;
         }
     }
@@ -480,16 +503,24 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
  * @param frame
  * @param imageIndex
  */
-void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
+void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
     // Collection of attachments, subpasses, and dependencies between the subpasses
     VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     VK_CHECK(vkBeginCommandBuffer(frame._commandBuffer->_commandBuffer, &cmdBeginInfo));
 
     // === Depth map render pass ===
-    _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
+    // _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
+
+    // === Cascaded depth map render pass ===
+    if (_enabledFeatures.shadowMapping) {
+//        _cascadedShadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
+        _cascadedShadow->compute_resources(frame, _scene->_renderables);
+    }
 
     // === Atmosphere skyview computing (WIP) ===
-    // _atmosphere->compute_resources(_frameNumber % FRAME_OVERLAP);
+    if (_enabledFeatures.atmosphere) {
+        _atmosphere->compute_resources(_frameNumber % FRAME_OVERLAP);
+    }
 
     // === Scene render pass ===
     {
@@ -511,19 +542,30 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
         {
             // Debug shadow map (WIP)
-            // this->_shadow->run_debug(frame);
+            if (_enabledFeatures.shadowMapping && this->_cascadedShadow->_debug) {
+                this->_cascadedShadow->debug_depth(frame);
+            } else {
+                // === Skybox ===
+                if (_enabledFeatures.skybox) {
+                    this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
+                }
 
-            // === Skybox ===
-            this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
+                // === Atmosphere (WIP) ===
+                if (_enabledFeatures.atmosphere) {
+                    this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &get_current_frame().atmosphereDescriptor);
+                }
 
-            // === Atmosphere (WIP) ===
-            // this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &get_current_frame().atmosphereDescriptor);
-
-            // === Meshes ===
-            this->render_objects(frame._commandBuffer->_commandBuffer);
+                // === Meshes ===
+                if (_enabledFeatures.meshes) {
+                    this->render_objects(frame._commandBuffer->_commandBuffer);
+                }
+            }
 
             // === UI ===
-            this->ui_overlay();
+            if (_enabledFeatures.ui) {
+                this->ui_overlay();
+            }
+
         }
         vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);
 
@@ -533,27 +575,53 @@ void VulkanEngine::build_command_buffers(FrameData frame, int imageIndex) {
 }
 
 /**
+ * @brief Compute the next frame resources
+ */
+void VulkanEngine::compute() {
+    // === Cascaded shadow mapping ===
+    if (_enabledFeatures.shadowMapping) {
+        _cascadedShadow->compute_cascades(*_camera, *_lightingManager);
+    }
+
+    // === Atmosphere skyview computing (WIP) ===
+    if (_enabledFeatures.atmosphere) {
+        _atmosphere->compute_resources(_frameNumber % FRAME_OVERLAP);
+    }
+}
+ 
+/**
  * Perform computation for the next frame to be rendered
  * @brief Render the next frame
  * @param imageIndex current frame index
  */
 void VulkanEngine::render(int imageIndex) {
 
-    // === Scene ===
+    // === Update scene ===
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
-        _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
+        unsigned char pixels[] = {0, 0, 0, 0};
+        Texture emptyTexture{};
+        emptyTexture.load_image_from_buffer(*_device, _uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
+
+        _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures, emptyTexture);
         _scene->load_scene(_ui->get_settings().scene_index, *_camera);
+        _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+
         this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
+        emptyTexture.destroy(*_device);
     }
 
-    // === Update required uniform buffers
+    // === Update resources ===
+    compute();
+
+    // === Update uniform buffers ===
     update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
 
-    // === Command Buffer ===
+    // === Render scene ===
     VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, 0));
+
     this->build_command_buffers(get_current_frame(), imageIndex);
 
-    // --- Submit queue
+    // === Submit queue
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     VkSubmitInfo submitInfo{};
@@ -647,7 +715,7 @@ void VulkanEngine::cleanup() {
         _scene->_renderables.clear();
         _atmosphere.reset();
         _skybox.reset();
-        _shadow.reset();
+        _cascadedShadow.reset();
         _ui.reset();
         _meshManager.reset();
         _materialManager.reset();

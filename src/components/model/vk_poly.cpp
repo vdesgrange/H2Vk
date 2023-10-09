@@ -12,8 +12,9 @@
 #include <array>
 
 
-std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, const glm::vec3& p0, const glm::vec3& p1, std::optional<PBRProperties> props) {
+std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, UploadContext& ctx, const glm::vec3& p0, const glm::vec3& p1, std::optional<Materials> props) {
     std::shared_ptr<Model> model = std::make_shared<ModelPOLY>(device);
+    model->load_empty(*device, ctx);
     model->_name = "Cube";
     Node *node = new Node{};
     node->matrix = glm::mat4(1.f);
@@ -80,10 +81,10 @@ std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, const glm::vec3& p
     if (props) {
         primitive.materialIndex = 0;
 
-        Materials material {};
-        material.properties = props.value();
-        material.pbr = true;
-        model->_materials.push_back(material);
+//        Materials material = props.value();
+//        material.properties = props.value();
+//        material.pbr = true;
+        model->_materials.push_back(props.value());
     }
 
     node->mesh.primitives.push_back(primitive);
@@ -92,8 +93,9 @@ std::shared_ptr<Model> ModelPOLY::create_cube(Device* device, const glm::vec3& p
     return model;
 }
 
-std::shared_ptr<Model> ModelPOLY::create_uv_sphere(Device* device, const glm::vec3& center, float radius, uint32_t stacks, uint32_t sectors, glm::vec3 color, std::optional<PBRProperties> props) {
+std::shared_ptr<Model> ModelPOLY::create_uv_sphere(Device* device, UploadContext& ctx, const glm::vec3& center, float radius, uint32_t stacks, uint32_t sectors, glm::vec3 color, std::optional<Materials> props) {
     std::shared_ptr<Model> model = std::make_shared<ModelPOLY>(device);
+    model->load_empty(*device, ctx);
     model->_name = "UV_sphere";
     float x, y, z, xy = 0;
     Node* node = new Node{};
@@ -146,11 +148,7 @@ std::shared_ptr<Model> ModelPOLY::create_uv_sphere(Device* device, const glm::ve
 
     if (props) {
         primitive.materialIndex = 0;
-
-        Materials material {};
-        material.properties = props.value();
-        material.pbr = true;
-        model->_materials.push_back(material);
+        model->_materials.push_back(props.value());
     }
 
     node->mesh.primitives.push_back(primitive);
@@ -159,8 +157,9 @@ std::shared_ptr<Model> ModelPOLY::create_uv_sphere(Device* device, const glm::ve
     return model;
 }
 
-std::shared_ptr<Model> ModelPOLY::create_triangle(Device* device, glm::vec3 color, std::optional<PBRProperties> props) {
+std::shared_ptr<Model> ModelPOLY::create_triangle(Device* device, UploadContext& ctx, glm::vec3 color, std::optional<Materials> props) {
     std::shared_ptr<Model> model = std::make_shared<ModelPOLY>(device);
+    model->load_empty(*device, ctx);
     model->_name = "Triangle";
 
     Node* node = new Node{};
@@ -186,10 +185,10 @@ std::shared_ptr<Model> ModelPOLY::create_triangle(Device* device, glm::vec3 colo
     if (props) {
         primitive.materialIndex = 0;
 
-        Materials material {};
-        material.properties = props.value();
-        material.pbr = true;
-        model->_materials.push_back(material);
+//        Materials material = props.value();
+//        material.properties = props.value();
+//        material.pbr = true;
+        model->_materials.push_back(props.value());
     }
 
     node->mesh.primitives.push_back(primitive);
@@ -198,8 +197,9 @@ std::shared_ptr<Model> ModelPOLY::create_triangle(Device* device, glm::vec3 colo
     return model;
 }
 
-std::shared_ptr<Model> ModelPOLY::create_plane(Device* device, const glm::vec3& p0, const glm::vec3& p1, glm::vec3 color, std::optional<PBRProperties> props) {
+std::shared_ptr<Model> ModelPOLY::create_plane(Device* device, UploadContext& ctx, const glm::vec3& p0, const glm::vec3& p1, glm::vec3 color, std::optional<Materials> props) {
     std::shared_ptr<Model> model = std::make_shared<ModelPOLY>(device);
+    model->load_empty(*device, ctx);
     model->_name = "Plane";
 
     Node *node = new Node{};
@@ -236,11 +236,7 @@ std::shared_ptr<Model> ModelPOLY::create_plane(Device* device, const glm::vec3& 
 
     if (props) {
         primitive.materialIndex = 0;
-
-        Materials material {};
-        material.properties = props.value();
-        material.pbr = true;
-        model->_materials.push_back(material);
+        model->_materials.push_back(props.value());
     }
 
     node->mesh.primitives.push_back(primitive);

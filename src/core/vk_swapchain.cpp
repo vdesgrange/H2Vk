@@ -27,6 +27,26 @@ SwapChain::SwapChain(Window& window, const Device& device) : _device(device) {
     VkExtent2D extent2d = choose_swap_extent(window, capabilities);
     window._windowExtent = extent2d;
 
+    // uint32_t formatCount;
+	// VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device._physicalDevice, device._surface, &formatCount, NULL));
+
+	// std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
+	// VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device._physicalDevice, device._surface, &formatCount, surfaceFormats.data()));
+    
+    // VkSurfaceFormatKHR formatKHR = surfaceFormats[0];
+	// std::vector<VkFormat> preferredImageFormats = { 
+	// 	VK_FORMAT_B8G8R8A8_UNORM,
+	// 	VK_FORMAT_R8G8B8A8_UNORM, 
+	// 	VK_FORMAT_A8B8G8R8_UNORM_PACK32 
+	// };
+
+	// for (auto& availableFormat : surfaceFormats) {
+	// 	if (std::find(preferredImageFormats.begin(), preferredImageFormats.end(), availableFormat.format) != preferredImageFormats.end()) {
+	// 		formatKHR = availableFormat;
+	// 		break;
+	// 	}
+	// }
+
     VkSurfaceFormatKHR formatKHR{};
     formatKHR.format = VK_FORMAT_B8G8R8A8_SRGB; // VK_FORMAT_B8G8R8A8_SRGB standard RGB.
     formatKHR.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR; // VK_COLOR_SPACE_SRGB_NONLINEAR_KHR

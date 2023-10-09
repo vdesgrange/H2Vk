@@ -49,7 +49,7 @@
 #include "scenes/vk_scene_listing.h"
 #include "scenes/vk_scene.h"
 
-#include "techniques/vk_shadow_map.h"
+#include "techniques/vk_cascaded_shadow_map.h"
 #include "techniques/vk_atmosphere.h"
 
 class Window;
@@ -101,14 +101,14 @@ public:
     std::unique_ptr<Scene> _scene;
     std::unique_ptr<UInterface> _ui;
     std::unique_ptr<Skybox> _skybox;
-    std::unique_ptr<ShadowMapping> _shadow;
+    std::unique_ptr<CascadedShadow> _cascadedShadow;
     std::unique_ptr<Atmosphere> _atmosphere;
 
     std::unique_ptr<SystemManager> _systemManager;
     std::shared_ptr<MaterialManager> _materialManager;
     std::shared_ptr<MeshManager> _meshManager;
     std::shared_ptr<LightingManager> _lightingManager;
-    std::unique_ptr<Camera> _camera; // todo - camera manager for multi-viewport
+    std::unique_ptr<Camera> _camera;
 
     std::vector<FrameBuffer> _frameBuffers;
     std::vector<RenderObject> _renderables;
@@ -117,15 +117,24 @@ public:
     DescriptorAllocator* _allocator;
 
     struct {
-        VkDescriptorSetLayout skybox;
-        VkDescriptorSetLayout offscreen;
-        VkDescriptorSetLayout environment;
-        VkDescriptorSetLayout matrices;
-        VkDescriptorSetLayout textures;
-        VkDescriptorSetLayout gui;
-        VkDescriptorSetLayout debug;
-        VkDescriptorSetLayout atmosphere;
+        VkDescriptorSetLayout skybox = VK_NULL_HANDLE;
+        VkDescriptorSetLayout offscreen = VK_NULL_HANDLE;
+        VkDescriptorSetLayout cascadedOffscreen = VK_NULL_HANDLE;
+        VkDescriptorSetLayout environment = VK_NULL_HANDLE;
+        VkDescriptorSetLayout matrices = VK_NULL_HANDLE;
+        VkDescriptorSetLayout textures = VK_NULL_HANDLE;
+        VkDescriptorSetLayout gui = VK_NULL_HANDLE;
+        VkDescriptorSetLayout debug = VK_NULL_HANDLE;
+        VkDescriptorSetLayout atmosphere = VK_NULL_HANDLE;
     } _descriptorSetLayouts;
+
+    struct {
+        bool shadowMapping = false;
+        bool skybox = false;
+        bool atmosphere = false;
+        bool meshes = true;
+        bool ui = true;
+    } _enabledFeatures;
 
     DeletionQueue _mainDeletionQueue;
 
@@ -157,9 +166,17 @@ private:
     void update_uniform_buffers();
     void update_buffer_objects(RenderObject *first, int count);
     void render_objects(VkCommandBuffer commandBuffer);
-    void build_command_buffers(FrameData frame, int imageIndex);
+    void build_command_buffers(FrameData& frame, int imageIndex);
+    void compute();
     void render(int imageIndex);
     void draw();
     Statistics monitoring();
     FrameData& get_current_frame();
+
+    void allocate_buffers(Device& device) {
+        for (int i = 0; i < FRAME_OVERLAP; i++) {
+            const size_t depthBufferSize =  helper::pad_uniform_buffer_size(device, sizeof(GPUEnabledFeaturesData));
+            g_frames[i].enabledFeaturesBuffer = Buffer::create_buffer(device, depthBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        }
+    }
 };
