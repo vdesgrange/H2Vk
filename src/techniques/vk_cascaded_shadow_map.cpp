@@ -155,6 +155,9 @@ void CascadedShadow::setup_pipelines(Device& device, MaterialManager &materialMa
             return;
         }
     }
+    
+    _depthEffect.reset();
+    _debugEffect.reset();
 
     GraphicPipeline pipelineBuilder = GraphicPipeline(device, _depthPass);
     pipelineBuilder._dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
