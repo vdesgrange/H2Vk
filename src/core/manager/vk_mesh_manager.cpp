@@ -31,23 +31,22 @@ void MeshManager::upload_mesh(Model& mesh) {
     mesh._indexBuffer.count = static_cast<uint32_t>(mesh._indexesBuffer.size());
 
     AllocatedBuffer vertexStaging = Buffer::create_buffer(*_device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    void* data;
-    vmaMapMemory(_device->_allocator, vertexStaging._allocation, &data);
-    memcpy(data, mesh._verticesBuffer.data(), static_cast<size_t>(vertexBufferSize)); // number of vertex
-    vmaUnmapMemory(_device->_allocator, vertexStaging._allocation);
+    vertexStaging.map();
+    vertexStaging.copyFrom(mesh._verticesBuffer.data(), static_cast<size_t>(vertexBufferSize));
+    vertexStaging.unmap();
 
-    mesh._vertexBuffer = Buffer::create_buffer(*_device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-
+    // mesh._vertexBuffer = Buffer::create_buffer(*_device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+    Buffer::create_buffer(*_device, &mesh._vertexBuffer, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
     AllocatedBuffer indexStaging = Buffer::create_buffer(*_device, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    void* data2;
-    vmaMapMemory(_device->_allocator, indexStaging._allocation, &data2);
-    memcpy(data2, mesh._indexesBuffer.data(), static_cast<size_t>(indexBufferSize));
-    vmaUnmapMemory(_device->_allocator, indexStaging._allocation);
+    indexStaging.map();
+    indexStaging.copyFrom(mesh._indexesBuffer.data(), static_cast<size_t>(indexBufferSize));
+    indexStaging.unmap();
 
-    mesh._indexBuffer.allocation = Buffer::create_buffer(*_device, indexBufferSize,   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    // mesh._indexBuffer.allocation = Buffer::create_buffer(*_device, indexBufferSize,   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    Buffer::create_buffer(*_device, &mesh._indexBuffer.allocation, indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
-    CommandBuffer::immediate_submit(*_device, *_uploadContext, [&](VkCommandBuffer cmd) {
+    CommandBuffer::immediate_submit(*_device, *_uploadContext, [&](VkCommandBuffer cmd) {      
         VkBufferCopy copy;
         copy.dstOffset = 0;
         copy.srcOffset = 0;

@@ -260,7 +260,6 @@ void VulkanEngine::init_descriptors() {
 
     _skybox->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.skybox);
     _scene->setup_transformation_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.matrices);
-//    _cascadedShadow->prepare_depth_map(*_device, _uploadContext, *_lightingManager); // todo : use class attributes
     _cascadedShadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.cascadedOffscreen);
 
     this->setup_environment_descriptors();
@@ -271,7 +270,6 @@ void VulkanEngine::init_descriptors() {
             vmaDestroyBuffer(_device->_allocator, g_frames[i].cameraBuffer._buffer, g_frames[i].cameraBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].lightingBuffer._buffer, g_frames[i].lightingBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].objectBuffer._buffer, g_frames[i].objectBuffer._allocation);
-            // vmaDestroyBuffer(_device->_allocator, g_frames[i].offscreenBuffer._buffer, g_frames[i].offscreenBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].cascadedOffscreenBuffer._buffer, g_frames[i].cascadedOffscreenBuffer._allocation);
             vmaDestroyBuffer(_device->_allocator, g_frames[i].enabledFeaturesBuffer._buffer, g_frames[i].enabledFeaturesBuffer._allocation);
         }
@@ -284,8 +282,6 @@ void VulkanEngine::init_descriptors() {
 void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
-    // _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
-
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
 }
@@ -410,29 +406,23 @@ void VulkanEngine::update_uniform_buffers() {
     uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
 
     // === Camera & Objects & Environment ===
-    GPUCameraData camData = _camera->gpu_format();
-
     // Camera : write into the buffer by copying the render matrices from camera object into it
-    void *data;
-    vmaMapMemory(_device->_allocator, frame.cameraBuffer._allocation, &data);
-    memcpy(data, &camData, sizeof(GPUCameraData));
-    vmaUnmapMemory(_device->_allocator, frame.cameraBuffer._allocation);
+    GPUCameraData camData = _camera->gpu_format();
+    frame.cameraBuffer.map();
+    frame.cameraBuffer.copyFrom(&camData, sizeof(GPUCameraData));
+    frame.cameraBuffer.unmap();
 
     // Light : write scene data into lighting buffer
     GPULightData lightingData = _lightingManager->gpu_format();
-
-    void *data2;
-    vmaMapMemory(_device->_allocator, frame.lightingBuffer._allocation, &data2); //(void **) 
-    // data2 += helper::pad_uniform_buffer_size(*_device, sizeof(GPULightData)) * frameIndex; // why by frame?
-    memcpy(data2, &lightingData, sizeof(GPULightData));
-    vmaUnmapMemory(_device->_allocator, frame.lightingBuffer._allocation);
+    frame.lightingBuffer.map();
+    frame.lightingBuffer.copyFrom(&lightingData, sizeof(GPULightData));
+    frame.lightingBuffer.unmap();
 
     // Cascaded shadow
     CascadedShadow::GPUCascadedShadowData cascadedOffscreenData = _cascadedShadow->gpu_format();
-    void *data4;
-    vmaMapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation, &data4);
-    memcpy(data4, &cascadedOffscreenData, sizeof(CascadedShadow::GPUCascadedShadowData));
-    vmaUnmapMemory(_device->_allocator, frame.cascadedOffscreenBuffer._allocation);
+    frame.cascadedOffscreenBuffer.map();
+    frame.cascadedOffscreenBuffer.copyFrom(&cascadedOffscreenData, sizeof(CascadedShadow::GPUCascadedShadowData));
+    frame.cascadedOffscreenBuffer.unmap();
 
     // === Enabled Features ===
     GPUEnabledFeaturesData featuresData{};
@@ -440,10 +430,9 @@ void VulkanEngine::update_uniform_buffers() {
     featuresData.atmosphere = _enabledFeatures.atmosphere;
     featuresData.skybox = _enabledFeatures.skybox;
 
-    void *data5;
-    vmaMapMemory(_device->_allocator, frame.enabledFeaturesBuffer._allocation, &data5);
-    memcpy(data5, &featuresData, sizeof(GPUEnabledFeaturesData));
-    vmaUnmapMemory(_device->_allocator, frame.enabledFeaturesBuffer._allocation);
+    frame.enabledFeaturesBuffer.map();
+    frame.enabledFeaturesBuffer.copyFrom(&featuresData, sizeof(GPUEnabledFeaturesData));
+    frame.enabledFeaturesBuffer.unmap();
 }
 
 /**
@@ -456,14 +445,13 @@ void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
     // Object not moving : call only when change scene
     for (uint32_t i = 0; i < FRAME_OVERLAP; i++) {
         FrameData frame = g_frames[i]; // get_current_frame(); // if object moves, call each frame.
-        void* objectData;
-        vmaMapMemory(_device->_allocator, frame.objectBuffer._allocation, &objectData);
-        GPUObjectData* objectSSBO = (GPUObjectData*)objectData;
+        frame.objectBuffer.map();
+        GPUObjectData* objectSSBO = (GPUObjectData*)frame.objectBuffer._data;
         for (int j = 0; j < count; j++) {
             RenderObject& object = first[j];
             objectSSBO[j].model = object.transformMatrix;
         }
-        vmaUnmapMemory(_device->_allocator, frame.objectBuffer._allocation);
+        frame.objectBuffer.unmap();
     }
 }
 

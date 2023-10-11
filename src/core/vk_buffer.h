@@ -9,15 +9,29 @@
 #pragma once
 
 #include "core/utilities/vk_resources.h"
+#include <algorithm>
 
 class Device;
 
 /** @brief Allocated buffer */
 struct AllocatedBuffer {
-    /** @brief Represent linear arrays of data, used by binding them to a graphics or compute pipeline  */
-    VkBuffer _buffer;
+    /** @brief Principal memory allocator. One per device */
+    VmaAllocator _allocator = nullptr;
     /** @brief  Single memory allocation. Map/un-map to write data */
-    VmaAllocation _allocation;
+    VmaAllocation _allocation = nullptr;
+    /** @brief Represent linear arrays of data, used by binding them to a graphics or compute pipeline  */
+    VkBuffer _buffer = VK_NULL_HANDLE;
+    /** memory address */
+    void* _data;
+
+    ~AllocatedBuffer() {
+        // destroy();
+    }
+
+    VkResult map();
+    void unmap();
+    void copyFrom(void* source, size_t size);
+    void destroy();
 };
 
 /**
@@ -28,4 +42,5 @@ struct AllocatedBuffer {
 class Buffer final {
 public:
     static AllocatedBuffer create_buffer(const Device& device, size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+    static void create_buffer(const Device& device, AllocatedBuffer* buffer, size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 };

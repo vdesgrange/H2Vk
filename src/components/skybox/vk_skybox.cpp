@@ -104,11 +104,10 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture, VkFormat fo
     VkDeviceSize imageSize = texWidth * texHeight * 4;
     // VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // VK_FORMAT_R8G8B8A8_UNORM
     AllocatedBuffer buffer = Buffer::create_buffer(_device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    buffer.map();
+    buffer.copyFrom( pixel_ptr, static_cast<size_t>(imageSize));
+    buffer.unmap();
 
-    void* data;
-    vmaMapMemory(_device._allocator, buffer._allocation, &data);
-    memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
-    vmaUnmapMemory(_device._allocator, buffer._allocation);
     stbi_image_free(pixels);
 
     VkExtent3D imageExtent;

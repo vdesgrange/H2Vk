@@ -59,11 +59,9 @@ bool Texture::load_image_from_file(const Device& device, const UploadContext& ct
     VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
     AllocatedBuffer buffer = Buffer::create_buffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
-    void* data;
-    vmaMapMemory(device._allocator, buffer._allocation, &data);
-    memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
-    vmaUnmapMemory(device._allocator, buffer._allocation);
+    buffer.map();
+    buffer.copyFrom(pixel_ptr, static_cast<size_t>(imageSize));
+    buffer.unmap();
     stbi_image_free(pixels);
 
     VkExtent3D imageExtent;
@@ -149,11 +147,9 @@ bool Texture::load_image_from_file(const Device& device, const UploadContext& ct
 bool Texture::load_image_from_buffer(const Device& device, const UploadContext& ctx, void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
 
     AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
-    void* data;
-    vmaMapMemory(device._allocator, stagingBuffer._allocation, &data);
-    memcpy(data, buffer, static_cast<size_t>(bufferSize));
-    vmaUnmapMemory(device._allocator, stagingBuffer._allocation);
+    stagingBuffer.map();
+    stagingBuffer.copyFrom(buffer, static_cast<size_t>(bufferSize));
+    stagingBuffer.unmap();
 
     VkExtent3D imageExtent;
     imageExtent.width = static_cast<uint32_t>(texWidth);
@@ -239,11 +235,9 @@ bool Texture::load_image_from_buffer(const Device& device, const UploadContext& 
 bool Texture::load_image_from_buffer(const Device& device, const UploadContext& ctx, void* buffer, VkDeviceSize bufferSize, Sampler& sampler, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
 
     AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
-    void* data;
-    vmaMapMemory(device._allocator, stagingBuffer._allocation, &data);
-    memcpy(data, buffer, static_cast<size_t>(bufferSize));
-    vmaUnmapMemory(device._allocator, stagingBuffer._allocation);
+    stagingBuffer.map();
+    stagingBuffer.copyFrom(buffer, static_cast<size_t>(bufferSize));
+    stagingBuffer.unmap();
 
     VkExtent3D imageExtent;
     imageExtent.width = static_cast<uint32_t>(texWidth);
