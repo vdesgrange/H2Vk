@@ -30,7 +30,9 @@ void MeshManager::upload_mesh(Model& mesh) {
     size_t indexBufferSize = mesh._indexesBuffer.size() * sizeof(uint32_t);
     mesh._indexBuffer.count = static_cast<uint32_t>(mesh._indexesBuffer.size());
 
-    AllocatedBuffer vertexStaging = Buffer::create_buffer(*_device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    // AllocatedBuffer vertexStaging = Buffer::create_buffer(*_device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    AllocatedBuffer vertexStaging;
+    Buffer::create_buffer(*_device, &vertexStaging, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     vertexStaging.map();
     vertexStaging.copyFrom(mesh._verticesBuffer.data(), static_cast<size_t>(vertexBufferSize));
     vertexStaging.unmap();
@@ -38,7 +40,9 @@ void MeshManager::upload_mesh(Model& mesh) {
     // mesh._vertexBuffer = Buffer::create_buffer(*_device, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
     Buffer::create_buffer(*_device, &mesh._vertexBuffer, vertexBufferSize,  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
-    AllocatedBuffer indexStaging = Buffer::create_buffer(*_device, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    // AllocatedBuffer indexStaging = Buffer::create_buffer(*_device, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    AllocatedBuffer indexStaging;
+    Buffer::create_buffer(*_device, &indexStaging, indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     indexStaging.map();
     indexStaging.copyFrom(mesh._indexesBuffer.data(), static_cast<size_t>(indexBufferSize));
     indexStaging.unmap();

@@ -22,7 +22,8 @@ void Scene::load_scene(int sceneIndex, Camera& camera) {
 
 void Scene::allocate_buffers(Device& device) {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        g_frames[i].objectBuffer = Buffer::create_buffer(device, sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        // g_frames[i].objectBuffer = Buffer::create_buffer(device, sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        Buffer::create_buffer(device, &g_frames[i].objectBuffer, sizeof(GPUObjectData) * MAX_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     }
 }
 

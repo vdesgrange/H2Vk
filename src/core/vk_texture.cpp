@@ -58,7 +58,9 @@ bool Texture::load_image_from_file(const Device& device, const UploadContext& ct
     VkDeviceSize imageSize = texWidth * texHeight * 4;
     VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
-    AllocatedBuffer buffer = Buffer::create_buffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    // AllocatedBuffer buffer = Buffer::create_buffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    AllocatedBuffer buffer;
+    Buffer::create_buffer(device, &buffer, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     buffer.map();
     buffer.copyFrom(pixel_ptr, static_cast<size_t>(imageSize));
     buffer.unmap();
@@ -146,7 +148,9 @@ bool Texture::load_image_from_file(const Device& device, const UploadContext& ct
  */
 bool Texture::load_image_from_buffer(const Device& device, const UploadContext& ctx, void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
 
-    AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    // AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    AllocatedBuffer stagingBuffer;
+    Buffer::create_buffer(device, &stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     stagingBuffer.map();
     stagingBuffer.copyFrom(buffer, static_cast<size_t>(bufferSize));
     stagingBuffer.unmap();
@@ -234,7 +238,9 @@ bool Texture::load_image_from_buffer(const Device& device, const UploadContext& 
  */
 bool Texture::load_image_from_buffer(const Device& device, const UploadContext& ctx, void* buffer, VkDeviceSize bufferSize, Sampler& sampler, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
 
-    AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    // AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    AllocatedBuffer stagingBuffer;
+    Buffer::create_buffer(device, &stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     stagingBuffer.map();
     stagingBuffer.copyFrom(buffer, static_cast<size_t>(bufferSize));
     stagingBuffer.unmap();

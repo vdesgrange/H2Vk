@@ -117,7 +117,8 @@ void CascadedShadow::prepare_resources(Device& device) {
 void CascadedShadow::allocate_buffers(Device &device) {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         const size_t size = helper::pad_uniform_buffer_size(device, sizeof(GPUCascadedShadowData));
-        g_frames[i].cascadedOffscreenBuffer = Buffer::create_buffer(device, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        // g_frames[i].cascadedOffscreenBuffer = Buffer::create_buffer(device, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        Buffer::create_buffer(device, &g_frames[i].cascadedOffscreenBuffer, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     }
 }
 
