@@ -58,7 +58,6 @@ bool Texture::load_image_from_file(const Device& device, const UploadContext& ct
     VkDeviceSize imageSize = texWidth * texHeight * 4;
     VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
-    // AllocatedBuffer buffer = Buffer::create_buffer(device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     AllocatedBuffer buffer;
     Buffer::create_buffer(device, &buffer, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     buffer.map();
@@ -129,9 +128,7 @@ bool Texture::load_image_from_file(const Device& device, const UploadContext& ct
         vkCreateImageView(device._logicalDevice, &imageinfo, nullptr, &this->_imageView);
     });
 
-    // vmaDestroyBuffer(device._allocator, buffer._buffer, buffer._allocation);
-    std::cout << "Texture loaded successfully " << file << std::endl;
-
+    // buffer.destroy();
     return true;
 }
 
@@ -148,7 +145,6 @@ bool Texture::load_image_from_file(const Device& device, const UploadContext& ct
  */
 bool Texture::load_image_from_buffer(const Device& device, const UploadContext& ctx, void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
 
-    // AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     AllocatedBuffer stagingBuffer;
     Buffer::create_buffer(device, &stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     stagingBuffer.map();
@@ -219,8 +215,7 @@ bool Texture::load_image_from_buffer(const Device& device, const UploadContext& 
         this->updateDescriptor(); // update descriptor with sample, imageView, imageLayout
     });
 
-    // vmaDestroyBuffer(device._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
-    std::cout << "Texture loaded successfully " << std::endl;
+    // stagingBuffer.destroy();
 
     return true;
 }
@@ -238,7 +233,6 @@ bool Texture::load_image_from_buffer(const Device& device, const UploadContext& 
  */
 bool Texture::load_image_from_buffer(const Device& device, const UploadContext& ctx, void* buffer, VkDeviceSize bufferSize, Sampler& sampler, VkFormat format, uint32_t texWidth, uint32_t texHeight) {
 
-    // AllocatedBuffer stagingBuffer = Buffer::create_buffer(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     AllocatedBuffer stagingBuffer;
     Buffer::create_buffer(device, &stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     stagingBuffer.map();
@@ -316,8 +310,7 @@ bool Texture::load_image_from_buffer(const Device& device, const UploadContext& 
 
     });
 
-    // vmaDestroyBuffer(device._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
-    std::cout << "Texture with sampler loaded successfully " << std::endl;
+    // stagingBuffer.destroy();
 
     return true;
 }

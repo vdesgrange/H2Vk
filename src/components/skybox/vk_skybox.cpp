@@ -102,8 +102,6 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture, VkFormat fo
 
     void* pixel_ptr = pixels;
     VkDeviceSize imageSize = texWidth * texHeight * 4;
-    // VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // VK_FORMAT_R8G8B8A8_UNORM
-    // AllocatedBuffer buffer = Buffer::create_buffer(_device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     AllocatedBuffer buffer;
     Buffer::create_buffer(_device, &buffer, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     buffer.map();
@@ -166,10 +164,9 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture, VkFormat fo
 
         VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
         imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_GENERAL; // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_GENERAL;
         imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        // VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
 
         // Change texture image layout to shader read after all mip levels have been copied
@@ -177,9 +174,7 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture, VkFormat fo
     });
 
     texture.updateDescriptor();
-
-    // vmaDestroyBuffer(_device._allocator, buffer._buffer, buffer._allocation);
-    std::cout << "Sphere map loaded successfully " << file << std::endl;
+    // buffer.destroy();
 }
 
 void Skybox::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
@@ -190,9 +185,6 @@ void Skybox::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAll
 
     for (int i = 0; i < FRAME_OVERLAP; i++) {
         g_frames[i].skyboxDescriptor = VkDescriptorSet();
-
-        // todo : cameraBuffer must be allocated once only. Need to handle allocation dependencies ordering.
-        // g_frames[i].cameraBuffer = Buffer::create_buffer(_device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
         VkDescriptorBufferInfo camBInfo{};
         camBInfo.buffer = g_frames[i].cameraBuffer._buffer;

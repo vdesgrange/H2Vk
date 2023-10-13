@@ -28,12 +28,12 @@ public:
     /** memory address */
     void* _data;
 
-    // AllocatedBuffer();
+    AllocatedBuffer() = default;
     ~AllocatedBuffer() {
         destroy();
     }
-    // AllocatedBuffer(const AllocatedBuffer&) = delete; // copy constructor 
-    // AllocatedBuffer(AllocatedBuffer &&) noexcept = delete; // move constructor
+    AllocatedBuffer(const AllocatedBuffer&) = delete; // copy constructor 
+    AllocatedBuffer(AllocatedBuffer &&) noexcept = delete; // move constructor
     AllocatedBuffer& operator=(const AllocatedBuffer&) = delete; // copy assignment
     AllocatedBuffer& operator=(AllocatedBuffer &&) noexcept = delete; // move assignment
 
@@ -50,6 +50,5 @@ public:
  */
 class Buffer final {
 public:
-    // static AllocatedBuffer create_buffer(const Device& device, size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
     static void create_buffer(const Device& device, AllocatedBuffer* buffer, size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 };

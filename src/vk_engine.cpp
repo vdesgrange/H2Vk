@@ -267,11 +267,11 @@ void VulkanEngine::init_descriptors() {
     // === Clean up === // Why keep this here if buffered allocated in their respective related class?
     _mainDeletionQueue.push_function([&]() {
         for (int i = 0; i < FRAME_OVERLAP; i++) {
-            // vmaDestroyBuffer(_device->_allocator, g_frames[i].cameraBuffer._buffer, g_frames[i].cameraBuffer._allocation);
-            // vmaDestroyBuffer(_device->_allocator, g_frames[i].lightingBuffer._buffer, g_frames[i].lightingBuffer._allocation);
-            // vmaDestroyBuffer(_device->_allocator, g_frames[i].objectBuffer._buffer, g_frames[i].objectBuffer._allocation);
-            // vmaDestroyBuffer(_device->_allocator, g_frames[i].cascadedOffscreenBuffer._buffer, g_frames[i].cascadedOffscreenBuffer._allocation);
-            // vmaDestroyBuffer(_device->_allocator, g_frames[i].enabledFeaturesBuffer._buffer, g_frames[i].enabledFeaturesBuffer._allocation);
+            // g_frames[i].cameraBuffer.destroy();
+            // g_frames[i].lightingBuffer.destroy();
+            // g_frames[i].objectBuffer.destroy();
+            // g_frames[i].cascadedOffscreenBuffer.destroy();
+            // g_frames[i].enabledFeaturesBuffer.destroy();
         }
 
         delete _layoutCache;
@@ -675,12 +675,6 @@ void VulkanEngine::draw() { // todo : what need to be called at each frame? draw
  */
 void VulkanEngine::run()
 {
-//
-//    for (uint8_t i=0; i < 3; i++) {
-//        VK_CHECK(vkResetCommandBuffer(g_frames[i]._commandBuffer->_commandBuffer, 0));
-//        this->build_command_buffers(g_frames[i], i);
-//    }
-//
     while(!glfwWindowShouldClose(_window->_window)) {
         glfwPollEvents();
         Window::glfw_get_key(_window->_window);
