@@ -478,8 +478,8 @@ void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
         }
 
         if (object.model) {
-            bool bind = object.model.get() != lastModel.get(); // degueulasse sortir de la boucle de rendu
-            object.model->draw(commandBuffer, object.material->pipelineLayout, sizeof(glm::mat4), i, bind); // object.model != lastModel
+            bool bind = object.model.get() != lastModel.get();
+            object.model->draw(commandBuffer, object.material->pipelineLayout, sizeof(glm::mat4), i, bind);
             lastModel = bind ? object.model : lastModel;
         }
     }
@@ -495,12 +495,8 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
     VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     VK_CHECK(vkBeginCommandBuffer(frame._commandBuffer->_commandBuffer, &cmdBeginInfo));
 
-    // === Depth map render pass ===
-    // _shadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
-
     // === Cascaded depth map render pass ===
     if (_enabledFeatures.shadowMapping) {
-//        _cascadedShadow->run_offscreen_pass(frame, _scene->_renderables, *_lightingManager);
         _cascadedShadow->compute_resources(frame, _scene->_renderables);
     }
 
@@ -585,16 +581,10 @@ void VulkanEngine::render(int imageIndex) {
 
     // === Update scene ===
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
-        unsigned char pixels[] = {0, 0, 0, 0};
-        Texture emptyTexture{};
-        emptyTexture.load_image_from_buffer(*_device, _uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1);
-
-        _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures, emptyTexture);
+        _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
         _scene->load_scene(_ui->get_settings().scene_index, *_camera);
         _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
-
         this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
-        emptyTexture.destroy(*_device);
     }
 
     // === Update resources ===

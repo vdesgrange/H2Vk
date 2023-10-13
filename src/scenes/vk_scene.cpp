@@ -38,7 +38,7 @@ void Scene::setup_transformation_descriptors(DescriptorLayoutCache& layoutCache,
         g_frames[i].objectDescriptor = VkDescriptorSet();
 
         VkDescriptorBufferInfo objectsBInfo{};
-        objectsBInfo.buffer = g_frames[i].objectBuffer._buffer; // allocated once
+        objectsBInfo.buffer = g_frames[i].objectBuffer._buffer;
         objectsBInfo.offset = 0;
         objectsBInfo.range = sizeof(GPUObjectData) * MAX_OBJECTS;
 
@@ -49,8 +49,8 @@ void Scene::setup_transformation_descriptors(DescriptorLayoutCache& layoutCache,
     }
 }
 
-void Scene::setup_texture_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout, Texture& emptyTexture) {
+void Scene::setup_texture_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
     for (auto &renderable: this->_renderables) {
-        renderable.model->setup_descriptors(layoutCache, allocator, setLayout,emptyTexture);
+        renderable.model->setup_descriptors(layoutCache, allocator, setLayout);
     }
 }

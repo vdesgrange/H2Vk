@@ -56,10 +56,6 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
 
     // === Init shader materials ===
-    unsigned char pixels[] = {0, 0, 0, 1};
-    Texture emptyTexture{};
-    emptyTexture.load_image_from_buffer(*engine->_device, engine->_uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1); // ctx?
-
     std::vector<PushConstant> constants {
             {sizeof(glm::mat4), ShaderType::VERTEX},
             {sizeof(Materials::Factors), ShaderType::FRAGMENT}
@@ -70,12 +66,12 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
             {ShaderType::FRAGMENT, "../src/shaders/pbr/pbr_ibl.frag.spv"},
     };
 
-    floorModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    floorModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
     engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, modules);
 
-    wallModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    wallModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
     engine->_materialManager->create_material("pbrMaterial2", setLayouts, constants, modules);
 
@@ -103,7 +99,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
             std::string name = "sphere_" + std::to_string(x) + "_" + std::to_string(y);
             std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), engine->_uploadContext, {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f}, gold);
 
-            sphereModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+            sphereModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
             engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
             engine->_materialManager->create_material("spherePbrMaterial_" + std::to_string(7 * x + y), setLayouts, constants, modules);
 
@@ -120,22 +116,16 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
         }
     }
 
-    emptyTexture.destroy(*engine->_device); // todo - generate problems when clean-up 
     return renderables;
 }
 
 Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
 
-    // === Empty texture ===
-    unsigned char pixels[] = {0, 0, 0, 1};
-    Texture emptyTexture{};
-    emptyTexture.load_image_from_buffer(*engine->_device, engine->_uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1); // ctx?
-
     // === Init camera ===
     camera.inverse(true);
     camera.set_position({ 0.0f, 0.0f, 3.0f }); // Re-initialize position after scene change = camera jumping.
-    camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);  // 1700.f / 1200.f
+    camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width / (float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
     camera.set_type(Camera::Type::look_at);
     camera.set_speed(10.0f);
 
@@ -160,7 +150,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     };
 
     // VkDescriptorSetLayout textures{}; // todo : stop duplicate with _scene->setup_texture_descriptors
-    helmetModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    helmetModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
     engine->_materialManager->create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
@@ -172,18 +162,11 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     helmet.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(helmet);
 
-    emptyTexture.destroy(*engine->_device); // todo - generate problems when clean-up 
-
     return renderables;
 }
 
 Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
-
-    // === Empty texture ===
-    unsigned char pixels[] = {0, 0, 0, 1};
-    Texture emptyTexture{};
-    emptyTexture.load_image_from_buffer(*engine->_device, engine->_uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1); // ctx?
 
     // === Init camera ===
     camera.inverse(true);
@@ -214,7 +197,7 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     };
 
     VkDescriptorSetLayout textures{};
-    sponzaModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures, emptyTexture);
+    sponzaModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, textures};
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
     engine->_materialManager->create_material("sponzaMaterial", setLayouts, constants, pbr_modules);
@@ -226,18 +209,11 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     sponza.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(sponza);
 
-    emptyTexture.destroy(*engine->_device); // todo - generate problems when clean-up 
-
     return renderables;
 }
 
 Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
     Renderables renderables{};
-
-    // === Empty texture ===
-    unsigned char pixels[] = {0, 0, 0, 1};
-    Texture emptyTexture{};
-    emptyTexture.load_image_from_buffer(*engine->_device, engine->_uploadContext, pixels, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, 1); // ctx?
 
     // === Init camera ===
     camera.inverse(true);
@@ -271,16 +247,14 @@ Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
            {ShaderType::FRAGMENT, "../src/shaders/shadow_map/scene_debug.frag.spv"},
    };
 
-
-    treeModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    treeModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
     engine->_materialManager->create_material("treeMaterial", setLayouts, constants, modules);
 
-    fieldModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures, emptyTexture);
+    fieldModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
     engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
     engine->_materialManager->create_material("fieldMaterial", setLayouts, constants, modules);
-
 
     // == Init scene ==
     RenderObject tree;
@@ -296,8 +270,6 @@ Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
     field.material = engine->_materialManager->get_material("fieldMaterial");
     field.transformMatrix = glm::mat4{ 1.0f };
     renderables.push_back(field);
-
-    emptyTexture.destroy(*engine->_device); // todo - generate problems when clean-up 
 
     return renderables;
 }
