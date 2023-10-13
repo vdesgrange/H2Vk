@@ -150,11 +150,12 @@ public:
     } _indexBuffer {};
     AllocatedBuffer _vertexBuffer {};
 
-    Model() = delete;
     Model(Device* device);
-    Model(const Model& rhs);
     ~Model();
-    Model& operator=(const Model& rhs);
+
+    Model() = delete;
+    Model(const Model& rhs) = delete;
+    Model& operator=(const Model& rhs) = delete;
 
     virtual bool load_model(const Device& device, const UploadContext& ctx, const char *filename) { return false; };
 

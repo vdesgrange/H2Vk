@@ -178,7 +178,7 @@ void Skybox::load_sphere_texture(const char* file, Texture& texture, VkFormat fo
 
     texture.updateDescriptor();
 
-    vmaDestroyBuffer(_device._allocator, buffer._buffer, buffer._allocation);
+    // vmaDestroyBuffer(_device._allocator, buffer._buffer, buffer._allocation);
     std::cout << "Sphere map loaded successfully " << file << std::endl;
 }
 

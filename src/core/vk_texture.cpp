@@ -129,7 +129,7 @@ bool Texture::load_image_from_file(const Device& device, const UploadContext& ct
         vkCreateImageView(device._logicalDevice, &imageinfo, nullptr, &this->_imageView);
     });
 
-    vmaDestroyBuffer(device._allocator, buffer._buffer, buffer._allocation);
+    // vmaDestroyBuffer(device._allocator, buffer._buffer, buffer._allocation);
     std::cout << "Texture loaded successfully " << file << std::endl;
 
     return true;
@@ -219,7 +219,7 @@ bool Texture::load_image_from_buffer(const Device& device, const UploadContext& 
         this->updateDescriptor(); // update descriptor with sample, imageView, imageLayout
     });
 
-    vmaDestroyBuffer(device._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+    // vmaDestroyBuffer(device._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
     std::cout << "Texture loaded successfully " << std::endl;
 
     return true;
@@ -316,7 +316,7 @@ bool Texture::load_image_from_buffer(const Device& device, const UploadContext& 
 
     });
 
-    vmaDestroyBuffer(device._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+    // vmaDestroyBuffer(device._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
     std::cout << "Texture with sampler loaded successfully " << std::endl;
 
     return true;

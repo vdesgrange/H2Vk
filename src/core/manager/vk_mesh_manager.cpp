@@ -66,8 +66,8 @@ void MeshManager::upload_mesh(Model& mesh) {
         vkCmdCopyBuffer(cmd, indexStaging._buffer, mesh._indexBuffer.allocation._buffer, 1, &copy);
     });
 
-    vmaDestroyBuffer(_device->_allocator, vertexStaging._buffer, vertexStaging._allocation);
-    vmaDestroyBuffer(_device->_allocator, indexStaging._buffer, indexStaging._allocation);
+    // vmaDestroyBuffer(_device->_allocator, vertexStaging._buffer, vertexStaging._allocation);
+    // vmaDestroyBuffer(_device->_allocator, indexStaging._buffer, indexStaging._allocation);
 }
 
 std::shared_ptr<Model> MeshManager::get_model(const std::string &name) {

@@ -267,11 +267,11 @@ void VulkanEngine::init_descriptors() {
     // === Clean up === // Why keep this here if buffered allocated in their respective related class?
     _mainDeletionQueue.push_function([&]() {
         for (int i = 0; i < FRAME_OVERLAP; i++) {
-            vmaDestroyBuffer(_device->_allocator, g_frames[i].cameraBuffer._buffer, g_frames[i].cameraBuffer._allocation);
-            vmaDestroyBuffer(_device->_allocator, g_frames[i].lightingBuffer._buffer, g_frames[i].lightingBuffer._allocation);
-            vmaDestroyBuffer(_device->_allocator, g_frames[i].objectBuffer._buffer, g_frames[i].objectBuffer._allocation);
-            vmaDestroyBuffer(_device->_allocator, g_frames[i].cascadedOffscreenBuffer._buffer, g_frames[i].cascadedOffscreenBuffer._allocation);
-            vmaDestroyBuffer(_device->_allocator, g_frames[i].enabledFeaturesBuffer._buffer, g_frames[i].enabledFeaturesBuffer._allocation);
+            // vmaDestroyBuffer(_device->_allocator, g_frames[i].cameraBuffer._buffer, g_frames[i].cameraBuffer._allocation);
+            // vmaDestroyBuffer(_device->_allocator, g_frames[i].lightingBuffer._buffer, g_frames[i].lightingBuffer._allocation);
+            // vmaDestroyBuffer(_device->_allocator, g_frames[i].objectBuffer._buffer, g_frames[i].objectBuffer._allocation);
+            // vmaDestroyBuffer(_device->_allocator, g_frames[i].cascadedOffscreenBuffer._buffer, g_frames[i].cascadedOffscreenBuffer._allocation);
+            // vmaDestroyBuffer(_device->_allocator, g_frames[i].enabledFeaturesBuffer._buffer, g_frames[i].enabledFeaturesBuffer._allocation);
         }
 
         delete _layoutCache;
@@ -444,7 +444,7 @@ void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
     // Objects : write into the buffer by copying the render matrices from our render objects into it
     // Object not moving : call only when change scene
     for (uint32_t i = 0; i < FRAME_OVERLAP; i++) {
-        FrameData frame = g_frames[i]; // get_current_frame(); // if object moves, call each frame.
+        FrameData& frame = g_frames[i]; // get_current_frame(); // if object moves, call each frame.
         frame.objectBuffer.map();
         GPUObjectData* objectSSBO = (GPUObjectData*)frame.objectBuffer._data;
         for (int j = 0; j < count; j++) {

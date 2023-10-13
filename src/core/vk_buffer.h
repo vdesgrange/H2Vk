@@ -13,9 +13,13 @@
 
 class Device;
 
-/** @brief Allocated buffer */
+/** 
+ * @brief Allocated buffer 
+ * @note Noncopyable resource due to memory handling: copy, move constructors and operators are deleted. 
+ * */
 struct AllocatedBuffer {
-    /** @brief Principal memory allocator. One per device */
+public:
+    /** @brief Principal memory allocator. Expect one per device */
     VmaAllocator _allocator = nullptr;
     /** @brief  Single memory allocation. Map/un-map to write data */
     VmaAllocation _allocation = nullptr;
@@ -24,9 +28,14 @@ struct AllocatedBuffer {
     /** memory address */
     void* _data;
 
+    // AllocatedBuffer();
     ~AllocatedBuffer() {
-        // destroy();
+        destroy();
     }
+    // AllocatedBuffer(const AllocatedBuffer&) = delete; // copy constructor 
+    // AllocatedBuffer(AllocatedBuffer &&) noexcept = delete; // move constructor
+    AllocatedBuffer& operator=(const AllocatedBuffer&) = delete; // copy assignment
+    AllocatedBuffer& operator=(AllocatedBuffer &&) noexcept = delete; // move assignment
 
     VkResult map();
     void unmap();
@@ -41,6 +50,6 @@ struct AllocatedBuffer {
  */
 class Buffer final {
 public:
-    static AllocatedBuffer create_buffer(const Device& device, size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+    // static AllocatedBuffer create_buffer(const Device& device, size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
     static void create_buffer(const Device& device, AllocatedBuffer* buffer, size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 };

@@ -20,42 +20,42 @@ Model::~Model() {
     this->destroy(); // break for some reason
 }
 
-Model::Model(const Model& rhs) : _device(rhs._device) {
-    this->_images = rhs._images;
-    this->_textures = rhs._textures;
-    this->_materials = rhs._materials;
+// Model::Model(const Model& rhs) : _device(rhs._device) {
+//     this->_images = rhs._images;
+//     this->_textures = rhs._textures;
+//     this->_materials = rhs._materials;
 
-    for (auto it : rhs._nodes) {
-        Node* node = new Node(*it);
-        this->_nodes.push_back(node);
-    }
+//     for (auto it : rhs._nodes) {
+//         Node* node = new Node(*it);
+//         this->_nodes.push_back(node);
+//     }
 
-    this->_indexesBuffer = rhs._indexesBuffer;
-    this->_verticesBuffer = rhs._verticesBuffer;
+//     this->_indexesBuffer = rhs._indexesBuffer;
+//     this->_verticesBuffer = rhs._verticesBuffer;
 
-    this->_indexBuffer = rhs._indexBuffer;
-    this->_vertexBuffer = rhs._vertexBuffer;
-}
+//     this->_indexBuffer = rhs._indexBuffer;
+//     this->_vertexBuffer = rhs._vertexBuffer;
+// }
 
-Model& Model::operator=(const Model& rhs) {
-    this->_images = rhs._images;
-    this->_textures = rhs._textures;
-    this->_materials = rhs._materials;
+// Model& Model::operator=(const Model& rhs) {
+//     this->_images = rhs._images;
+//     this->_textures = rhs._textures;
+//     this->_materials = rhs._materials;
 
-    for (auto it : rhs._nodes) {
-        this->_nodes.push_back(std::move(it));
-    }
+//     for (auto it : rhs._nodes) {
+//         this->_nodes.push_back(std::move(it));
+//     }
 
-    this->_indexesBuffer = rhs._indexesBuffer;
-    this->_verticesBuffer = rhs._verticesBuffer;
+//     this->_indexesBuffer = rhs._indexesBuffer;
+//     this->_verticesBuffer = rhs._verticesBuffer;
 
-    this->_indexBuffer = rhs._indexBuffer;
-    this->_vertexBuffer = rhs._vertexBuffer;
+//     this->_indexBuffer = rhs._indexBuffer;
+//     this->_vertexBuffer = rhs._vertexBuffer;
 
-    this->_device = rhs._device;
+//     this->_device = rhs._device;
 
-    return *this;
-}
+//     return *this;
+// }
 
 void Model::destroy() {
     for (auto node : _nodes) {
@@ -72,8 +72,8 @@ void Model::destroy() {
     _textures.clear();
     _samplers.clear();
 
-    vmaDestroyBuffer(_device->_allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
-    vmaDestroyBuffer(_device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
+    // vmaDestroyBuffer(_device->_allocator, _vertexBuffer._buffer, _vertexBuffer._allocation);
+    // vmaDestroyBuffer(_device->_allocator, _indexBuffer.allocation._buffer, _indexBuffer.allocation._allocation);
 }
 
 VkDescriptorImageInfo Model::get_texture_descriptor(const size_t index)
