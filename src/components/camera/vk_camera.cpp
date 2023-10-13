@@ -236,7 +236,6 @@ void Camera::update_view() {
 
 void Camera::allocate_buffers(Device& device) {
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        // g_frames[i].cameraBuffer = Buffer::create_buffer(device, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
         Buffer::create_buffer(device, &g_frames[i].cameraBuffer, sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     }
 }
