@@ -66,7 +66,6 @@ void VulkanEngine::init_window() {
  */
 void VulkanEngine::init_vulkan() {
     _device = std::make_unique<Device>(*_window);
-    // std::cout << "GPU has a minimum buffer alignment = " << _device->_gpuProperties.limits.minUniformBufferOffsetAlignment << std::endl;
 }
 
 /**
@@ -158,7 +157,7 @@ void VulkanEngine::init_default_renderpass() {
  * Images used for the framebuffer attachment must be created for every images in the swap chain (ie. color + depth).
  */
 void VulkanEngine::init_framebuffers() {
-    // _frameBuffers.clear(); // todo fix destructor
+    _frameBuffers.clear();
     _frameBuffers.reserve(_swapchain->_swapChainImages.size());
 
     for (int i = 0; i < _swapchain->_swapChainImages.size(); i++) {
@@ -315,7 +314,7 @@ void VulkanEngine::init_scene() {
     _skybox->_type = Skybox::Type::box;
     _skybox->load();
 
-   _cascadedShadow = std::make_unique<CascadedShadow>(*_device, _uploadContext);
+    _cascadedShadow = std::make_unique<CascadedShadow>(*_device, _uploadContext);
 
     _atmosphere = std::make_unique<Atmosphere>(*_device, *_materialManager, *_lightingManager, _uploadContext);
 
@@ -444,7 +443,7 @@ void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
     // Objects : write into the buffer by copying the render matrices from our render objects into it
     // Object not moving : call only when change scene
     for (uint32_t i = 0; i < FRAME_OVERLAP; i++) {
-        FrameData& frame = g_frames[i]; // get_current_frame(); // if object moves, call each frame.
+        FrameData& frame = g_frames[i]; // if object moves, call each frame.
         frame.objectBuffer.map();
         GPUObjectData* objectSSBO = (GPUObjectData*)frame.objectBuffer._data;
         for (int j = 0; j < count; j++) {

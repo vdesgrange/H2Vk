@@ -11,6 +11,7 @@
 #include "vk_renderpass.h"
 #include "core/utilities/vk_resources.h"
 
+class Device;
 class RenderPass;
 
 /**
@@ -26,19 +27,21 @@ public:
     FrameBuffer(const RenderPass& renderPass, std::vector<VkImageView>& attachments, uint32_t width, uint32_t height, uint32_t layers);
     ~FrameBuffer();
 
-    FrameBuffer(const FrameBuffer& rhs) : _renderPass(rhs._renderPass) {
+    FrameBuffer(const FrameBuffer& rhs) : _device(rhs._renderPass._device), _renderPass(rhs._renderPass) {
         this->_frameBuffer = rhs._frameBuffer;
     }
 
     FrameBuffer& operator= (FrameBuffer other) = delete;
 
-    FrameBuffer(FrameBuffer&& rhs) noexcept : _renderPass(rhs._renderPass) {
+    FrameBuffer(FrameBuffer&& rhs) noexcept :  _device(rhs._renderPass._device), _renderPass(rhs._renderPass) {
         std::swap(this->_frameBuffer, rhs._frameBuffer);
     }
 
     FrameBuffer& operator= (FrameBuffer &&) = delete;
 
 private:
+    /** @brief Device associated to render pass */
+    const class Device& _device;
     /** @brief what render pass the frame buffer will be compatible with */
     const class RenderPass& _renderPass;
 };
