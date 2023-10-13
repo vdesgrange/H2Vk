@@ -10,6 +10,7 @@
 
 #include "core/utilities/vk_resources.h"
 #include <algorithm>
+#include <set>
 
 class Device;
 
@@ -50,5 +51,6 @@ public:
  */
 class Buffer final {
 public:
+    static std::set<AllocatedBuffer*> _bufferTracker;
     static void create_buffer(const Device& device, AllocatedBuffer* buffer, size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 };

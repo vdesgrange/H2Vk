@@ -267,11 +267,11 @@ void VulkanEngine::init_descriptors() {
     // === Clean up === // Why keep this here if buffered allocated in their respective related class?
     _mainDeletionQueue.push_function([&]() {
         for (int i = 0; i < FRAME_OVERLAP; i++) {
-            // g_frames[i].cameraBuffer.destroy();
-            // g_frames[i].lightingBuffer.destroy();
-            // g_frames[i].objectBuffer.destroy();
-            // g_frames[i].cascadedOffscreenBuffer.destroy();
-            // g_frames[i].enabledFeaturesBuffer.destroy();
+            g_frames[i].cameraBuffer.destroy();
+            g_frames[i].lightingBuffer.destroy();
+            g_frames[i].objectBuffer.destroy();
+            g_frames[i].cascadedOffscreenBuffer.destroy();
+            g_frames[i].enabledFeaturesBuffer.destroy();
         }
 
         delete _layoutCache;

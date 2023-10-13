@@ -8,6 +8,9 @@
 
 #include "vk_buffer.h"
 
+/** @brief  Used for debugging */
+std::set<AllocatedBuffer*> Buffer::_bufferTracker;
+
 /**
  * Create a buffer object (VkBuffer), get memory requirements,
  * allocate memory (VkDeviceMemory) using allocator then bind buffer with memory.
@@ -40,6 +43,7 @@ void Buffer::create_buffer(const Device& device, AllocatedBuffer* buffer, size_t
                              &buffer->_allocation,
                              nullptr));
 
+    Buffer:_bufferTracker.insert(buffer);
 }
 
 VkResult AllocatedBuffer::map() {
@@ -65,5 +69,7 @@ void AllocatedBuffer::copyFrom(void* source, size_t size) {
 void AllocatedBuffer::destroy() {
     if (_allocator) {
         vmaDestroyBuffer(_allocator, _buffer, _allocation);
+        _allocator = nullptr;
+        Buffer::_bufferTracker.erase(this);
     }
 }
