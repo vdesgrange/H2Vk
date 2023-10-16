@@ -248,14 +248,14 @@ void Atmosphere::create_multiple_scattering_resource(Device& device, UploadConte
     });
 
     _multipleScatteringRenderPass = RenderPass(device);
-    RenderPass::Attachment color = _multipleScatteringRenderPass.color(format);
+    RenderPass::Attachment color = RenderPass::color(format);
     color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     std::vector<VkAttachmentReference> references = {color.ref};
     std::vector<VkAttachmentDescription> attachments = {color.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency};
-    VkSubpassDescription subpass = _multipleScatteringRenderPass.subpass_description(references, nullptr);
+    std::vector<VkSubpassDescription> subpasses = {RenderPass::subpass_description(references, nullptr)};
 
-    _multipleScatteringRenderPass.init(attachments, dependencies, subpass);
+    _multipleScatteringRenderPass.init(attachments, dependencies, subpasses);
 
     // Prepare framebuffer
      std::vector<VkImageView> imageviews = {_multipleScatteringLUT._imageView};
@@ -334,14 +334,14 @@ void Atmosphere::create_skyview_resource(Device &device, UploadContext &uploadCo
 
     // === Prepare mapping ===
     _skyviewRenderPass = RenderPass(device);
-    RenderPass::Attachment color = _skyviewRenderPass.color(format);
+    RenderPass::Attachment color = RenderPass::color(format);
     color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     std::vector<VkAttachmentReference> references = {color.ref};
     std::vector<VkAttachmentDescription> attachments = {color.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency};
-    VkSubpassDescription subpass = _skyviewRenderPass.subpass_description(references, nullptr);
+    std::vector<VkSubpassDescription> subpasses = {RenderPass::subpass_description(references, nullptr)};
 
-    _skyviewRenderPass.init(attachments, dependencies, subpass);
+    _skyviewRenderPass.init(attachments, dependencies, subpasses);
 
     // === Prepare framebuffer ===
     std::vector<VkImageView> imageviews = {_skyviewLUT._imageView};

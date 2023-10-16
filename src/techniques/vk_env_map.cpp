@@ -81,14 +81,14 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
 
     // === Prepare mapping ===
     RenderPass renderPass = RenderPass(device);
-    RenderPass::Attachment color = renderPass.color(format);
+    RenderPass::Attachment color = RenderPass::color(format);
     color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     std::vector<VkAttachmentReference> references = {color.ref};
     std::vector<VkAttachmentDescription> attachments = {color.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency};
-    VkSubpassDescription subpass = renderPass.subpass_description(references, nullptr);
+    std::vector<VkSubpassDescription> subpasses = {RenderPass::subpass_description(references, nullptr)};
     
-    renderPass.init(attachments, dependencies, subpass);
+    renderPass.init(attachments, dependencies, subpasses);
 
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
@@ -274,15 +274,15 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
 
     // === Prepare mapping ===
     RenderPass renderPass = RenderPass(device);
-    RenderPass::Attachment color = renderPass.color(format);
+    RenderPass::Attachment color = RenderPass::color(format);
     color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     color.ref.layout = VK_IMAGE_LAYOUT_GENERAL;
     std::vector<VkAttachmentReference> references = {color.ref};
     std::vector<VkAttachmentDescription> attachments = {color.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency};
-    VkSubpassDescription subpass = renderPass.subpass_description(references, nullptr);
+    std::vector<VkSubpassDescription> subpasses = {RenderPass::subpass_description(references, nullptr)};
 
-    renderPass.init(attachments, dependencies, subpass);
+    renderPass.init(attachments, dependencies, subpasses);
 
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
@@ -500,15 +500,15 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
 
     // === Prepare mapping ===
     RenderPass renderPass = RenderPass(device);
-    RenderPass::Attachment color = renderPass.color(format);
+    RenderPass::Attachment color = RenderPass::color(format);
     color.description.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     color.ref.layout = VK_IMAGE_LAYOUT_GENERAL;
     std::vector<VkAttachmentReference> references = {color.ref};
     std::vector<VkAttachmentDescription> attachments = {color.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency};
-
-    VkSubpassDescription subpass = renderPass.subpass_description(references, nullptr);
-    renderPass.init(attachments, dependencies, subpass);
+    std::vector<VkSubpassDescription> subpasses = {RenderPass::subpass_description(references, nullptr)};
+    
+    renderPass.init(attachments, dependencies, subpasses);
 
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};

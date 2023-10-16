@@ -39,25 +39,19 @@ void CascadedShadow::prepare_resources(Device& device) {
     // === Prepare depth render pass ===
     _depthPass = RenderPass(device);
 
-    RenderPass::Attachment depth = _depthPass.depth(DEPTH_FORMAT);
+    RenderPass::Attachment depth = RenderPass::depth(DEPTH_FORMAT);
     depth.description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     depth.ref.attachment = 0;
     depth.ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
     std::vector<VkAttachmentDescription> attachments{depth.description};
     std::vector<VkAttachmentReference> colorRef{};
-
     std::vector<VkSubpassDependency> dependencies{};
     dependencies.reserve(2);
     dependencies.push_back({VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_DEPENDENCY_BY_REGION_BIT});
     dependencies.push_back({0, VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_DEPENDENCY_BY_REGION_BIT});
+    std::vector<VkSubpassDescription> subpasses = {RenderPass::subpass_description(colorRef, &depth.ref)};
 
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 0;
-    subpass.pDepthStencilAttachment = &depth.ref; // link depth attachment to sub-pass
-
-    _depthPass.init(attachments, dependencies, subpass);
+    _depthPass.init(attachments, dependencies, subpasses);
 
     // === Prepare depth map ===
     VkExtent3D extent { CascadedShadow::SHADOW_WIDTH, CascadedShadow::SHADOW_HEIGHT, 1};
@@ -212,8 +206,6 @@ void CascadedShadow::compute_resources(FrameData& frame, Renderables& renderable
     VkExtent2D extent{CascadedShadow::SHADOW_WIDTH, CascadedShadow::SHADOW_HEIGHT};
 
     VkViewport viewport = vkinit::get_viewport((float) CascadedShadow::SHADOW_WIDTH, (float) CascadedShadow::SHADOW_HEIGHT);
-//    viewport.height = - (float) CascadedShadow::SHADOW_HEIGHT;
-//    viewport.y = (float) CascadedShadow::SHADOW_HEIGHT;
     vkCmdSetViewport(frame._commandBuffer->_commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor = vkinit::get_scissor((float) CascadedShadow::SHADOW_WIDTH, (float) CascadedShadow::SHADOW_HEIGHT);
@@ -228,7 +220,7 @@ void CascadedShadow::compute_resources(FrameData& frame, Renderables& renderable
         {
             std::shared_ptr<Model> lastModel = nullptr;
             int pc = l;
-            int i = 0; // a retirer? semble casser
+            int i = 0;
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _depthEffect->pipeline);
             vkCmdPushConstants(cmd, _depthEffect->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), sizeof(int), &pc);
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _depthEffect->pipelineLayout, 0, 1, &frame.cascadedOffscreenDescriptor, 0, nullptr);

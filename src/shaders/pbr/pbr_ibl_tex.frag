@@ -151,7 +151,7 @@ vec3 spot_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, float met
 
 vec3 directional_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, float metallic) {
     for (int i = 0; i < lightingData.num_lights[1]; i++) {
-        vec3 L = normalize(-lightingData.dir_direction[i].xyz); // to fix : "-1 * L" depending if camera POV or lookAt.
+        vec3 L = normalize(lightingData.dir_direction[i].xyz); // to fix : "-1 * L" depending if camera POV or lookAt.
         vec3 C = lightingData.dir_color[i].rgb / 255.0;
 
         Lo += BRDF(L, V, N, C, albedo, roughness, metallic);

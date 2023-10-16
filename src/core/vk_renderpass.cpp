@@ -7,54 +7,42 @@
 */
 
 #include "vk_renderpass.h"
+#include "core/utilities/vk_initializers.h"
 
 /**
- * RenderPass
- * Render pass object wraps all information related to the framebuffer attachments that will be used for rendering.
- * Framebuffers are created for a specific render pass, so RenderPass must be created first.
- * Framebuffer attachments : description of the image which will be written into the rendering commands (iow. pixels
- * are rendered on a framebuffer).
- * @brief constructor
- * @param device vulkan device wrapper
- */
-RenderPass::RenderPass(Device& device) : _device(device) {
-}
-
-/**
- * Destroy render pass
- * @brief default destructor
- */
-RenderPass::~RenderPass() {
-    vkDestroyRenderPass(_device._logicalDevice, _renderPass, nullptr);
-}
-
-
-/**
- * Initialize a render pass and a single sub-pass with a collection of attachments and dependencies
- * @brief initialize render pass with unique sub-pass
- * @note todo - reorganize : color and depth attachment are a mess
- * @param attachments collection of sub-pass descriptions
+ * Initialize a render pass from a collection of attachments, dependencies and sub-pass descriptions.
+ * @brief Initialize render pass
+ * @param attachments collection of attachment descriptions
  * @param dependencies collection of sub-pass dependencies
- * @param subpass single sub-pass of the render pass
+ * @param subpasses collection of sub-pass descriptions
  */
-void RenderPass::init(std::vector<VkAttachmentDescription> attachments, std::vector<VkSubpassDependency> dependencies, VkSubpassDescription subpass) {
+void RenderPass::init(std::vector<VkAttachmentDescription> attachments, std::vector<VkSubpassDependency> dependencies, std::vector<VkSubpassDescription> subpasses) {
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
     renderPassInfo.pAttachments = attachments.data();
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.subpassCount = static_cast<u_int32_t>(subpasses.size());
+    renderPassInfo.pSubpasses = subpasses.data();
     renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
     renderPassInfo.pDependencies = dependencies.data();
 
-    VK_CHECK(vkCreateRenderPass(_device._logicalDevice, &renderPassInfo, nullptr, &_renderPass));
+    VK_CHECK(vkCreateRenderPass(_device, &renderPassInfo, nullptr, &_renderPass));
 }
 
 /**
- * Create structure for color attachment, description of the image which will be writing into with rendering commands
- * @brief Initialize color attachment objects
+ * @brief Destroy render pass
+ */
+void RenderPass::destroy() {
+    vkDestroyRenderPass(_device, _renderPass, nullptr);
+}
+
+/**
+ * Color attachment helper.
+ * Generate a commonly used color attachment configuration.
+ * Description of the image which will be writing into with rendering commands.
+ * @brief A default color attachment structure.
  * @param format color attachment format
- * @return structure for sub-pass color attachment related objects
+ * @return Structure for sub-pass color attachment related object.
  */
 RenderPass::Attachment RenderPass::color(VkFormat format) {
     VkAttachmentDescription colorAttachment{};
@@ -79,12 +67,14 @@ RenderPass::Attachment RenderPass::color(VkFormat format) {
     dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-    return RenderPass::Attachment {colorAttachment, colorAttachmentRef, dependency};
+    return RenderPass::Attachment {Attachment::Type::color, colorAttachment, colorAttachmentRef, dependency};
 }
 
 /**
- * Create structure for depth buffer which will allow z-testing for rendering of 3d assets.
- * @brief Initialize depth attachment objects
+ * Depth attachment helper.
+ * Generate a commonly used depth attachment configuration.
+ * Depth buffer will allow z-testing for rendering of 3D assets.
+ * @brief A default depth attachment structure
  * @param format depth format
  * @return structure for sub-pass depth attachment related objects
  */
@@ -112,7 +102,7 @@ RenderPass::Attachment RenderPass::depth(VkFormat format) {
     depthDependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
     depthDependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-    return RenderPass::Attachment {depthAttachment, depthAttachmentRef,depthDependency};
+    return RenderPass::Attachment {Attachment::Type::depth, depthAttachment, depthAttachmentRef, depthDependency};
 }
 
 /**

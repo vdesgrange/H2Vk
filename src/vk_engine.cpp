@@ -141,14 +141,14 @@ void VulkanEngine::init_commands() {
 void VulkanEngine::init_default_renderpass() {
     _renderPass = std::make_unique<RenderPass>(*_device);
 
-    RenderPass::Attachment color = _renderPass->color(_swapchain->_swapChainImageFormat);
-    RenderPass::Attachment depth = _renderPass->depth(_swapchain->_depthFormat);
+    RenderPass::Attachment color = RenderPass::color(_swapchain->_swapChainImageFormat);
+    RenderPass::Attachment depth = RenderPass::depth(_swapchain->_depthFormat);
     std::vector<VkAttachmentDescription> attachments = {color.description, depth.description};
     std::vector<VkSubpassDependency> dependencies = {color.dependency, depth.dependency};
     std::vector<VkAttachmentReference> references = {color.ref};
-    VkSubpassDescription subpass = _renderPass->subpass_description(references, &depth.ref);
+    std::vector<VkSubpassDescription> subpasses = {RenderPass::subpass_description(references, &depth.ref)};
 
-    _renderPass->init(attachments, dependencies, subpass);
+    _renderPass->init(attachments, dependencies, subpasses);
 }
 
 /**
@@ -522,9 +522,9 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
         VkRect2D scissor = vkinit::get_scissor((float) _window->_windowExtent.width, (float) _window->_windowExtent.height);
         vkCmdSetScissor(frame._commandBuffer->_commandBuffer, 0, 1, &scissor);
 
-        vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         {
-            // Debug shadow map (WIP)
+            // Debug shadow map
             if (_enabledFeatures.shadowMapping && this->_cascadedShadow->_debug) {
                 this->_cascadedShadow->debug_depth(frame);
             } else {

@@ -17,19 +17,19 @@
  * @param attachments collection of image view handles used as corresponding attachments in a render pass instance.
  * @param width, height, layers framebuffer dimensions
  */
-FrameBuffer::FrameBuffer(const RenderPass& renderPass, std::vector<VkImageView>& attachments, uint32_t width, uint32_t height, uint32_t layers) : _device(renderPass._device), _renderPass(renderPass) {
+FrameBuffer::FrameBuffer(const RenderPass& renderPass, std::vector<VkImageView>& attachments, uint32_t width, uint32_t height, uint32_t layers) : _device(renderPass._device), _renderPass(renderPass._renderPass) {
 
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = renderPass._renderPass;
+    framebufferInfo.renderPass = _renderPass;
     framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
     framebufferInfo.pAttachments = attachments.data();
     framebufferInfo.width = width;
     framebufferInfo.height = height;
     framebufferInfo.layers = layers;
 
-    VK_CHECK(vkCreateFramebuffer(_renderPass._device._logicalDevice, &framebufferInfo, nullptr, &_frameBuffer));
+    VK_CHECK(vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &_frameBuffer));
 }
 
 
@@ -39,6 +39,6 @@ FrameBuffer::FrameBuffer(const RenderPass& renderPass, std::vector<VkImageView>&
  */
 FrameBuffer::~FrameBuffer() {
     if (_frameBuffer != nullptr) { // By default VkFrameBuffer might simply be invalid instead of null pointer.
-        vkDestroyFramebuffer(_device._logicalDevice, _frameBuffer, nullptr);
+        vkDestroyFramebuffer(_device, _frameBuffer, nullptr);
     }
 }
