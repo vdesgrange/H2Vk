@@ -36,7 +36,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     // === Init camera ===
     camera.inverse(false);
     camera.set_position({ 0.0f, 0.0f, 10.0f });
-    camera.set_perspective(70.f, (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 50.0f);
+    camera.set_perspective(70.f, static_cast<float>(engine->_window->_windowExtent.width) / static_cast<float>(engine->_window->_windowExtent.height), 0.1f, 50.0f);
     camera.set_type(Camera::Type::look_at);
     camera.set_speed(10.0f);
 
@@ -93,8 +93,8 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
     for (int x = 0; x <= 6; x++) {
         for (int y = 0; y <= 6; y++) {
-            float ratio_x = float(x) / 6.0f;
-            float ratio_y = float(y) / 6.0f;
+            float ratio_x = static_cast<float>(x) / 6.0f;
+            float ratio_y = static_cast<float>(y) / 6.0f;
             Materials gold = {{1.0f,  0.765557f, 0.336057f, 1.0f}, ratio_y * 1.0f, ratio_x * 1.0f, 1.0f};
             std::string name = "sphere_" + std::to_string(x) + "_" + std::to_string(y);
             std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), engine->_uploadContext, {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f}, gold);
@@ -125,7 +125,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     // === Init camera ===
     camera.inverse(true);
     camera.set_position({ 0.0f, 0.0f, 3.0f }); // Re-initialize position after scene change = camera jumping.
-    camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width / (float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
+    camera.set_perspective(70.f, static_cast<float>(engine->_window->_windowExtent.width) /static_cast<float>(engine->_window->_windowExtent.height), 0.1f, 200.0f);
     camera.set_type(Camera::Type::look_at);
     camera.set_speed(10.0f);
 
@@ -171,7 +171,7 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     // === Init camera ===
     camera.inverse(true);
     camera.set_position({ 0.0f, -5.0f, 0.0f }); // Re-initialize position after scene change = camera jumping.
-    camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 200.0f);
+    camera.set_perspective(70.f,  static_cast<float>(engine->_window->_windowExtent.width) / static_cast<float>(engine->_window->_windowExtent.height), 0.1f, 200.0f);
     camera.set_type(Camera::Type::pov);
     camera.set_speed(10.0f);
 
@@ -218,7 +218,7 @@ Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
     // === Init camera ===
     camera.inverse(true);
     camera.set_position({ 0.0f, -5.0f, 0.0f }); // Re-initialize position after scene change = camera jumping.
-    camera.set_perspective(70.f,  (float)engine->_window->_windowExtent.width /(float)engine->_window->_windowExtent.height, 0.1f, 70.0f);
+    camera.set_perspective(70.f,  static_cast<float>(engine->_window->_windowExtent.width) / static_cast<float>(engine->_window->_windowExtent.height), 0.1f, 70.0f);
     camera.set_type(Camera::Type::pov);
     camera.set_speed(10.0f);
 

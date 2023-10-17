@@ -22,7 +22,7 @@ public:
     /** @brief Semaphore object */
     VkSemaphore _semaphore;
 
-    Semaphore(const Device& device);
+    explicit Semaphore(const Device& device);
     ~Semaphore();
 
 private:

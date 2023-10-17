@@ -47,7 +47,7 @@ public:
     /** @brief render pass object, collection of attachments, subpasses, dependencies, etc. */
     VkRenderPass _renderPass = VK_NULL_HANDLE;
 
-    RenderPass(Device& device) : _device(device._logicalDevice) {}
+    explicit RenderPass(Device& device) : _device(device._logicalDevice) {}
     ~RenderPass() {
         destroy();
     }

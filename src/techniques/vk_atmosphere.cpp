@@ -507,10 +507,10 @@ void Atmosphere::compute_multiple_scattering(Device& device, UploadContext& uplo
     {
         vkCmdBeginRenderPass(commandBuffer._commandBuffer, &offscreenPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         {
-            VkViewport viewport = vkinit::get_viewport((float) Atmosphere::MULTISCATTERING_WIDTH,(float) Atmosphere::MULTISCATTERING_HEIGHT);
+            VkViewport viewport = vkinit::get_viewport(static_cast<float>(Atmosphere::MULTISCATTERING_WIDTH), static_cast<float>(Atmosphere::MULTISCATTERING_HEIGHT));
             vkCmdSetViewport(commandBuffer._commandBuffer, 0, 1, &viewport);
 
-            VkRect2D scissor = vkinit::get_scissor((float) Atmosphere::MULTISCATTERING_WIDTH,(float) Atmosphere::MULTISCATTERING_HEIGHT);
+            VkRect2D scissor = vkinit::get_scissor(static_cast<float>(Atmosphere::MULTISCATTERING_WIDTH), static_cast<float>(Atmosphere::MULTISCATTERING_HEIGHT));
             vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
 
             vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _multiScatteringPass->pipelineLayout, 0, 1, &_multipleScatteringDescriptor, 0, nullptr);
@@ -575,10 +575,10 @@ void Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext, u
         {
             vkCmdBeginRenderPass(commandBuffer._commandBuffer, &offscreenPassInfo, VK_SUBPASS_CONTENTS_INLINE);
             {
-                VkViewport viewport = vkinit::get_viewport((float) Atmosphere::SKYVIEW_WIDTH,(float) Atmosphere::SKYVIEW_HEIGHT);
+                VkViewport viewport = vkinit::get_viewport(static_cast<float>(Atmosphere::SKYVIEW_WIDTH), static_cast<float>(Atmosphere::SKYVIEW_HEIGHT));
                 vkCmdSetViewport(commandBuffer._commandBuffer, 0, 1, &viewport);
 
-                VkRect2D scissor = vkinit::get_scissor((float) Atmosphere::SKYVIEW_WIDTH,(float) Atmosphere::SKYVIEW_HEIGHT);
+                VkRect2D scissor = vkinit::get_scissor(static_cast<float>(Atmosphere::SKYVIEW_WIDTH), static_cast<float>(Atmosphere::SKYVIEW_HEIGHT));
                 vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
 
                 vkCmdBindDescriptorSets(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _skyviewPass->pipelineLayout, 0, 1, &_skyviewDescriptor.at(frameIndex), 0, nullptr);

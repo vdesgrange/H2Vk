@@ -22,7 +22,7 @@ public:
     /** @brief vulkan command pool object */
     VkCommandPool _commandPool;
 
-    CommandPool(const Device& device);
+    explicit CommandPool(const Device& device);
     ~CommandPool();
 
 private:

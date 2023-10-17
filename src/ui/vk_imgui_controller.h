@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - UI Controller
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -16,6 +16,12 @@
 
 class Camera;
 
+/**
+ * UI Controller 
+ * Imgui requires inputs which might need formatting. This wrapping controller interface between UI view
+ * and model's data used.
+ * @brief Controller wrapping imgui inputs
+ */
 class UIController {
 public:
     static std::function<float ()> get_speed(Camera& camera);

@@ -32,7 +32,7 @@ public:
         size_t hash() const;
     };
 
-    DescriptorLayoutCache(const Device &device) : _device(device) {};
+    explicit DescriptorLayoutCache(const Device &device) : _device(device) {};
     ~DescriptorLayoutCache();
     VkDescriptorSetLayout createDescriptorLayout(VkDescriptorSetLayoutCreateInfo& info);
 

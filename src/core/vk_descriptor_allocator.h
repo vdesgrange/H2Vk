@@ -29,7 +29,7 @@ public:
     /** @brief Number of sets per pools (kind of abstract so far) */
     const unsigned int MAX_SETS = 10;
 
-    DescriptorAllocator(const Device &device) : _device(device) {};
+    explicit DescriptorAllocator(const Device &device) : _device(device) {};
     ~DescriptorAllocator();
 
     bool allocate(VkDescriptorSet* descriptor, VkDescriptorSetLayout* setLayout, std::vector<VkDescriptorPoolSize> sizes);

@@ -176,10 +176,10 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
         {
             vkCmdBeginRenderPass(commandBuffer._commandBuffer, &renderPassInfo,VK_SUBPASS_CONTENTS_INLINE);
             {
-                VkViewport viewport = vkinit::get_viewport((float) ENV_WIDTH, (float) ENV_HEIGHT);
+                VkViewport viewport = vkinit::get_viewport(static_cast<float>(ENV_WIDTH),static_cast<float>(ENV_HEIGHT));
                 vkCmdSetViewport(commandBuffer._commandBuffer, 0, 1, &viewport);
 
-                VkRect2D scissor = vkinit::get_scissor((float) inTexture._width, (float) inTexture._height);
+                VkRect2D scissor = vkinit::get_scissor(static_cast<float>(inTexture._width), static_cast<float>(inTexture._height));
                 vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
 
                 vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, converterPass->pipeline);
@@ -371,10 +371,10 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
         {
             vkCmdBeginRenderPass(commandBuffer._commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
             {
-                VkViewport viewport = vkinit::get_viewport((float) CONVOLVE_WIDTH, (float) CONVOLVE_HEIGHT);
+                VkViewport viewport = vkinit::get_viewport(static_cast<float>(CONVOLVE_WIDTH), static_cast<float>(CONVOLVE_HEIGHT));
                 vkCmdSetViewport(commandBuffer._commandBuffer, 0, 1, &viewport);
 
-                VkRect2D scissor = vkinit::get_scissor((float) inTexture._width, (float) inTexture._height);
+                VkRect2D scissor = vkinit::get_scissor(static_cast<float>(inTexture._width), static_cast<float>(inTexture._height));
                 vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
 
                 vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irradiancePass->pipeline);
@@ -579,7 +579,7 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
         std::shared_ptr<ShaderPass> prefilterPass = materialManager.create_material("prefilter", {setLayout}, constants, modules);
 
         // Command pool + command buffer for compute operations
-        float roughness = static_cast<float>(mipLevel) / float(PRE_FILTER_MIP_LEVEL);
+        float roughness = static_cast<float>(mipLevel) / static_cast<float>(PRE_FILTER_MIP_LEVEL);
 
         for (int face = 0; face < count; face++) {
             CommandPool commandPool = CommandPool(device); // can use graphic queue for compute work
@@ -605,10 +605,10 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
             {
                 vkCmdBeginRenderPass(commandBuffer._commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
                 {
-                    VkViewport viewport = vkinit::get_viewport((float) mipWidth, (float) mipHeight);
+                    VkViewport viewport = vkinit::get_viewport(static_cast<float>(mipWidth),static_cast<float>(mipHeight));
                     vkCmdSetViewport(commandBuffer._commandBuffer, 0, 1, &viewport);
 
-                    VkRect2D scissor = vkinit::get_scissor((float) inTexture._width, (float) inTexture._height);
+                    VkRect2D scissor = vkinit::get_scissor(static_cast<float>(inTexture._width), static_cast<float>(inTexture._height));
                     vkCmdSetScissor(commandBuffer._commandBuffer, 0, 1, &scissor);
 
                     vkCmdBindPipeline(commandBuffer._commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, prefilterPass->pipeline);

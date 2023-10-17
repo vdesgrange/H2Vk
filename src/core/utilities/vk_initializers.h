@@ -33,5 +33,5 @@ namespace vkinit {
     VkWriteDescriptorSet write_descriptor_image(VkDescriptorType type, VkDescriptorSet dstSet, VkDescriptorImageInfo* imageInfo, uint32_t binding);
     VkViewport get_viewport(float width, float height);
     VkRect2D get_scissor(float width, float height);
-}
+} // namespace vkinit
 

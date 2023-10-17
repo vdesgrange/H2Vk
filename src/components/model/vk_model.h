@@ -150,7 +150,7 @@ public:
     } _indexBuffer {};
     AllocatedBuffer _vertexBuffer {};
 
-    Model(Device* device);
+    explicit Model(Device* device);
     ~Model();
 
     Model() = delete;

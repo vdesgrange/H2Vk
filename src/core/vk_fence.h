@@ -22,7 +22,7 @@ public:
     /** @brief  Fence object */
     VkFence _fence;
 
-    Fence(const Device& device);
+    explicit Fence(const Device& device);
     Fence(const Device& device, VkFenceCreateFlagBits flags);
     ~Fence();
 

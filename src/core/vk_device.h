@@ -33,7 +33,7 @@ public:
     /** @brief Represent memory assigned to a buffer */
     VmaAllocator _allocator;
 
-    Device(Window& _window);
+    explicit Device(Window& _window);
     ~Device();
 
     VkQueue get_graphics_queue() const;

@@ -205,10 +205,10 @@ void CascadedShadow::compute_resources(FrameData& frame, Renderables& renderable
 
     VkExtent2D extent{CascadedShadow::SHADOW_WIDTH, CascadedShadow::SHADOW_HEIGHT};
 
-    VkViewport viewport = vkinit::get_viewport((float) CascadedShadow::SHADOW_WIDTH, (float) CascadedShadow::SHADOW_HEIGHT);
+    VkViewport viewport = vkinit::get_viewport(static_cast<float>(CascadedShadow::SHADOW_WIDTH), static_cast<float>(CascadedShadow::SHADOW_HEIGHT));
     vkCmdSetViewport(frame._commandBuffer->_commandBuffer, 0, 1, &viewport);
 
-    VkRect2D scissor = vkinit::get_scissor((float) CascadedShadow::SHADOW_WIDTH, (float) CascadedShadow::SHADOW_HEIGHT);
+    VkRect2D scissor = vkinit::get_scissor(static_cast<float>(CascadedShadow::SHADOW_WIDTH), static_cast<float>(CascadedShadow::SHADOW_HEIGHT));
     vkCmdSetScissor(frame._commandBuffer->_commandBuffer, 0, 1, &scissor);
 
     for (uint8_t l = 0; l < CascadedShadow::COUNT; l++) {

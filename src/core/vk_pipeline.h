@@ -24,7 +24,7 @@ class VertexInputDescription;
  */
 class PipelineBuilder {
 public:
-    PipelineBuilder(const Device& device): _device(device) {};
+    explicit PipelineBuilder(const Device& device): _device(device) {};
 
     std::shared_ptr<ShaderEffect> build_effect(std::vector<VkDescriptorSetLayout> setLayouts, std::vector<VkPushConstantRange> pushConstants, std::vector<std::tuple<VkShaderStageFlagBits, const char*, VkSpecializationInfo>> shaderModules);
     std::shared_ptr<ShaderPass> build_pass(std::shared_ptr<ShaderEffect> effect);
@@ -76,7 +76,7 @@ private:
  */
 class ComputePipeline final : public PipelineBuilder {
 public:
-    ComputePipeline(const Device& device) : PipelineBuilder(device) {};
+    explicit ComputePipeline(const Device& device) : PipelineBuilder(device) {};
 
 private:
     VkPipeline build_pipeline(VkPipelineLayout& pipelineLayout, std::vector<VkPipelineShaderStageCreateInfo>& shaderStages) override;

@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk - ImGui wrapper
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -13,6 +13,12 @@
 
 #include "imgui_internal.h"
 
+/**
+ * ImGui wraper
+ * Use getter/setter classes methods instead of using public class members. 
+ * Add additional processing if required.
+ * @brief Extend ImGui methods to accommodate engine
+ */
 namespace ImGui {
     bool InputFloat3(const char* label, const std::function<std::array<float, 3> ()>& getter, const std::function<void (std::array<float, 3>)>& setter, const char* format = "%.3f", ImGuiInputTextFlags flags = 0) {
         std::array<float, 3> value = getter();
