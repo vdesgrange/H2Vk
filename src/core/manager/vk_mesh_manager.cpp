@@ -44,7 +44,7 @@ void MeshManager::upload_mesh(Model& mesh) {
     indexStaging.copyFrom(mesh._indexesBuffer.data(), static_cast<size_t>(indexBufferSize));
     indexStaging.unmap();
 
-    Buffer::create_buffer(*_device, &mesh._indexBuffer.allocation, indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    Buffer::create_buffer(*_device, &mesh._indexBuffer.allocation, indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
     CommandBuffer::immediate_submit(*_device, *_uploadContext, [&](VkCommandBuffer cmd) {      
         VkBufferCopy copy;
