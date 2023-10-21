@@ -1,3 +1,4 @@
 assets/skybox/*.jpg filter=lfs diff=lfs merge=lfs -text
 assets/monkey/*.obj filter=lfs diff=lfs merge=lfs -text
 assets/damaged_helmet/**/* filter=lfs diff=lfs merge=lfs -text
+assets/field/**/* filter=lfs diff=lfs merge=lfs -text

@@ -22,3 +22,6 @@
 [submodule "third_party/glm"]
 	path = third_party/glm
 	url = git@github.com:g-truc/glm.git
+[submodule "assets/glTF-Sample-Models"]
+	path = assets/glTF-Sample-Models
+	url = git@github.com:KhronosGroup/glTF-Sample-Models.git
