@@ -54,3 +54,36 @@ void Scene::setup_texture_descriptors(DescriptorLayoutCache& layoutCache, Descri
         renderable.model->setup_descriptors(layoutCache, allocator, setLayout);
     }
 }
+
+/**
+ * @brief Render scene assets
+ * @param commandBuffer
+ */
+void Scene::render_objects(VkCommandBuffer commandBuffer, FrameData& frame) {
+    std::shared_ptr<Model> lastModel = nullptr;
+    std::shared_ptr<Material> lastMaterial = nullptr;
+    // uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
+
+    uint32_t count = _renderables.size();
+    RenderObject *first = _renderables.data();
+
+    for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
+        RenderObject& object = first[i]; // Take the scene/object
+
+        if (object.material != lastMaterial) {
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
+            lastMaterial = object.material;
+            // uint32_t lightOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex;
+            std::vector<uint32_t> dynOffsets = {0, 0};
+
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &frame.environmentDescriptor, 2, dynOffsets.data());
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &frame.objectDescriptor, 0,nullptr);
+        }
+
+        if (object.model) {
+            bool bind = object.model.get() != lastModel.get();
+            object.model->draw(commandBuffer, object.material->pipelineLayout, sizeof(glm::mat4), i, bind);
+            lastModel = bind ? object.model : lastModel;
+        }
+    }
+}

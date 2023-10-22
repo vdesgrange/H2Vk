@@ -163,14 +163,19 @@ private:
     void recreate_swap_chain();
     void ui_overlay();
     void update_uniform_buffers();
-    void update_buffer_objects(RenderObject *first, int count); // update_objects_buffer
-    void render_objects(VkCommandBuffer commandBuffer);
+    void update_objects_buffer(RenderObject *first, int count);
     void build_command_buffers(FrameData& frame, int imageIndex);
     void compute();
     void render(int imageIndex);
     void draw();
-    // Statistics monitoring();
-    FrameData& get_current_frame();
+
+    /**
+     * @brief Determine current processed frame from its index.
+     * @return current frame data structure
+     */
+    FrameData& get_current_frame() {
+        return g_frames[_frameNumber % FRAME_OVERLAP];
+    }
 
     void allocate_buffers(Device& device) {
         for (int i = 0; i < FRAME_OVERLAP; i++) {

@@ -29,8 +29,6 @@
 
 #include "vk_engine.h"
 
-using namespace std;
-
 /**
  * @brief Initialize the engine
  */
@@ -50,7 +48,7 @@ void VulkanEngine::init()
     init_descriptors();
     init_materials();
 
-    update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
+    update_objects_buffer(_scene->_renderables.data(), _scene->_renderables.size());
 	_isInitialized = true;
 }
 
@@ -66,47 +64,6 @@ void VulkanEngine::init_window() {
  */
 void VulkanEngine::init_vulkan() {
     _device = std::make_unique<Device>(*_window);
-}
-
-/**
- * @brief Initialize user interface
- * @note - todo - messy, need rework once ECS implemented
- */
-void VulkanEngine::init_interface() {
-    auto settings = Settings{.scene_index=0};
-    _ui = std::make_unique<UInterface>(*this, settings);
-    _ui->init_imgui();
-}
-
-/**
- * @brief Initialize camera
- * @note - todo - should consider entity-component system
- */
-void VulkanEngine::init_camera() {
-    _camera = std::make_unique<Camera>();
-    _camera->inverse(false);
-    _camera->set_position({ 0.f, 0.f, 0.f });
-    _camera->set_perspective(70.f, (float)_window->_windowExtent.width /(float)_window->_windowExtent.height, 0.1f, 200.0f);
-
-    _window->on_get_key = [this](int key, int action) {
-        _camera->on_key(key, action);
-//        if (updated) {
-//            update_buffers();
-//        }
-    };
-
-    _window->on_cursor_position = [this](double xpos, double ypos) {
-        if (_ui->want_capture_mouse()) return;
-        _camera->on_cursor_position(xpos, ypos);
-//        if (updated) {
-//            update_uniform_buffers();
-//        }
-    };
-
-    _window->on_mouse_button = [this](int button, int action, int mods) {
-        if (_ui->want_capture_mouse()) return;
-        _camera->on_mouse_button(button, action, mods);
-    };
 }
 
 /**
@@ -193,6 +150,111 @@ void VulkanEngine::init_sync_structures() {
 }
 
 /**
+ * @brief Initialize system managers
+ * @note material, assets, lighting managers.
+ */
+void VulkanEngine::init_managers() {
+    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass);
+
+    _systemManager = std::make_unique<SystemManager>();
+    _materialManager = _systemManager->register_system<MaterialManager>(_device.get(), _pipelineBuilder.get());
+    _meshManager = _systemManager->register_system<MeshManager>(_device.get(), &_uploadContext);
+    _lightingManager = _systemManager->register_system<LightingManager>();
+}
+
+/**
+ * @brief Initialize user interface
+ * @note - todo - messy, need rework once ECS implemented
+ */
+void VulkanEngine::init_interface() {
+    auto settings = Settings{.scene_index=0};
+    _ui = std::make_unique<UInterface>(*this, settings);
+    _ui->init_imgui();
+}
+
+/**
+ * @brief Initialize camera
+ * @note - todo - should consider entity-component system
+ */
+void VulkanEngine::init_camera() {
+    _camera = std::make_unique<Camera>();
+    _camera->inverse(false);
+    _camera->set_position({ 0.f, 0.f, 0.f });
+    _camera->set_perspective(70.f, (float)_window->_windowExtent.width /(float)_window->_windowExtent.height, 0.1f, 200.0f);
+
+    _window->on_get_key = [this](int key, int action) {
+        _camera->on_key(key, action);
+//        if (updated) {
+//            update_buffers();
+//        }
+    };
+
+    _window->on_cursor_position = [this](double xpos, double ypos) {
+        if (_ui->want_capture_mouse()) return;
+        _camera->on_cursor_position(xpos, ypos);
+//        if (updated) {
+//            update_uniform_buffers();
+//        }
+    };
+
+    _window->on_mouse_button = [this](int button, int action, int mods) {
+        if (_ui->want_capture_mouse()) return;
+        _camera->on_mouse_button(button, action, mods);
+    };
+}
+
+/**
+ * @brief Initialize the scene
+ */
+void VulkanEngine::init_scene() {
+    _skybox = std::make_unique<Skybox>(*_device, *_meshManager, _uploadContext);
+    _skybox->_type = Skybox::Type::box;
+    _skybox->load();
+
+    _cascadedShadow = std::make_unique<CascadedShadow>(*_device, _uploadContext);
+
+    _atmosphere = std::make_unique<Atmosphere>(*_device, *_materialManager, *_lightingManager, _uploadContext);
+
+    _sceneListing = std::make_unique<SceneListing>();
+    _scene = std::make_unique<Scene>(*this);
+}
+
+/**
+ * @brief Initialize descriptor objects
+ * @note Initialize descriptors used by skybox, scene, shadow. Create caching and allocation system.
+ */
+void VulkanEngine::init_descriptors() {
+    _layoutCache = new DescriptorLayoutCache(*_device); // todo : make smart pointer
+    _allocator = new DescriptorAllocator(*_device); // todo : make smart pointer
+
+    VulkanEngine::allocate_buffers(*_device);
+    Camera::allocate_buffers(*_device);
+    LightingManager::allocate_buffers(*_device);
+    Scene::allocate_buffers(*_device);
+    CascadedShadow::allocate_buffers(*_device);
+
+    _skybox->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.skybox);
+    _scene->setup_transformation_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.matrices);
+    _cascadedShadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.cascadedOffscreen);
+
+    this->setup_environment_descriptors();
+
+    // === Clean up === // Why keep this here if buffered allocated in their respective related class?
+    _mainDeletionQueue.push_function([&]() {
+        for (int i = 0; i < FRAME_OVERLAP; i++) {
+            g_frames[i].cameraBuffer.destroy();
+            g_frames[i].lightingBuffer.destroy();
+            g_frames[i].objectBuffer.destroy();
+            g_frames[i].cascadedOffscreenBuffer.destroy();
+            g_frames[i].enabledFeaturesBuffer.destroy();
+        }
+
+        delete _layoutCache;
+        delete _allocator;
+    });
+}
+
+/**
  * @brief Initialize environment descriptors
  * @note Environment descriptor sets need to be initialized one time before run loop.
  */
@@ -244,122 +306,14 @@ void VulkanEngine::setup_environment_descriptors() {
 }
 
 /**
- * @brief Initialize descriptor objects
- * @note Initialize descriptors used by skybox, scene, shadow. Create caching and allocation system.
+ * @brief Pre-compute materials
  */
-void VulkanEngine::init_descriptors() {
-    _layoutCache = new DescriptorLayoutCache(*_device); // todo : make smart pointer
-    _allocator = new DescriptorAllocator(*_device); // todo : make smart pointer
-
-    VulkanEngine::allocate_buffers(*_device);
-    Camera::allocate_buffers(*_device);
-    LightingManager::allocate_buffers(*_device);
-    Scene::allocate_buffers(*_device);
-    CascadedShadow::allocate_buffers(*_device);
-
-    _skybox->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.skybox);
-    _scene->setup_transformation_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.matrices);
-    _cascadedShadow->setup_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.cascadedOffscreen);
-
-    this->setup_environment_descriptors();
-
-    // === Clean up === // Why keep this here if buffered allocated in their respective related class?
-    _mainDeletionQueue.push_function([&]() {
-        for (int i = 0; i < FRAME_OVERLAP; i++) {
-            g_frames[i].cameraBuffer.destroy();
-            g_frames[i].lightingBuffer.destroy();
-            g_frames[i].objectBuffer.destroy();
-            g_frames[i].cascadedOffscreenBuffer.destroy();
-            g_frames[i].enabledFeaturesBuffer.destroy();
-        }
-
-        delete _layoutCache;
-        delete _allocator;
-    });
-}
-
 void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
 }
-
-/**
- * @brief Determine current processed frame from its index.
- * @return current frame data structure
- */
-FrameData& VulkanEngine::get_current_frame() {
-    return g_frames[_frameNumber % FRAME_OVERLAP];
-}
-
-/**
- * @brief Initialize system managers
- * @note material, assets, lighting managers.
- */
-void VulkanEngine::init_managers() {
-    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass);
-
-    _systemManager = std::make_unique<SystemManager>();
-    _materialManager = _systemManager->register_system<MaterialManager>(_device.get(), _pipelineBuilder.get());
-    _meshManager = _systemManager->register_system<MeshManager>(_device.get(), &_uploadContext);
-    _lightingManager = _systemManager->register_system<LightingManager>();
-}
-
-/**
- * @brief Initialize the scene
- */
-void VulkanEngine::init_scene() {
-    _skybox = std::make_unique<Skybox>(*_device, *_meshManager, _uploadContext);
-    _skybox->_type = Skybox::Type::box;
-    _skybox->load();
-
-    _cascadedShadow = std::make_unique<CascadedShadow>(*_device, _uploadContext);
-
-    _atmosphere = std::make_unique<Atmosphere>(*_device, *_materialManager, *_lightingManager, _uploadContext);
-
-    _sceneListing = std::make_unique<SceneListing>();
-    _scene = std::make_unique<Scene>(*this);
-}
-
-/**
- * @brief Recreate swap-chain and affiliated objects.
- * @note Necessary for some action such as resizing the window.
- */
-void VulkanEngine::recreate_swap_chain() {
-    int width = 0, height = 0;
-    glfwGetFramebufferSize(_window->_window, &width, &height);
-    while (width == 0 || height == 0) {
-        glfwGetFramebufferSize(_window->_window, &width, &height);
-        glfwWaitEvents();
-    }
-
-    vkDeviceWaitIdle(_device->_logicalDevice);
-    _pipelineBuilder.reset();
-    _renderPass.reset();
-    _swapchain.reset();
-
-    // Command buffers
-    for (int i = 0; i < FRAME_OVERLAP; i++) {
-        delete g_frames[i]._commandBuffer;
-        g_frames[i]._commandBuffer = new CommandBuffer(*_device, *g_frames[i]._commandPool);
-    }
-    delete _uploadContext._commandBuffer;
-    _uploadContext._commandBuffer = new CommandBuffer(*_device, *_uploadContext._commandPool);
-
-    init_swapchain();
-    init_default_renderpass();
-    init_framebuffers(); // framebuffers depend on renderpass for device for creation and destruction
-    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass); // todo: messy, rework
-    _materialManager->_pipelineBuilder = _pipelineBuilder.get();
-
-    if ((float)_window->_windowExtent.width > 0.0f && (float)_window->_windowExtent.height > 0.0f) {
-        _camera->set_aspect((float)_window->_windowExtent.width / (float)_window->_windowExtent.height);
-        update_uniform_buffers();
-    }
-
-}
-
 
 /**
  * @brief Update user interface
@@ -376,95 +330,6 @@ void VulkanEngine::ui_overlay() {
 
     // Move camera when key press
     _camera->update_camera(1.0f / stats.FrameRate);
-}
-
-/**
- * @brief update uniform buffer
- * @note handle camera, lighting, shadow uniform buffer data.
- */
-void VulkanEngine::update_uniform_buffers() {
-    FrameData& frame =  get_current_frame();
-    uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
-
-    // === Camera & Objects & Environment ===
-    // Camera : write into the buffer by copying the render matrices from camera object into it
-    GPUCameraData camData = _camera->gpu_format();
-    frame.cameraBuffer.map();
-    frame.cameraBuffer.copyFrom(&camData, sizeof(GPUCameraData));
-    frame.cameraBuffer.unmap();
-
-    // Light : write scene data into lighting buffer
-    GPULightData lightingData = _lightingManager->gpu_format();
-    frame.lightingBuffer.map();
-    frame.lightingBuffer.copyFrom(&lightingData, sizeof(GPULightData));
-    frame.lightingBuffer.unmap();
-
-    // Cascaded shadow
-    CascadedShadow::GPUCascadedShadowData cascadedOffscreenData = _cascadedShadow->gpu_format();
-    frame.cascadedOffscreenBuffer.map();
-    frame.cascadedOffscreenBuffer.copyFrom(&cascadedOffscreenData, sizeof(CascadedShadow::GPUCascadedShadowData));
-    frame.cascadedOffscreenBuffer.unmap();
-
-    // === Enabled Features ===
-    GPUEnabledFeaturesData featuresData{};
-    featuresData.shadowMapping = _enabledFeatures.shadowMapping;
-    featuresData.atmosphere = _enabledFeatures.atmosphere;
-    featuresData.skybox = _enabledFeatures.skybox;
-
-    frame.enabledFeaturesBuffer.map();
-    frame.enabledFeaturesBuffer.copyFrom(&featuresData, sizeof(GPUEnabledFeaturesData));
-    frame.enabledFeaturesBuffer.unmap();
-}
-
-/**
- * @brief update buffer objects
- * @param first
- * @param count
- */
-void VulkanEngine::update_buffer_objects(RenderObject *first, int count) {
-    // Objects : write into the buffer by copying the render matrices from our render objects into it
-    // Object not moving : call only when change scene
-    for (uint32_t i = 0; i < FRAME_OVERLAP; i++) {
-        FrameData& frame = g_frames[i]; // if object moves, call each frame.
-        frame.objectBuffer.map();
-        GPUObjectData* objectSSBO = (GPUObjectData*)frame.objectBuffer._data;
-        for (int j = 0; j < count; j++) {
-            RenderObject& object = first[j];
-            objectSSBO[j].model = object.transformMatrix;
-        }
-        frame.objectBuffer.unmap();
-    }
-}
-
-/**
- * @brief render assets
- * @param commandBuffer
- */
-void VulkanEngine::render_objects(VkCommandBuffer commandBuffer) {
-    std::shared_ptr<Model> lastModel = nullptr;
-    std::shared_ptr<Material> lastMaterial = nullptr;
-    uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
-    uint32_t count = _scene->_renderables.size();
-    RenderObject *first = _scene->_renderables.data();
-    for (int i=0; i < count; i++) { // For each scene/object in the vector of scenes.
-        RenderObject& object = first[i]; // Take the scene/object
-
-        if (object.material != lastMaterial) { // Same material = (shaders/pipeline/descriptors) for multiple objects part of the same scene (e.g. monkey + triangles)
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
-            lastMaterial = object.material;
-            // uint32_t lightOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex;
-            std::vector<uint32_t> dynOffsets = {0, 0};
-
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().environmentDescriptor, 2, dynOffsets.data());
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0,nullptr);
-        }
-
-        if (object.model) {
-            bool bind = object.model.get() != lastModel.get();
-            object.model->draw(commandBuffer, object.material->pipelineLayout, sizeof(glm::mat4), i, bind);
-            lastModel = bind ? object.model : lastModel;
-        }
-    }
 }
 
 /**
@@ -512,17 +377,17 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
             } else {
                 // === Skybox ===
                 if (_enabledFeatures.skybox) {
-                    this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &get_current_frame().skyboxDescriptor);
+                    this->_skybox->build_command_buffer(frame._commandBuffer->_commandBuffer, &frame.skyboxDescriptor);
                 }
 
                 // === Atmosphere (WIP) ===
                 if (_enabledFeatures.atmosphere) {
-                    this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &get_current_frame().atmosphereDescriptor);
+                    this->_atmosphere->draw(frame._commandBuffer->_commandBuffer, &frame.atmosphereDescriptor);
                 }
 
                 // === Meshes ===
                 if (_enabledFeatures.meshes) {
-                    this->render_objects(frame._commandBuffer->_commandBuffer);
+                   this->_scene->render_objects(frame._commandBuffer->_commandBuffer, frame);
                 }
             }
 
@@ -532,11 +397,69 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
             }
 
         }
-        vkCmdEndRenderPass(get_current_frame()._commandBuffer->_commandBuffer);
+        vkCmdEndRenderPass(frame._commandBuffer->_commandBuffer);
 
     }
-    VK_CHECK(vkEndCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer));
+    VK_CHECK(vkEndCommandBuffer(frame._commandBuffer->_commandBuffer));
 
+}
+
+/**
+ * @brief update objects buffer
+ * @param first
+ * @param count
+ */
+void VulkanEngine::update_objects_buffer(RenderObject *first, int count) {
+    // Objects : write into the buffer by copying the render matrices from our render objects into it
+    // Object not moving : call only when change scene
+    for (uint32_t i = 0; i < FRAME_OVERLAP; i++) {
+        FrameData& frame = g_frames[i]; // if object moves, call each frame.
+        frame.objectBuffer.map();
+        GPUObjectData* objectSSBO = (GPUObjectData*)frame.objectBuffer._data;
+        for (int j = 0; j < count; j++) {
+            RenderObject& object = first[j];
+            objectSSBO[j].model = object.transformMatrix;
+        }
+        frame.objectBuffer.unmap();
+    }
+}
+
+/**
+ * @brief update uniform buffer
+ * @note handle camera, lighting, shadow uniform buffer data.
+ */
+void VulkanEngine::update_uniform_buffers() {
+    FrameData& frame =  get_current_frame();
+    uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
+
+    // === Camera & Objects & Environment ===
+    // Camera : write into the buffer by copying the render matrices from camera object into it
+    GPUCameraData camData = _camera->gpu_format();
+    frame.cameraBuffer.map();
+    frame.cameraBuffer.copyFrom(&camData, sizeof(GPUCameraData));
+    frame.cameraBuffer.unmap();
+
+    // Light : write scene data into lighting buffer
+    GPULightData lightingData = _lightingManager->gpu_format();
+    frame.lightingBuffer.map();
+    frame.lightingBuffer.copyFrom(&lightingData, sizeof(GPULightData));
+    frame.lightingBuffer.unmap();
+
+    // Cascaded shadow
+    CascadedShadow::GPUCascadedShadowData cascadedOffscreenData = _cascadedShadow->gpu_format();
+    frame.cascadedOffscreenBuffer.map();
+    frame.cascadedOffscreenBuffer.copyFrom(&cascadedOffscreenData, sizeof(CascadedShadow::GPUCascadedShadowData));
+    frame.cascadedOffscreenBuffer.unmap();
+
+    // === Enabled Features ===
+    GPUEnabledFeaturesData featuresData{};
+    featuresData.shadowMapping = _enabledFeatures.shadowMapping;
+    featuresData.atmosphere = _enabledFeatures.atmosphere;
+    featuresData.skybox = _enabledFeatures.skybox;
+
+    frame.enabledFeaturesBuffer.map();
+    frame.enabledFeaturesBuffer.copyFrom(&featuresData, sizeof(GPUEnabledFeaturesData));
+    frame.enabledFeaturesBuffer.unmap();
 }
 
 /**
@@ -560,27 +483,28 @@ void VulkanEngine::compute() {
  * @param imageIndex current frame index
  */
 void VulkanEngine::render(int imageIndex) {
+    FrameData& frame = get_current_frame();
 
     // === Update scene ===
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
         _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
         _scene->load_scene(_ui->get_settings().scene_index, *_camera);
         _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
-        this->update_buffer_objects(_scene->_renderables.data(), _scene->_renderables.size());
+        update_objects_buffer(_scene->_renderables.data(), _scene->_renderables.size());
     }
 
     // === Update resources ===
     compute();
 
     // === Update uniform buffers ===
-    update_uniform_buffers(); // If called at every frame: fix the position jump of the camera when moving
+    update_uniform_buffers();
 
     // === Render scene ===
-    VK_CHECK(vkResetCommandBuffer(get_current_frame()._commandBuffer->_commandBuffer, 0));
+    VK_CHECK(vkResetCommandBuffer(frame._commandBuffer->_commandBuffer, 0));
 
-    this->build_command_buffers(get_current_frame(), imageIndex);
+    build_command_buffers(frame, imageIndex);
 
-    // === Submit queue
+    // === Submit queue ===
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     VkSubmitInfo submitInfo{};
@@ -588,27 +512,66 @@ void VulkanEngine::render(int imageIndex) {
     submitInfo.pNext = nullptr;
     submitInfo.pWaitDstStageMask = &waitStage;
     submitInfo.waitSemaphoreCount = 1; // Semaphore to wait before executing the command buffers
-    submitInfo.pWaitSemaphores = &(get_current_frame()._presentSemaphore->_semaphore);
-    submitInfo.signalSemaphoreCount = 1; // Number of semaphores to be signaled once the commands
-    submitInfo.pSignalSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
+    submitInfo.pWaitSemaphores = &(frame._presentSemaphore->_semaphore); // Wait acquisition of next presentable image
+    submitInfo.signalSemaphoreCount = 1; // Number of semaphores to be signaled once the commands are executed
+    submitInfo.pSignalSemaphores = &(frame._renderSemaphore->_semaphore); // Signal image is rendered and ready to be presented
     submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
-    submitInfo.pCommandBuffers = &get_current_frame()._commandBuffer->_commandBuffer;
+    submitInfo.pCommandBuffers = &frame._commandBuffer->_commandBuffer;
 
-    VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, get_current_frame()._renderFence->_fence));
+    VK_CHECK(vkQueueSubmit(_device->get_graphics_queue(), 1, &submitInfo, frame._renderFence->_fence));
+}
+
+/**
+ * @brief Recreate swap-chain and affiliated objects.
+ * @note Necessary for some action such as resizing the window.
+ */
+void VulkanEngine::recreate_swap_chain() {
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(_window->_window, &width, &height);
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(_window->_window, &width, &height);
+        glfwWaitEvents();
+    }
+
+    vkDeviceWaitIdle(_device->_logicalDevice);
+    _pipelineBuilder.reset();
+    _renderPass.reset();
+    _swapchain.reset();
+
+    // Command buffers
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        delete g_frames[i]._commandBuffer;
+        g_frames[i]._commandBuffer = new CommandBuffer(*_device, *g_frames[i]._commandPool);
+    }
+    delete _uploadContext._commandBuffer;
+    _uploadContext._commandBuffer = new CommandBuffer(*_device, *_uploadContext._commandPool);
+
+    init_swapchain();
+    init_default_renderpass();
+    init_framebuffers(); // framebuffers depend on renderpass for device for creation and destruction
+    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass); // todo: messy, rework
+    _materialManager->_pipelineBuilder = _pipelineBuilder.get();
+
+    if ((float)_window->_windowExtent.width > 0.0f && (float)_window->_windowExtent.height > 0.0f) {
+        _camera->set_aspect((float)_window->_windowExtent.width / (float)_window->_windowExtent.height);
+        update_uniform_buffers();
+    }
+
 }
 
 /**
  * @brief Draw the latest rendered frame
  */
-void VulkanEngine::draw() { // todo : what need to be called at each frame? draw()? commandBuffers might not need to be re-build
+void VulkanEngine::draw() {
+    FrameData& frame = get_current_frame();
     // === Prepare frame ===
     // Wait GPU to render latest frame. Timeout of 1 second
-     VK_CHECK(get_current_frame()._renderFence->wait(1000000000));
-     VK_CHECK(get_current_frame()._renderFence->reset());
+     VK_CHECK(frame._renderFence->wait(1000000000));
+     VK_CHECK(frame._renderFence->reset());
 
     // Acquire next presentable image. Use occur only after the image is returned by vkAcquireNextImageKHR and before vkQueuePresentKHR.
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, get_current_frame()._presentSemaphore->_semaphore, nullptr, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(_device->_logicalDevice, _swapchain->_swapchain, 1000000000, frame._presentSemaphore->_semaphore, nullptr, &imageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         recreate_swap_chain();
         return;
@@ -616,7 +579,7 @@ void VulkanEngine::draw() { // todo : what need to be called at each frame? draw
         throw std::runtime_error("failed to acquire swap chain image");
     }
 
-    // === Rendering commands
+    // === Render frame ===
     render(imageIndex);
 
     // === Submit frame ===
@@ -628,7 +591,7 @@ void VulkanEngine::draw() { // todo : what need to be called at each frame? draw
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &(get_current_frame()._renderSemaphore->_semaphore);
+    presentInfo.pWaitSemaphores = &(frame._renderSemaphore->_semaphore); // Wait for command buffers to be fully executed.
 
     result = vkQueuePresentKHR(_device->get_graphics_queue(), &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _window->_framebufferResized) {

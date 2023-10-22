@@ -159,7 +159,7 @@ bool UInterface::interface(Performance::Statistics statistics) {
             updated |= ImGui::MenuItem("Performances", nullptr, &this->p_open[STATS_VIEWER]);
 
             if (_engine._enabledFeatures.skybox) {
-                updated |= ImGui::MenuItem("Enable skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
+                updated |= ImGui::MenuItem("Display skybox", nullptr, &this->p_open[SKYBOX_EDITOR]);
             }
             ImGui::EndMenu();
         }

@@ -22,7 +22,7 @@ public:
     explicit Scene(VulkanEngine& engine) : _engine(engine) {};
 
     void load_scene(int sceneIndex, Camera& camera);
-    void render_objects(VkCommandBuffer commandBuffer);
+    void render_objects(VkCommandBuffer commandBuffer, FrameData& frame);
     static void allocate_buffers(Device& device);
     void setup_transformation_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
     void setup_texture_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
