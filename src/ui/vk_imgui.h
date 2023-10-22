@@ -14,6 +14,7 @@ class VulkanEngine;
 #include "VkBootstrap.h"
 #include "core/vk_descriptor_cache.h"
 #include "core/vk_descriptor_allocator.h"
+#include "core/utilities/vk_performance.h"
 
 typedef enum UIConstants {
     SCENE_EDITOR = 0,
@@ -24,13 +25,6 @@ typedef enum UIConstants {
     LOG_CONSOLE = 5,
     SHADOW_EDITOR = 6,
 } UIConstants;
-
-struct Statistics final {
-    VkExtent2D FramebufferSize;
-    float FrameRate;
-    float coordinates[3] {0.0f, 0.0f, 0.0f};
-    float rotation[3] {0.0f, 0.0f, 0.0f};
-};
 
 struct Settings final {
     int scene_index;
@@ -52,7 +46,7 @@ public:
     ~UInterface();
 
     void init_imgui();
-    bool render(VkCommandBuffer cmd, Statistics stats);
+    bool render(VkCommandBuffer cmd, Performance::Statistics stats);
     static bool want_capture_mouse();
 
     Settings& get_settings() { return _settings; };
@@ -66,10 +60,10 @@ private:
     void clean_up();
     void new_frame();
 
-    bool interface(Statistics statistics);
+    bool interface(Performance::Statistics statistics);
     bool scene_editor();
     bool view_editor();
-    bool stats_viewer(const Statistics& statistics);
+    bool stats_viewer(const Performance::Statistics& statistics);
     bool skybox_editor();
     bool light_editor();
     bool shadow_editor();

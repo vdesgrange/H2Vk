@@ -19,6 +19,7 @@
 #include "core/utilities/vk_resources.h"
 #include "core/utilities/vk_global.h"
 #include "core/utilities/vk_initializers.h"
+#include "core/utilities/vk_performance.h"
 
 #include "core/vk_window.h"
 #include "core/vk_device.h"
@@ -77,7 +78,6 @@ class Semaphore;
 class Fence;
 class DescriptorLayoutCache;
 class DescriptorAllocator;
-class Statistics;
 
 const bool enableValidationLayers = true;
 
@@ -89,7 +89,6 @@ class VulkanEngine {
 public:
 	bool _isInitialized = false;
     uint32_t _frameNumber = 0;
-    double _time = 0;
 
     std::unique_ptr<Window> _window;
     std::unique_ptr<Device> _device;
@@ -164,13 +163,13 @@ private:
     void recreate_swap_chain();
     void ui_overlay();
     void update_uniform_buffers();
-    void update_buffer_objects(RenderObject *first, int count);
+    void update_buffer_objects(RenderObject *first, int count); // update_objects_buffer
     void render_objects(VkCommandBuffer commandBuffer);
     void build_command_buffers(FrameData& frame, int imageIndex);
     void compute();
     void render(int imageIndex);
     void draw();
-    Statistics monitoring();
+    // Statistics monitoring();
     FrameData& get_current_frame();
 
     void allocate_buffers(Device& device) {

@@ -360,31 +360,13 @@ void VulkanEngine::recreate_swap_chain() {
 
 }
 
-/**
- * @brief Basic FPS monitoring
- * @return
- */
-Statistics VulkanEngine::monitoring() {
-    // Record delta time between calls to Render.
-    const auto prevTime = _time;
-    _time = _window->get_time();
-    const auto timeDelta = _time - prevTime;
-
-    Statistics stats = {};
-    stats.FramebufferSize = _window->get_framebuffer_size();
-    stats.FrameRate = static_cast<float>(1 / timeDelta); // FPS
-    stats.coordinates[0] = _camera->get_position_vector().x;
-    stats.coordinates[1] = _camera->get_position_vector().y;
-    stats.coordinates[2] = _camera->get_position_vector().z;
-    return stats;
-}
 
 /**
  * @brief Update user interface
  * Handle object which need update per frame (ie. camera movement)
  */
 void VulkanEngine::ui_overlay() {
-    Statistics stats = monitoring();
+    Performance::Statistics stats = Performance::monitoring(_window.get(), _camera.get());
 
     bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
     if (updated) {

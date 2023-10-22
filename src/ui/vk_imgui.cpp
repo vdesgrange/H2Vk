@@ -108,7 +108,7 @@ void UInterface::init_imgui() {
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
-bool UInterface::render(VkCommandBuffer cmd, Statistics statistics) {
+bool UInterface::render(VkCommandBuffer cmd, Performance::Statistics statistics) {
     this->new_frame();
     bool updated = this->interface(statistics);
 
@@ -140,7 +140,7 @@ void UInterface::new_frame() {
     ImGui::NewFrame();
 }
 
-bool UInterface::interface(Statistics statistics) {
+bool UInterface::interface(Performance::Statistics statistics) {
     const auto& io = ImGui::GetIO();
     bool updated = false;
 
@@ -413,7 +413,7 @@ bool UInterface::view_editor() {
     return updated;
 }
 
-bool UInterface::stats_viewer(const Statistics& statistics) {
+bool UInterface::stats_viewer(const Performance::Statistics& statistics) {
     bool updated = false;
 
     if (!this->p_open[STATS_VIEWER]) {
