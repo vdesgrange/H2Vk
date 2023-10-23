@@ -8,9 +8,10 @@ The first element of the periodic table.
 Or the comburant used by the first successful internal combustion engine.
 ```
 
-An small graphic engine developed as a side-project to learn the Vulkan API, improve C++ skills and gather graphic computing knowledge.
+A real-time rendering engine developed as a side-project to learn the Vulkan API, improve C++17 skills and gather graphic computing knowledge.
 
-Given that this project is recent, the list of features implemented remains short.
+Given that this project is recent, the list of features implemented remains short. It still features techniques
+such as cascaded shadow mapping, image-based lighting and atmospheric scattering.
 A long term goal aim at using this work to render solutions obtained from physic simulations with closure modelling.
 
 ## Pre-requisites
@@ -53,17 +54,18 @@ cd ../bin
 
 - Physic-Based Rendering (PBR)
 - Image-Based Lighting (IBL)
+- Cascaded Shadow mapping
 - glTF import
 - Keyboard and mouse input
 
-### WIP
-- Shadow mapping
+### Work in progress
 - Atmosphere
 
 ## Snapshots
 
-![gold material!](./snapshots/gold.png "Golden spheres")
-![damaged helmet!](./snapshots/helmet.png "Damaged helmet")
+![damaged helmet!](./snapshots/damaged_helmet.png "Damaged helmet")
+![gold material!](./snapshots/sphere_shadows.png "Golden spheres")
+![gold material!](./snapshots/sponza_shadows.png "Sponza")
 
 
 ## References
