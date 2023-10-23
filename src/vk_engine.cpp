@@ -359,7 +359,7 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
         clearValues[1].depthStencil = {1.0f, 0};
 
-        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass,_window->_windowExtent,_frameBuffers.at(imageIndex)._frameBuffer);
+        VkRenderPassBeginInfo renderPassInfo = vkinit::renderpass_begin_info(_renderPass->_renderPass, _window->_windowExtent, _frameBuffers.at(imageIndex)._frameBuffer);
         renderPassInfo.clearValueCount = clearValues.size();
         renderPassInfo.pClearValues = clearValues.data();
 

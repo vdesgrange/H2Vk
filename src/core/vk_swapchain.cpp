@@ -51,10 +51,16 @@ SwapChain::SwapChain(Window& window, const Device& device) : _device(device) {
     formatKHR.format = VK_FORMAT_B8G8R8A8_SRGB; // VK_FORMAT_B8G8R8A8_SRGB standard RGB.
     formatKHR.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR; // VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
 
+    uint32_t presentModeCount;
+    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device._physicalDevice, device._surface, &presentModeCount, nullptr));
+	
+    std::vector<VkPresentModeKHR> presentMode(presentModeCount);
+	VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device._physicalDevice, device._surface, &presentModeCount, presentMode.data()));
+
     vkb::SwapchainBuilder swapchainBuilder{device._physicalDevice, device._logicalDevice, device._surface };
     vkb::Swapchain vkbSwapchain = swapchainBuilder
             .set_desired_format(formatKHR)  // .use_default_format_selection()
-            .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
+            .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
             .set_desired_extent(window._windowExtent.width, window._windowExtent.height)
             .build()
             .value();
