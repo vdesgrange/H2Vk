@@ -9,6 +9,9 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <vector>
+#include <string>
+#include <utility>
 
 class Window;
 class Camera;
@@ -24,6 +27,8 @@ public:
         float FrameRate;
         float coordinates[3] {0.0f, 0.0f, 0.0f};
         float rotation[3] {0.0f, 0.0f, 0.0f};
+
+        std::vector<std::pair<std::string, float>> _cmdTimestamps {};
     };
 
     static Statistics monitoring(Window* window, Camera* camera);

@@ -11,6 +11,7 @@
 #include "glm/glm.hpp"
 #include "core/vk_shaders.h"
 #include "core/vk_buffer.h"
+#include "core/vk_query_pool.h"
 
 #include <deque>
 #include <functional>
@@ -49,6 +50,8 @@ struct FrameData {
     CommandPool* _commandPool;
     CommandBuffer* _commandBuffer;
 
+    QueryTimestamp _queryTimestamp;
+
     VkDescriptorSet skyboxDescriptor;
 
     AllocatedBuffer enabledFeaturesBuffer;
@@ -65,7 +68,6 @@ struct FrameData {
 
     AllocatedBuffer cascadedOffscreenBuffer;
     VkDescriptorSet cascadedOffscreenDescriptor;
-    // std::array<VkDescriptorSet, 4> cascadedOffscreenDescriptor;
 
     VkDescriptorSet debugDescriptor;
 

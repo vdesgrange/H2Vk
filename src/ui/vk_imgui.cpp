@@ -276,8 +276,9 @@ bool UInterface::scene_editor() {
                             std::string tex_id = "##texture_object_" + std::to_string(i) + std::to_string(j);
 
                             ImGui::PushID(tex_id.c_str());
-                            if (ImGui::Selectable(label.c_str(), selected_tex == j))
+                            if (ImGui::Selectable(label.c_str(), selected_tex == j)) {
                                 selected_tex = j;
+                            }
                             ImGui::PopID();
                         }
 
@@ -440,10 +441,11 @@ bool UInterface::stats_viewer(const Performance::Statistics& statistics) {
     {
         ImGui::Text("Statistics (%.0f x %.0f):", io.DisplayFramebufferScale.x * io.DisplaySize.x,  io.DisplayFramebufferScale.y * io.DisplaySize.y);
         ImGui::Separator();
-        ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / statistics.FrameRate, statistics.FrameRate);
-//        ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-//        ImGui::Text("%d vertices, %d indices ", io.MetricsRenderVertices, io.MetricsRenderIndices);
-//        ImGui::Text("%d triangles", io.MetricsRenderIndices / 3);
+        ImGui::Text("Average %.3f ms (%.1f FPS)", 1000.0f / statistics.FrameRate, statistics.FrameRate);
+        for (auto const& it : statistics._cmdTimestamps) {
+            ImGui::Text("%s %.3f ms", it.first.c_str(), it.second);
+        }
+
         ImGui::Text("Coordinates (%.0f, %.0f, %.0f)", statistics.coordinates[0], statistics.coordinates[1], statistics.coordinates[2]);
         ImGui::Text("Rotation (%.0f, %.0f, %.0f)", statistics.rotation[0], statistics.rotation[1], statistics.rotation[2]);
     }
