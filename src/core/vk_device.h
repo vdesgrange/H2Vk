@@ -30,6 +30,8 @@ public:
     VkSurfaceKHR _surface;
     /** @brief GPU information */
     VkPhysicalDeviceProperties _gpuProperties;
+    /** @brief GPU features 2 */
+    VkPhysicalDeviceFeatures2 _gpuFeatures2;
     /** @brief Represent memory assigned to a buffer */
     VmaAllocator _allocator;
 

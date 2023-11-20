@@ -54,7 +54,6 @@ Device::Device(Window& window) {
     vkb::PhysicalDevice physicalDevice = selector
             .set_minimum_version(1, 1)
             .set_surface(_surface)
-            // .add_desired_extension(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME)
             .add_desired_extension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)
             .add_desired_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
             .add_desired_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)
@@ -67,15 +66,15 @@ Device::Device(Window& window) {
     shader_draw_parameters_features.pNext = nullptr;
     shader_draw_parameters_features.shaderDrawParameters = VK_TRUE;
 
-    VkPhysicalDeviceFeatures2 physical_features2 = {};
-    physical_features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    physical_features2.pNext = &shader_draw_parameters_features;
-    vkGetPhysicalDeviceFeatures2(physicalDevice, &physical_features2);
+    // VkPhysicalDeviceFeatures2 physical_features2 = {};
+    _gpuFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    _gpuFeatures2.pNext = &shader_draw_parameters_features;
+    vkGetPhysicalDeviceFeatures2(physicalDevice, &_gpuFeatures2);
 
     vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 
     vkb::Device vkbDevice = deviceBuilder
-            .add_pNext(&physical_features2)
+            .add_pNext(&_gpuFeatures2)
             .build()
             .value();
 

@@ -36,6 +36,7 @@
 #include "core/vk_command_pool.h"
 #include "core/vk_command_buffer.h"
 #include "core/vk_buffer.h"
+#include "core/vk_query_pool.h"
 
 #include "core/manager/vk_material_manager.h"
 #include "core/manager/vk_mesh_manager.h"

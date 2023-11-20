@@ -64,6 +64,10 @@ void VulkanEngine::init_window() {
  */
 void VulkanEngine::init_vulkan() {
     _device = std::make_unique<Device>(*_window);
+
+    for (int i = 0; i < FRAME_OVERLAP; i++) {
+        QueryTimestamp::init(*_device, &g_frames[i]._queryTimestamp, VK_QUERY_TYPE_TIMESTAMP, 4);
+    }
 }
 
 /**
@@ -321,6 +325,7 @@ void VulkanEngine::init_materials() {
  */
 void VulkanEngine::ui_overlay() {
     Performance::Statistics stats = Performance::monitoring(_window.get(), _camera.get());
+    stats._cmdTimestamps = get_current_frame()._queryTimestamp._results;
 
     bool updated = _ui->render(get_current_frame()._commandBuffer->_commandBuffer, stats);
     if (updated) {
@@ -342,9 +347,14 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
     VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     VK_CHECK(vkBeginCommandBuffer(frame._commandBuffer->_commandBuffer, &cmdBeginInfo));
 
-    // === Cascaded depth map render pass ===
+    frame._queryTimestamp.reset(frame._commandBuffer->_commandBuffer);
+
+    // === Cascaded depth map render pass ===  
     if (_enabledFeatures.shadowMapping) {
+        uint32_t start = frame._queryTimestamp.write(frame._commandBuffer->_commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         _cascadedShadow->compute_resources(frame, _scene->_renderables);
+        uint32_t end = frame._queryTimestamp.write(frame._commandBuffer->_commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+        frame._queryTimestamp.record("Cascaded shadows", start, end);
     }
 
     // === Atmosphere skyview computing (WIP) ===
@@ -368,6 +378,8 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
 
         VkRect2D scissor = vkinit::get_scissor((float) _window->_windowExtent.width, (float) _window->_windowExtent.height);
         vkCmdSetScissor(frame._commandBuffer->_commandBuffer, 0, 1, &scissor);
+
+        uint32_t start = frame._queryTimestamp.write(frame._commandBuffer->_commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
         vkCmdBeginRenderPass(frame._commandBuffer->_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         {
@@ -398,7 +410,8 @@ void VulkanEngine::build_command_buffers(FrameData& frame, int imageIndex) {
 
         }
         vkCmdEndRenderPass(frame._commandBuffer->_commandBuffer);
-
+        uint32_t end = frame._queryTimestamp.write(frame._commandBuffer->_commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+        frame._queryTimestamp.record("Full render", start, end);
     }
     VK_CHECK(vkEndCommandBuffer(frame._commandBuffer->_commandBuffer));
 
@@ -601,6 +614,9 @@ void VulkanEngine::draw() {
         throw std::runtime_error("failed to present swap chain image!");
     }
 
+    // === Time commands execution ===
+    frame._queryTimestamp.results();
+
     _frameNumber++;
 }
 
@@ -626,6 +642,7 @@ void VulkanEngine::cleanup() {
         vkDeviceWaitIdle(_device->_logicalDevice);
         for (int i=0; i < FRAME_OVERLAP; i++) {
             g_frames[i]._renderFence->wait(1000000000);
+            g_frames[i]._queryTimestamp.destroy();
         }
 
         _scene->_renderables.clear();
