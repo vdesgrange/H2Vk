@@ -164,6 +164,8 @@ void VulkanEngine::init_managers() {
     _materialManager = _systemManager->register_system<MaterialManager>(_device.get(), _pipelineBuilder.get());
     _meshManager = _systemManager->register_system<MeshManager>(_device.get(), &_uploadContext);
     _lightingManager = _systemManager->register_system<LightingManager>();
+
+    // JobManager::init();
 }
 
 /**
@@ -500,10 +502,12 @@ void VulkanEngine::render(int imageIndex) {
 
     // === Update scene ===
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
-        _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
-        _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-        _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
-        update_objects_buffer(_scene->_renderables.data(), _scene->_renderables.size());
+        // JobManager::execute([&]() {
+            _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
+            _scene->load_scene(_ui->get_settings().scene_index, *_camera);
+            _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+            update_objects_buffer(_scene->_renderables.data(), _scene->_renderables.size());
+        // });
     }
 
     // === Update resources ===

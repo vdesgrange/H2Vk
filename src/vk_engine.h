@@ -40,6 +40,7 @@
 
 #include "core/manager/vk_material_manager.h"
 #include "core/manager/vk_mesh_manager.h"
+#include "core/manager/vk_job_manager.h"
 
 #include "components/skybox/vk_skybox.h"
 #include "components/camera/vk_camera.h"

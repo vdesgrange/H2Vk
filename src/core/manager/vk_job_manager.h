@@ -13,7 +13,10 @@
 #include <mutex>
 #include <atomic>
 #include <functional>
+#include <thread>
 #include <deque>
+#include <cstdint>
+#include <cstdio>
 
 /**
  * @brief Thread safe queue
@@ -69,18 +72,17 @@ struct JobDispatchData {
  */
 namespace JobManager {
     /** @brief number of worker threads */
-    uint32_t _numThreads = 0;
+    inline uint32_t _numThreads = 0;
     /** @brief condition variable used by main thread to wake secondary threads*/
-    std::condition_variable _cv;
+    inline std::condition_variable _cv;
     /** @brief Associated to condition variable */
-    std::mutex _mutex;
+    inline std::mutex _mutex;
     /** @brief Job pool */
-    ThreadSafeQueue<std::function<void()>> _jobPool;
+    inline ThreadSafeQueue<std::function<void()>> _jobPool;
     /** @brief Label of latest job submitted by main thread*/
-    uint32_t _currentLabel;
+    inline uint32_t _currentLabel;
     /** @brief State of execution. Latest job executed. */
-    std::atomic<uint32_t> _finishedLabel;
-
+    inline std::atomic<uint32_t> _finishedLabel;
 
     void init();
     void execute(std::function<void()> const& function);
@@ -88,4 +90,4 @@ namespace JobManager {
     void poll();
     bool is_busy();
     void wait();
-};
+}  // namespace JobManager

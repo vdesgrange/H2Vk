@@ -8,8 +8,6 @@
 
 #include "vk_job_manager.h"
 
-#include <thread>
-
 /**
 * Initialize job manager and thread workers.
 * @brief Set up job manager
@@ -18,9 +16,9 @@ void JobManager::init() {
     _finishedLabel.store(0);
 
     // Get number of threads supported
-    uint nCores = std::thread::hardware_concurrency();
+    unsigned int nCores = std::thread::hardware_concurrency();
     std::printf("Number of threads supported : %i \n", nCores);
-    uint32_t nbThreads = std::max(1u, nCores);
+    uint32_t nbThreads = 1u > (nCores / 2) ? 1u : nCores;
 
     // Initialize workers
     for (uint32_t i = 0; i < nbThreads; ++i) {
