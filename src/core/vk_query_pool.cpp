@@ -37,7 +37,7 @@ void QueryTimestamp::init(Device& device, QueryTimestamp* pool, VkQueryType type
     info.pipelineStatistics = bitmask; // Ignored if not VK_QUERY_TYPE_PIPELINE_STATISTICS
 
     pool->_device = device._logicalDevice;
-    pool->_count = 0;
+    pool->_count = count;
     pool->_queries.clear();
     pool->_timestamps.clear();
     pool->_timestamps.shrink_to_fit();
@@ -82,7 +82,7 @@ void QueryTimestamp::results() {
 
 void QueryTimestamp::reset(const VkCommandBuffer cmd) {
     assert(_pool);
-    const uint32_t count = _count; // Detach from CPU
+    const uint32_t count = _count; // _timestamps.size(); // Detach from CPU
     vkCmdResetQueryPool(cmd, _pool, 0, count);
     _count = 0;
     _queries.clear();
