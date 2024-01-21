@@ -51,37 +51,41 @@ Device::Device(Window& window) {
     required_features.samplerAnisotropy = VK_TRUE;
     selector.set_required_features(required_features);
 
+    // Enable Vulkan features
+    VkPhysicalDeviceVulkan11Features features11 = {};
+    features11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+    features11.shaderDrawParameters = VK_TRUE;
+    features11.pNext = nullptr;
+
+    VkPhysicalDeviceVulkan12Features features12 = {};
+    features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+    features12.hostQueryReset = VK_TRUE;
+    features12.pNext = nullptr;
+
     vkb::PhysicalDevice physicalDevice = selector
-            .set_minimum_version(1, 1)
+            .set_minimum_version(1, 2)
             .set_surface(_surface)
             .add_desired_extension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)
             .add_desired_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
             .add_desired_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)
+            .set_required_features_11(features11) // Enable selected Vulkan 1.1 features
+            .set_required_features_12(features12) // Enable selected Vulkan 1.2 features
             .select()
             .value();
 
-    //create the final Vulkan device
-    VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features = {};
-    shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
-    shader_draw_parameters_features.pNext = nullptr;
-    shader_draw_parameters_features.shaderDrawParameters = VK_TRUE;
-
-    // VkPhysicalDeviceFeatures2 physical_features2 = {};
-    _gpuFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    _gpuFeatures2.pNext = &shader_draw_parameters_features;
-    vkGetPhysicalDeviceFeatures2(physicalDevice, &_gpuFeatures2);
-
     vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 
-    vkb::Device vkbDevice = deviceBuilder
-            .add_pNext(&_gpuFeatures2)
-            .build()
-            .value();
+    vkb::Device vkbDevice = deviceBuilder.build().value();
 
     // Get the VkDevice handle used in the rest of a Vulkan application
     _logicalDevice = vkbDevice.device;
     _physicalDevice = physicalDevice.physical_device;
     _gpuProperties = physicalDevice.properties;
+
+    // Note : Uncomment to check which Vulkan features (12 or 11 and 13) are enabled.
+//    _gpuFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+//    _gpuFeatures2.pNext = &features12;
+//    vkGetPhysicalDeviceFeatures2(_physicalDevice, &_gpuFeatures2);
 
     std::cout << "GPU properties : " << _gpuProperties.deviceType << " : " << _gpuProperties.deviceName << std::endl;
 
