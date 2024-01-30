@@ -54,8 +54,8 @@ public:
 private:
     class VulkanEngine& _engine;
     Settings _settings;
-    DescriptorLayoutCache* _layoutCache;
-    DescriptorAllocator* _allocator;
+    std::unique_ptr<DescriptorLayoutCache> _layoutCache;
+    std::unique_ptr<DescriptorAllocator> _allocator;
 
     void clean_up();
     void new_frame();
