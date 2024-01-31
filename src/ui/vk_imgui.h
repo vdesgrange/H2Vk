@@ -11,6 +11,7 @@
 class VulkanEngine;
 
 #include <unordered_map>
+#include <memory>
 #include "VkBootstrap.h"
 #include "core/vk_descriptor_cache.h"
 #include "core/vk_descriptor_allocator.h"
