@@ -13,15 +13,34 @@ set(CMAKE_CXX_STANDARD 17) # keep
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin") # keep
 
+#MESSAGE(${CMAKE_CXX_COMPILER_ID})
+IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  FIND_PROGRAM(LLVM_SYMBOLIZER
+          NAMES llvm-symbolizer
+          llvm-symbolizer-12
+          llvm-symbolizer-14)
+
+  IF(NOT LLVM_SYMBOLIZER)
+    MESSAGE(WARNING "AddressSanitizer failed to locate an llvm-symbolizer program. Stack traces may lack symbols.")
+  ELSE()
+    MESSAGE(WARNING "Using following LLVM_SYMBOLIZER: ${LLVM_SYMBOLIZER}")
+  ENDIF()
+ENDIF()
+
+#set(ADDRESS_SANITIZER_TEST_ENV ASAN_SYMBOLIZER_PATH=${LLVM_SYMBOLIZER} ASAN_OPTIONS=symbolizer=1)
+
 IF (APPLE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_USE_PLATFORM_MACOS_MVK")
   set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG}")
 ELSE()
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -O0 ") 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -O0") # -fsanitize=address -fsanitize=thread -fsanitize=undefined
-  set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fsanitize=address -O0")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -O0 -g")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -O0 -g") # -fsanitize=address -fsanitize=thread -fsanitize=undefined
+  set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fsanitize=address -O0 -g")
 ENDIF()
+
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
 
 option(TRACY_ENABLE "" OFF) # keep
 option(TRACY_ON_DEMAND "" OFF) # keep
