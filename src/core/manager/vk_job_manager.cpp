@@ -18,7 +18,8 @@ void JobManager::init() {
     // Get number of threads supported
     unsigned int nCores = std::thread::hardware_concurrency();
     std::printf("Number of threads supported : %i \n", nCores);
-    uint32_t nbThreads = 1u > (nCores / 2) ? 1u : nCores;
+    uint32_t nbThreads = 2u > (nCores / 2) ? 1u : 2u;
+    std::printf("Number of threads used : %i \n", nbThreads);
 
     // Initialize workers
     for (uint32_t i = 0; i < nbThreads; ++i) {

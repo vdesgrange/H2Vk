@@ -202,8 +202,8 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
         submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
         submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
 
-        VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
+        device._queue->queue_submit({submitInfo}, VK_NULL_HANDLE);
+        device._queue->queue_wait();
     }
 
     for (int face = 0; face < count; face++) {
@@ -399,8 +399,8 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
         submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
         submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
 
-        VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
+        device._queue->queue_submit({submitInfo}, VK_NULL_HANDLE);
+        device._queue->queue_wait();
     }
 
 
@@ -632,8 +632,8 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
             submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
             submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
 
-            VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-            VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
+            device._queue->queue_submit({submitInfo}, VK_NULL_HANDLE);
+            device._queue->queue_wait();
         }
 
     }
@@ -732,7 +732,7 @@ Texture EnvMap::brdf_convolution(Device& device, UploadContext& uploadContext) {
         cmdBeginInfo.pInheritanceInfo = nullptr;
         cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
+        device._queue->queue_wait();
 
         VK_CHECK(vkBeginCommandBuffer(commandBuffer._commandBuffer, &cmdBeginInfo));
         {
@@ -755,8 +755,8 @@ Texture EnvMap::brdf_convolution(Device& device, UploadContext& uploadContext) {
         submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
         submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
 
-        VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
+        device._queue->queue_submit({submitInfo}, VK_NULL_HANDLE);
+        device._queue->queue_wait();
     }
 
     CommandBuffer::immediate_submit(device, uploadContext, [&](VkCommandBuffer cmd) {

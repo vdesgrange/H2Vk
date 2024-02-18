@@ -28,6 +28,8 @@ public:
     const class Device& _device;
     /** @brief Number of sets per pools (kind of abstract so far) */
     const unsigned int MAX_SETS = 10;
+    /** @brief mutex */
+    std::mutex _mutex;
 
     explicit DescriptorAllocator(const Device &device) : _device(device) {};
     ~DescriptorAllocator();

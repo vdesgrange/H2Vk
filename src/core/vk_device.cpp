@@ -91,8 +91,9 @@ Device::Device(Window& window) {
 
     std::cout << "GPU properties : " << _gpuProperties.deviceType << " : " << _gpuProperties.deviceName << std::endl;
 
-    _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
-    _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+    _queue = std::make_shared<Queue>(vkbDevice.get_queue(vkb::QueueType::graphics).value(), vkbDevice.get_queue_index(vkb::QueueType::graphics).value());
+//    _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+//    _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
     // Initialize memory allocator
     VmaAllocatorCreateInfo allocatorInfo = {};
@@ -104,18 +105,20 @@ Device::Device(Window& window) {
 
 Device::~Device() {
 //    vmaDestroyAllocator(_allocator);
-//    vkDestroyDevice(_logicalDevice, nullptr);
+//    vkDestroyDevice(_logicalDevice, nullptr);F
 //    vkDestroySurfaceKHR(_instance, _surface, nullptr);
 //    vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 //    vkDestroyInstance(_instance, nullptr);
 }
+
 /**
  * Get graphics queue pointer.
  * Assume to wrap both present and graphics operation. Single graphics queue for basic GPU.
  * @return
  */
 VkQueue Device::get_graphics_queue() const {
-    return _graphicsQueue;
+    // return _graphicsQueue;
+    return _queue->get_queue();
 }
 
 /**
@@ -123,5 +126,6 @@ VkQueue Device::get_graphics_queue() const {
  * @return
  */
 uint32_t Device::get_graphics_queue_family() const {
-    return _graphicsQueueFamily;
+    // return _graphicsQueueFamily;
+    return _queue->get_queue_family();
 }

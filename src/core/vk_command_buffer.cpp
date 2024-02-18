@@ -38,6 +38,31 @@ CommandBuffer::~CommandBuffer() {
     vkFreeCommandBuffers(_device._logicalDevice, _commandPool._commandPool, _count, &_commandBuffer);
 }
 
+void CommandBuffer::record(std::function<void(VkCommandBuffer cmd)>&& function) {
+    VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    std::scoped_lock<std::mutex> lock(this->_mutex);
+    VK_CHECK(vkBeginCommandBuffer(this->_commandBuffer, &cmdBeginInfo));
+    function(this->_commandBuffer);
+    VK_CHECK(vkEndCommandBuffer(this->_commandBuffer));
+}
+
+VkCommandBuffer CommandBuffer::begin() {
+    VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    this->_mutex.lock();
+    VK_CHECK(vkBeginCommandBuffer(this->_commandBuffer, &cmdBeginInfo));
+
+    return this->_commandBuffer;
+}
+
+VkCommandBuffer CommandBuffer::end() {
+    VK_CHECK(vkEndCommandBuffer(this->_commandBuffer)); // Finish recording a command buffer
+    this->_mutex.unlock();
+
+    return this->_commandBuffer;
+}
+
 /**
  * Will records a command (defined as a lambda) and
  * @brief records and submit command for the GPU
@@ -49,13 +74,17 @@ void CommandBuffer::immediate_submit(const Device& device, const UploadContext& 
     VkCommandBuffer cmd = ctx._commandBuffer->_commandBuffer;
     VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+    std::scoped_lock<std::mutex> lock(ctx._commandBuffer->_mutex);
+
     VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo)); // Start recording command buffer
     function(cmd); // Commands we want to execute into a command buffer
     VK_CHECK(vkEndCommandBuffer(cmd)); // Finish recording a command buffer
 
-    VkSubmitInfo submitInfo = vkinit::submit_info(&cmd); // queue submit op. specifications
+    std::vector<VkSubmitInfo> submitInfo = {vkinit::submit_info(&cmd)}; // queue submit op. specifications
     // Submits a sequence of semaphores or command buffers to the graphics queue. todo - Allow choice of queue
-    VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, ctx._uploadFence->_fence));
+
+    device._queue->queue_submit(submitInfo, ctx._uploadFence->_fence);
+
     // Wait for one or more fences to become signaled
     vkWaitForFences(device._logicalDevice, 1, &ctx._uploadFence->_fence, true, 9999999999);
     vkResetFences(device._logicalDevice, 1, &ctx._uploadFence->_fence);

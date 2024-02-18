@@ -46,6 +46,7 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* descriptor, VkDescriptorSetL
     info.descriptorSetCount = 1; // one descriptor set
     info.pSetLayouts = setLayout; // using this layout
 
+    std::scoped_lock<std::mutex> lock(_mutex);
     VkResult result = vkAllocateDescriptorSets(_device._logicalDevice, &info, descriptor);
 
     bool reallocate = false;
