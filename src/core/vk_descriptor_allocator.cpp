@@ -34,6 +34,8 @@ DescriptorAllocator::~DescriptorAllocator() {
  * @return true if descriptor set allocated successfully
  */
 bool DescriptorAllocator::allocate(VkDescriptorSet* descriptor, VkDescriptorSetLayout* setLayout, std::vector<VkDescriptorPoolSize> sizes) {
+    std::scoped_lock<std::mutex> lock(_mutex);
+
     if (_currentPool == VK_NULL_HANDLE){ // if no pool selected
         _currentPool = getPool(sizes, 0, MAX_SETS);  // todo clean up descriptorPool choice and size
         usedPools.push_back(_currentPool);
@@ -46,7 +48,6 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* descriptor, VkDescriptorSetL
     info.descriptorSetCount = 1; // one descriptor set
     info.pSetLayouts = setLayout; // using this layout
 
-    std::scoped_lock<std::mutex> lock(_mutex);
     VkResult result = vkAllocateDescriptorSets(_device._logicalDevice, &info, descriptor);
 
     bool reallocate = false;

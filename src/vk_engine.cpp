@@ -26,6 +26,7 @@
 #include "glm/glm.hpp"
 #include <iostream>
 #include <array>
+#include <mutex>
 
 #include "vk_engine.h"
 
@@ -501,13 +502,16 @@ void VulkanEngine::render(int imageIndex) {
     FrameData& frame = get_current_frame();
 
     // === Update scene ===
-    if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
-         JobManager::execute([&]() {
-            _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
-            _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-            _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
-            update_objects_buffer(_scene->_renderables.data(), _scene->_renderables.size());
-         });
+    if (_scene->_sceneIndex != _ui->get_settings().scene_index) { // !!!!! SCENE INDEX PAS MIS A JOUR A TEMPS : MULTIPLE JOBS
+        if (_scene->_mutex.try_lock()) {
+            JobManager::execute([&]() {
+                _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
+                _scene->load_scene(_ui->get_settings().scene_index, *_camera);
+                 _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+                update_objects_buffer(_scene->_renderables.data(), _scene->_renderables.size());
+                _scene->_mutex.unlock();
+            });
+        }
     }
 
     // === Update resources ===
@@ -535,8 +539,6 @@ void VulkanEngine::render(int imageIndex) {
     submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
     submitInfo.pCommandBuffers = &frame._commandBuffer->_commandBuffer;
 
-
-    std::scoped_lock<std::mutex> lock(frame._commandBuffer->_mutex);
     _device->_queue->queue_submit({submitInfo}, frame._renderFence->_fence);
 }
 

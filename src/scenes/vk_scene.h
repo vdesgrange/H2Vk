@@ -1,7 +1,7 @@
 /*
 *  H2Vk - A Vulkan based rendering engine
 *
-* Copyright (C) 2022-2023 by Viviane Desgrange
+* Copyright (C) 2022-2024 by Viviane Desgrange
 *
 * This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
 */
@@ -9,6 +9,7 @@
 #pragma once
 
 #include "vk_scene_listing.h"
+#include <mutex>
 
 class VulkanEngine;
 class Camera;
@@ -16,7 +17,11 @@ class Texture;
 
 class Scene final {
 public:
+    /** @brief a mutex */
+    std::mutex _mutex;
+    /** @brief Index of the scene */
     int _sceneIndex;
+    /** @brief A vector of objects (model + material + transformation) */
     Renderables _renderables;
 
     explicit Scene(VulkanEngine& engine) : _engine(engine) {};
