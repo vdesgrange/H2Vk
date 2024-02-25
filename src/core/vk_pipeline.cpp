@@ -55,6 +55,7 @@ std::shared_ptr<ShaderPass> PipelineBuilder::build_pass(std::shared_ptr<ShaderEf
     std::shared_ptr<ShaderPass> pass = std::make_shared<ShaderPass>();
     pass->effect = std::shared_ptr<ShaderEffect>(effect);
     pass->pipelineLayout = this->build_layout(effect->setLayouts, effect->pushConstants);
+    pass->_device = _device._logicalDevice;
 
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages{}; // create pipeline shader stage information
     for (auto& stage : pass->effect->shaderStages) {

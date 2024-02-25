@@ -15,12 +15,18 @@ MaterialManager::MaterialManager(const Device* device, PipelineBuilder* pipeline
 
 MaterialManager::~MaterialManager() {
 
-    for (const auto& item : this->_entities) {
-        std::shared_ptr<Material> material = std::static_pointer_cast<Material>(item.second);
-
-        vkDestroyPipeline(_device->_logicalDevice, material->pipeline, nullptr);
-        vkDestroyPipelineLayout(_device->_logicalDevice, material->pipelineLayout, nullptr);
-    }
+//    for (const auto& item : this->_entities) {
+//        std::shared_ptr<Material> material = std::static_pointer_cast<Material>(item.second);
+//
+//        if (material->pipeline) {
+//            vkDestroyPipeline(_device->_logicalDevice, material->pipeline, nullptr);
+//            material->pipeline = VK_NULL_HANDLE;
+//        }
+//        if (material->pipelineLayout) {
+//            vkDestroyPipelineLayout(_device->_logicalDevice, material->pipelineLayout, nullptr);
+//            material->pipelineLayout = VK_NULL_HANDLE;
+//        }
+//    }
     _entities.clear();
 }
 
