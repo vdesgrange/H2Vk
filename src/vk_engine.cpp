@@ -502,7 +502,7 @@ void VulkanEngine::render(int imageIndex) {
     FrameData& frame = get_current_frame();
 
     // === Update scene ===
-    if (_scene->_sceneIndex != _ui->get_settings().scene_index) { // !!!!! SCENE INDEX PAS MIS A JOUR A TEMPS : MULTIPLE JOBS
+    if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
         if (_scene->_mutex.try_lock()) {
             JobManager::execute([&]() {
                 _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
@@ -652,6 +652,8 @@ void VulkanEngine::cleanup() {
             g_frames[i]._renderFence->wait(1000000000);
             g_frames[i]._queryTimestamp.destroy();
         }
+
+        JobManager::destroy();
 
         _scene->_renderables.clear();
         _atmosphere.reset();
