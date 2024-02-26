@@ -10,6 +10,7 @@
 
 #include "vk_mem_alloc.h"
 #include "vk_queue.h"
+#include <memory>
 
 class Window;
 
