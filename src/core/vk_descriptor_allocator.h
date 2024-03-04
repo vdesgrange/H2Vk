@@ -36,7 +36,8 @@ public:
 
     bool allocate(VkDescriptorSet* descriptor, VkDescriptorSetLayout* setLayout, std::vector<VkDescriptorPoolSize> sizes);
 
-    void resetPools();
+    void destroyPools();
+    void clearPools();
     VkDescriptorPool getPool(std::vector<VkDescriptorPoolSize> sizes, VkDescriptorPoolCreateFlags flags, uint32_t count);
     VkDescriptorPool createPool(std::vector<VkDescriptorPoolSize> sizes, VkDescriptorPoolCreateFlags flags, uint32_t count);
 
@@ -44,7 +45,7 @@ private:
     /** @brief pool set as main allocation pool */
     VkDescriptorPool _currentPool{VK_NULL_HANDLE};
     /** @brief collection of used descriptor pools */
-    std::vector<VkDescriptorPool> usedPools;
+    std::vector<VkDescriptorPool> _usedPools;
     /** @brief collection of free descriptor pools. Can be used for descriptor set allocation. */
-    std::vector<VkDescriptorPool> freePools;
+    std::vector<VkDescriptorPool> _freePools;
 };
