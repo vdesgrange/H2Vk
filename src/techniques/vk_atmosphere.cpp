@@ -84,17 +84,17 @@ void Atmosphere::precompute_resources() {
     submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
     submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
 
-    VK_CHECK(vkQueueWaitIdle(_device.get_graphics_queue()));
+    _device._queue->queue_wait();
 
     this->compute_transmittance(_device, _uploadContext, commandBuffer);
 
-    VK_CHECK(vkQueueSubmit(_device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-    VK_CHECK(vkQueueWaitIdle(_device.get_graphics_queue()));
+    _device._queue->queue_submit({submitInfo}, VK_NULL_HANDLE);
+    _device._queue->queue_wait();
 
     this->compute_multiple_scattering(_device, _uploadContext, commandBuffer);
 
-    VK_CHECK(vkQueueSubmit(_device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-    VK_CHECK(vkQueueWaitIdle(_device.get_graphics_queue()));
+    _device._queue->queue_submit({submitInfo}, VK_NULL_HANDLE);
+    _device._queue->queue_wait();
 }
 
 /**
@@ -601,8 +601,8 @@ void Atmosphere::compute_skyview(Device& device, UploadContext& uploadContext, u
         submitInfo.commandBufferCount = 1; // Number of command buffers to execute in the batch
         submitInfo.pCommandBuffers = &commandBuffer._commandBuffer;
 
-        VK_CHECK(vkQueueSubmit(device.get_graphics_queue(), 1, &submitInfo, VK_NULL_HANDLE));
-        VK_CHECK(vkQueueWaitIdle(device.get_graphics_queue()));
+        device._queue->queue_submit({submitInfo}, VK_NULL_HANDLE);
+        device._queue->queue_wait();
     }
 
 }

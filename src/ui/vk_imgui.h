@@ -11,6 +11,7 @@
 class VulkanEngine;
 
 #include <unordered_map>
+#include <memory>
 #include "VkBootstrap.h"
 #include "core/vk_descriptor_cache.h"
 #include "core/vk_descriptor_allocator.h"
@@ -54,8 +55,8 @@ public:
 private:
     class VulkanEngine& _engine;
     Settings _settings;
-    DescriptorLayoutCache* _layoutCache;
-    DescriptorAllocator* _allocator;
+    std::unique_ptr<DescriptorLayoutCache> _layoutCache;
+    std::unique_ptr<DescriptorAllocator> _allocator;
 
     void clean_up();
     void new_frame();

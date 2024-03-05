@@ -35,9 +35,15 @@ class CommandBuffer final {
 public:
     /** @brief vulkan object used to record commands */
     VkCommandBuffer _commandBuffer;
+    /** @brief mutex */
+    std::mutex _mutex;
 
     CommandBuffer(const Device& device, CommandPool& commandPool, uint32_t count=1);
     ~CommandBuffer();
+
+    VkCommandBuffer begin();
+    VkCommandBuffer end();
+    void record(std::function<void(VkCommandBuffer cmd)>&& function);
 
     static void immediate_submit(const Device& device, const UploadContext& ctx, std::function<void(VkCommandBuffer cmd)>&& function);
 

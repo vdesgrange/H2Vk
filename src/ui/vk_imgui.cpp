@@ -30,8 +30,8 @@ UInterface::UInterface(VulkanEngine& engine, Settings settings) : _engine(engine
     this->p_open.emplace(SKYBOX_EDITOR, false);
     this->p_open.emplace(SHADOW_EDITOR, false);
 
-    _layoutCache = new DescriptorLayoutCache(*engine._device);
-    _allocator = new DescriptorAllocator(*engine._device);
+    _layoutCache = std::make_unique<DescriptorLayoutCache>(*engine._device); // memory leak
+    _allocator = std::make_unique<DescriptorAllocator>(*engine._device); // memory leak
 };
 
 UInterface::~UInterface() {

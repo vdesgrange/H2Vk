@@ -25,7 +25,7 @@ Device::Device(Window& window) {
     //make the Vulkan instance, with basic debug features
     auto inst_ret = builder.set_app_name("H2Vk")
             .request_validation_layers(true)
-            .require_api_version(1, 1, 0)
+            .require_api_version(1, 2, 0)
             .use_default_debug_messenger()
             .add_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) // for shader debugging
             .add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
@@ -49,7 +49,6 @@ Device::Device(Window& window) {
     VkPhysicalDeviceFeatures required_features {};
     required_features.depthClamp = VK_TRUE;
     required_features.samplerAnisotropy = VK_TRUE;
-    selector.set_required_features(required_features);
 
     // Enable Vulkan features
     VkPhysicalDeviceVulkan11Features features11 = {};
@@ -65,12 +64,15 @@ Device::Device(Window& window) {
     vkb::PhysicalDevice physicalDevice = selector
             .set_minimum_version(1, 2)
             .set_surface(_surface)
-            .add_desired_extension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)
-            .add_desired_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
+            .allow_any_gpu_device_type(false)
+            .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete) // NO-INTEL = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+//            .add_desired_extension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)
+//            .add_desired_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
             .add_desired_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)
+            .set_required_features(required_features)
             .set_required_features_11(features11) // Enable selected Vulkan 1.1 features
             .set_required_features_12(features12) // Enable selected Vulkan 1.2 features
-            .select()
+            .select(vkb::DeviceSelectionMode::partially_and_fully_suitable)
             .value();
 
     vkb::DeviceBuilder deviceBuilder{ physicalDevice };
@@ -89,8 +91,9 @@ Device::Device(Window& window) {
 
     std::cout << "GPU properties : " << _gpuProperties.deviceType << " : " << _gpuProperties.deviceName << std::endl;
 
-    _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
-    _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+    _queue = std::make_shared<Queue>(vkbDevice.get_queue(vkb::QueueType::graphics).value(), vkbDevice.get_queue_index(vkb::QueueType::graphics).value());
+//    _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+//    _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
     // Initialize memory allocator
     VmaAllocatorCreateInfo allocatorInfo = {};
@@ -102,18 +105,20 @@ Device::Device(Window& window) {
 
 Device::~Device() {
 //    vmaDestroyAllocator(_allocator);
-//    vkDestroyDevice(_logicalDevice, nullptr);
+//    vkDestroyDevice(_logicalDevice, nullptr);F
 //    vkDestroySurfaceKHR(_instance, _surface, nullptr);
 //    vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 //    vkDestroyInstance(_instance, nullptr);
 }
+
 /**
  * Get graphics queue pointer.
  * Assume to wrap both present and graphics operation. Single graphics queue for basic GPU.
  * @return
  */
 VkQueue Device::get_graphics_queue() const {
-    return _graphicsQueue;
+    // return _graphicsQueue;
+    return _queue->get_queue();
 }
 
 /**
@@ -121,5 +126,6 @@ VkQueue Device::get_graphics_queue() const {
  * @return
  */
 uint32_t Device::get_graphics_queue_family() const {
-    return _graphicsQueueFamily;
+    // return _graphicsQueueFamily;
+    return _queue->get_queue_family();
 }

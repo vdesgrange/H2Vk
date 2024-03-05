@@ -64,6 +64,18 @@ struct ShaderPass : public Entity {
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
     std::shared_ptr<ShaderEffect> effect;
+    VkDevice _device;
+
+    ~ShaderPass() {
+        if (pipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(_device, pipeline, nullptr);
+            pipeline = VK_NULL_HANDLE;
+        }
+        if (pipelineLayout != VK_NULL_HANDLE) {
+            vkDestroyPipelineLayout(_device, pipelineLayout, nullptr);
+            pipelineLayout = VK_NULL_HANDLE;
+        }
+    }
 };
 
 typedef ShaderPass Material;

@@ -1,7 +1,7 @@
 /*
 * Job manager
 *
-* Copyright (C) 2022-2023 by Viviane Desgrange
+* Copyright (C) 2022-2024 by Viviane Desgrange
 *
 * This code is licensed under the Non-Profit Open Software License ("Non-Profit OSL") 3.0 (https://opensource.org/license/nposl-3-0/)
 */
@@ -17,15 +17,15 @@ void JobManager::init() {
 
     // Get number of threads supported
     unsigned int nCores = std::thread::hardware_concurrency();
-    std::printf("Number of threads supported : %i \n", nCores);
-    uint32_t nbThreads = 1u > (nCores / 2) ? 1u : nCores;
+    _numThreads = 2u > (nCores / 2) ? 1u : 2u;
+    _run = true;
+    std::printf("Number of threads supported %i, used %i \n", nCores, _numThreads);
 
-    // Initialize workers
-    for (uint32_t i = 0; i < nbThreads; ++i) {
-        std::thread worker([] {
+    for (uint32_t i = 0; i < _numThreads; ++i) {
+        _threads.emplace_back([] {
             std::function<void()> job;
 
-            while(true) {
+            while(_run) {
                 // Retrieve job from task pool
                 if (_jobPool.pop_front(job)) {
                     job();
@@ -37,9 +37,19 @@ void JobManager::init() {
                 }
             }
         });
-        worker.detach();
     }
 };
+
+/**
+ * @brief Wake up, wait and stop all thread workers.
+ */
+void JobManager::destroy() {
+    _cv.notify_all();
+    _run = false;
+    for (uint32_t i = 0; i < _numThreads; ++i) {
+        _threads[i].join();
+    }
+}
 
 /**
  * @brief Wake up and reschedule a thread worker

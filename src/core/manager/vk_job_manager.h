@@ -71,8 +71,12 @@ struct JobDispatchData {
  * @brief Job manager
  */
 namespace JobManager {
+    /** @brief True if job system is running. Set to false before terminating. */
+    inline bool _run = false;
     /** @brief number of worker threads */
     inline uint32_t _numThreads = 0;
+    /** @brief collection keeping track of threads */
+    inline std::vector<std::thread> _threads;
     /** @brief condition variable used by main thread to wake secondary threads*/
     inline std::condition_variable _cv;
     /** @brief Associated to condition variable */
@@ -90,4 +94,5 @@ namespace JobManager {
     void poll();
     bool is_busy();
     void wait();
+    void destroy();
 }  // namespace JobManager

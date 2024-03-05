@@ -14,12 +14,42 @@
  * destroy descriptor pools, free and invalidate descriptor sets allocated from the pools.
  */
 DescriptorAllocator::~DescriptorAllocator() {
-    for (auto p : freePools) {
+    destroyPools();
+}
+
+/**
+ * Destroy descriptor pools, implicitly free and invalidate descriptor sets allocated from the pools
+ */
+void DescriptorAllocator::destroyPools() {
+    for (auto p : _freePools) {
         vkDestroyDescriptorPool(_device._logicalDevice, p, nullptr);
     }
-    for (auto p : usedPools) {
+    for (auto p : _usedPools) {
         vkDestroyDescriptorPool(_device._logicalDevice, p, nullptr);
     }
+
+    _freePools.clear();
+    _usedPools.clear();
+}
+
+/**
+ * Recycles resources from the descriptor sets allocated from the used pools back to the free pools.
+ * Descriptor sets are implicitly freed.
+ * @brief reset descriptor pools
+ */
+void DescriptorAllocator::clearPools() {
+    for (auto p : _freePools) {
+        vkResetDescriptorPool(_device._logicalDevice, p, 0);
+    }
+
+    for (auto p : _usedPools) {
+        vkResetDescriptorPool(_device._logicalDevice, p, 0);
+        _freePools.push_back(p);
+    }
+
+    _usedPools.clear();
+    _freePools.shrink_to_fit();
+    _currentPool = VK_NULL_HANDLE;
 }
 
 /**
@@ -34,10 +64,12 @@ DescriptorAllocator::~DescriptorAllocator() {
  * @return true if descriptor set allocated successfully
  */
 bool DescriptorAllocator::allocate(VkDescriptorSet* descriptor, VkDescriptorSetLayout* setLayout, std::vector<VkDescriptorPoolSize> sizes) {
-    if (_currentPool == VK_NULL_HANDLE){ // if no pool selected
-        _currentPool = getPool(sizes, 0, MAX_SETS);  // todo clean up descriptorPool choice and size
-        usedPools.push_back(_currentPool);
-    }
+    std::scoped_lock<std::mutex> lock(_mutex);
+
+    // if (_currentPool == VK_NULL_HANDLE){ // if no pool selected
+    _currentPool = getPool(sizes, 0, MAX_SETS);  // todo clean up descriptorPool choice and size
+        // _usedPools.push_back(_currentPool);
+    // }
 
     VkDescriptorSetAllocateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -47,46 +79,45 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* descriptor, VkDescriptorSetL
     info.pSetLayouts = setLayout; // using this layout
 
     VkResult result = vkAllocateDescriptorSets(_device._logicalDevice, &info, descriptor);
-
-    bool reallocate = false;
-    switch (result) {
-        case VK_SUCCESS:
-            return true;
-        case VK_ERROR_FRAGMENTED_POOL:
-        case VK_ERROR_OUT_OF_POOL_MEMORY:
-            reallocate = true;
-            break;
-        default:
-            return false;
-    }
-
-    if (reallocate) {
+    if (result == VK_SUCCESS) {
+        _freePools.push_back(_currentPool);
+        return true;
+    } else if (result == VK_ERROR_FRAGMENTED_POOL || result == VK_ERROR_OUT_OF_POOL_MEMORY) {
+        _usedPools.push_back(_currentPool);
         _currentPool = getPool(sizes, 0, MAX_SETS);
         info.descriptorPool = _currentPool;
-        usedPools.push_back(_currentPool);
-        result = vkAllocateDescriptorSets(_device._logicalDevice, &info, descriptor);
-        if (result == VK_SUCCESS){
-            std::cout << "reallocate success" << std::endl;
-            return true;
-        }
-        std::cout << "reallocate fail" << std::endl;
+        VK_CHECK(vkAllocateDescriptorSets(_device._logicalDevice, &info, descriptor));
+        std::cout << "reallocate success" << std::endl;
+
+        _freePools.push_back(_currentPool);
+        return true;
     }
+
+//    bool reallocate = false;
+//    switch (result) {
+//        case VK_SUCCESS:
+//            return true;
+//        case VK_ERROR_FRAGMENTED_POOL:
+//        case VK_ERROR_OUT_OF_POOL_MEMORY:
+//            reallocate = true;
+//            break;
+//        default:
+//            return false;
+//    }
+//
+//    if (reallocate) {
+//        _currentPool = getPool(sizes, 0, MAX_SETS);
+//        info.descriptorPool = _currentPool;
+//        _usedPools.push_back(_currentPool);
+//        result = vkAllocateDescriptorSets(_device._logicalDevice, &info, descriptor);
+//        if (result == VK_SUCCESS){
+//            std::cout << "reallocate success" << std::endl;
+//            return true;
+//        }
+//        std::cout << "reallocate fail" << std::endl;
+//    }
 
     return false;
-}
-
-/**
- * Recycles resources from the descriptor sets allocated from the used pools back to the descriptor pools.
- * Free descriptor sets.
- * @brief reset descriptor pools
- */
-void DescriptorAllocator::resetPools() {
-    for (auto p : usedPools){
-        vkResetDescriptorPool(_device._logicalDevice, p, 0);
-        freePools.push_back(p);
-    }
-    usedPools.clear();
-    _currentPool = VK_NULL_HANDLE;
 }
 
 /**
@@ -103,9 +134,9 @@ void DescriptorAllocator::resetPools() {
  * @return an existing or new descriptor pool
  */
 VkDescriptorPool DescriptorAllocator::getPool(std::vector<VkDescriptorPoolSize> poolSizes, VkDescriptorPoolCreateFlags flags, uint32_t count) {
-    if (freePools.size() > 0) {
-        VkDescriptorPool pool = freePools.back();
-        freePools.pop_back();
+    if (_freePools.size() > 0) {
+        VkDescriptorPool pool = _freePools.back();
+        _freePools.pop_back();
         return pool;
     }
 

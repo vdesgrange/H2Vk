@@ -9,6 +9,8 @@
 #pragma once
 
 #include "vk_mem_alloc.h"
+#include "vk_queue.h"
+#include <memory>
 
 class Window;
 
@@ -34,6 +36,8 @@ public:
     VkPhysicalDeviceFeatures2 _gpuFeatures2;
     /** @brief Represent memory assigned to a buffer */
     VmaAllocator _allocator;
+    /** @brief Device queue */
+    std::shared_ptr<Queue> _queue;
 
     explicit Device(Window& _window);
     ~Device();
@@ -42,8 +46,8 @@ public:
     uint32_t get_graphics_queue_family() const;
 
 private:
+
     /** @brief Device graphics queue where command buffers are submitted to */
     VkQueue _graphicsQueue;
-
     uint32_t _graphicsQueueFamily;
 };
