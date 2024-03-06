@@ -8,15 +8,19 @@
 
 #include "vk_scene.h"
 #include "core/utilities/vk_global.h"
+#include "components/camera/vk_camera.h"
 
 void Scene::load_scene(int sceneIndex, Camera& camera) {
     if (sceneIndex == _sceneIndex) {
         return;
     }
 
-    _renderables.clear();
-    auto renderables = SceneListing::scenes[sceneIndex].second(camera, &_engine);
+    Camera adhocCamera{};
+    auto renderables = SceneListing::scenes[sceneIndex].second(adhocCamera, &_engine);
+
+    camera = adhocCamera;
     _sceneIndex = sceneIndex;
+    _renderables.clear();
     _renderables = renderables;
 }
 
@@ -75,7 +79,6 @@ void Scene::render_objects(VkCommandBuffer commandBuffer, FrameData& frame) {
             lastMaterial = object.material;
             // uint32_t lightOffset = helper::pad_uniform_buffer_size(*_device,sizeof(GPULightData)) * frameIndex;
             std::vector<uint32_t> dynOffsets = {0, 0};
-
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &frame.environmentDescriptor, 2, dynOffsets.data());
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &frame.objectDescriptor, 0,nullptr);
         }

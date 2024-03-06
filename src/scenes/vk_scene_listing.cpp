@@ -41,9 +41,6 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     camera.set_speed(10.0f);
 
     // === Add entities ===
-    engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.0f, 0.f),glm::vec4(1.f)));
-
     Materials blank = {{1.0f, 1.0f, 1.0, 1.0f}, 0.0f,  1.0f, 0.0f};
 
     std::shared_ptr<Model> floorModel = ModelPOLY::create_plane(engine->_device.get(), engine->_uploadContext, {-4.0f, 4.0f, -6.0f}, {4.0f, 4.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, blank);
@@ -54,6 +51,8 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     engine->_meshManager->upload_mesh(*wallModel);
     engine->_meshManager->add_entity("wall", std::static_pointer_cast<Entity>(wallModel));
 
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.0f, 0.f),glm::vec4(1.f)));
 
     // === Init shader materials ===
     std::vector<PushConstant> constants {
@@ -130,13 +129,13 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     camera.set_speed(10.0f);
 
     // === Add entities ===
-    engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
-
     std::shared_ptr<ModelGLTF2> helmetModel = std::make_shared<ModelGLTF2>(engine->_device.get());
     helmetModel->load_model(*engine->_device, engine->_uploadContext, "../assets/damaged_helmet/gltf/DamagedHelmet.gltf");
     engine->_meshManager->upload_mesh(*helmetModel);
     engine->_meshManager->add_entity("helmet", std::static_pointer_cast<Entity>(helmetModel));
+
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
     // === Init shader materials ===
     std::vector<PushConstant> constants {
@@ -176,14 +175,14 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     camera.set_speed(10.0f);
 
     // === Add entities ===
-    engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
-
     std::shared_ptr<ModelGLTF2> sponzaModel = std::make_shared<ModelGLTF2>(engine->_device.get());
     sponzaModel->load_model(*engine->_device, engine->_uploadContext, "../assets/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
 
     engine->_meshManager->upload_mesh(*sponzaModel);
     engine->_meshManager->add_entity("sponza", std::static_pointer_cast<Entity>(sponzaModel));
+
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
     // === Init shader materials ===
     std::vector<PushConstant> constants {
@@ -223,8 +222,6 @@ Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
     camera.set_speed(10.0f);
 
     // === Add entities ===
-    engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
     std::shared_ptr<ModelGLTF2> treeModel = std::make_shared<ModelGLTF2>(engine->_device.get());
     treeModel->load_model(*engine->_device, engine->_uploadContext, "../assets/field/oaktree.gltf");
@@ -235,6 +232,9 @@ Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
     fieldModel->load_model(*engine->_device, engine->_uploadContext, "../assets/field/terrain_gridlines.gltf");
     engine->_meshManager->upload_mesh(*fieldModel);
     engine->_meshManager->add_entity("field", std::static_pointer_cast<Entity>(fieldModel));
+
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
     // === Init shader materials ===
     std::vector<PushConstant> constants {
