@@ -320,6 +320,7 @@ void VulkanEngine::init_materials() {
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
+    // _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
 }
 
 /**
@@ -492,7 +493,7 @@ void VulkanEngine::compute() {
         _atmosphere->compute_resources(_frameNumber % FRAME_OVERLAP);
     }
 }
- 
+
 /**
  * Perform computation for the next frame to be rendered
  * @brief Render the next frame
@@ -505,9 +506,8 @@ void VulkanEngine::render(int imageIndex) {
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
         if (_scene->_mutex.try_lock()) {
             JobManager::execute([&]() {
-                _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
                 _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-                 _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+                _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
                 update_objects_buffer(_scene->_renderables.data(), _scene->_renderables.size());
                 _scene->_mutex.unlock();
             });

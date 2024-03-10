@@ -55,7 +55,7 @@ void Scene::setup_transformation_descriptors(DescriptorLayoutCache& layoutCache,
 
 void Scene::setup_texture_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout) {
     for (auto &renderable: this->_renderables) {
-        renderable.model->setup_descriptors(layoutCache, allocator, setLayout);
+        renderable.model->setup_descriptors(layoutCache, allocator, setLayout); // Duplicate with scene listing. Not multi-thread safe. Use global _renderables.
     }
 }
 
