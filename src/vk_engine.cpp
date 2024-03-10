@@ -320,7 +320,6 @@ void VulkanEngine::init_materials() {
     _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
-    // _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
 }
 
 /**
