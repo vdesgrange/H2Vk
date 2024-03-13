@@ -14,6 +14,7 @@ void Scene::load_scene(int sceneIndex, Camera& camera) {
     if (sceneIndex == _sceneIndex) {
         return;
     }
+    _ready = false;
 
     Camera adhocCamera{};
     auto renderables = SceneListing::scenes[sceneIndex].second(adhocCamera, &_engine);
@@ -22,6 +23,7 @@ void Scene::load_scene(int sceneIndex, Camera& camera) {
     _sceneIndex = sceneIndex;
     _renderables.clear();
     _renderables = renderables;
+    _ready = true;
 }
 
 void Scene::allocate_buffers(Device& device) {
