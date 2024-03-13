@@ -22,7 +22,9 @@
 #include "core/utilities/vk_initializers.h"
 
 CascadedShadow::CascadedShadow(Device& device, UploadContext& uploadContext) : _device(device), _depthPass(RenderPass(device)), _uploadContext(uploadContext) {
+    _ready = false;
     prepare_resources(device);
+    _ready = true;
 }
 
 CascadedShadow::~CascadedShadow() {
@@ -149,9 +151,11 @@ void CascadedShadow::setup_pipelines(Device& device, MaterialManager &materialMa
             return;
         }
     }
+
+    _ready = false;
     
-    _depthEffect.reset();
-    _debugEffect.reset();
+    // _depthEffect.reset();
+    // _debugEffect.reset();
 
     GraphicPipeline pipelineBuilder = GraphicPipeline(device, _depthPass);
     pipelineBuilder._dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
@@ -191,10 +195,11 @@ void CascadedShadow::setup_pipelines(Device& device, MaterialManager &materialMa
     materialManager._pipelineBuilder = &debugPipeline;
     _debugEffect = materialManager.create_material("debugCascades", setLayouts, debugConst, debugMod);
 
+    _ready = true;
 }
 
 void CascadedShadow::compute_resources(FrameData& frame, Renderables& renderables) {
-    if (_depthEffect.get() == nullptr) {
+    if (_depthEffect.get() == nullptr || !_ready) {
         return;
     }
 
