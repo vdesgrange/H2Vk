@@ -68,6 +68,7 @@ void Queue::queue_submit(std::vector<VkSubmitInfo> submitInfo, VkFence fence) {
  * @brief thread-safe wait for a queue to become idle
  */
 void Queue::queue_wait() {
+    std::scoped_lock<std::mutex> lock(_mutex);
     VK_CHECK(vkQueueWaitIdle(_queue));
 }
 
