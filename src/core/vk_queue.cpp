@@ -29,6 +29,15 @@ uint32_t Queue::get_queue_family() {
     return _queueFamily;
 }
 
+/**
+ * Queue submit with single submit info
+ * @brief thread-safe queue submit
+ * @param waitStage
+ * @param waitSemaphores
+ * @param signalSemaphores
+ * @param cmds
+ * @param fence
+ */
 void Queue::queue_submit(VkPipelineStageFlags waitStage, std::vector<VkSemaphore> waitSemaphores, std::vector<VkSemaphore> signalSemaphores, std::vector<VkCommandBuffer> cmds, VkFence fence) {
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -45,11 +54,28 @@ void Queue::queue_submit(VkPipelineStageFlags waitStage, std::vector<VkSemaphore
     VK_CHECK(vkQueueSubmit(_queue, 1, &submitInfo, fence));
 }
 
+/**
+ * @brief thread-safe queue submit
+ * @param submitInfo collection of queue submit operation information
+ * @param fence fence to be signaled once all submitted command buffers have completed
+ */
 void Queue::queue_submit(std::vector<VkSubmitInfo> submitInfo, VkFence fence) {
     std::scoped_lock<std::mutex> lock(_mutex);
     VK_CHECK(vkQueueSubmit(_queue, static_cast<uint32_t>(submitInfo.size()), submitInfo.data(), fence));
 }
 
+/**
+ * @brief thread-safe wait for a queue to become idle
+ */
 void Queue::queue_wait() {
     VK_CHECK(vkQueueWaitIdle(_queue));
+}
+
+/**
+ * @brief queue an image for presentation. Only valid for compatible queues
+ * @todo Should move to a present queue family class. Incompatible queue not handled by wrapper
+ */
+VkResult Queue::queue_present(VkPresentInfoKHR& presentInfo) {
+    std::scoped_lock<std::mutex> lock(_mutex);
+    return vkQueuePresentKHR(_queue, &presentInfo);
 }

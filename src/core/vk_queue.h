@@ -18,16 +18,22 @@ public:
     uint32_t get_queue_family();
 
     Queue(VkQueue queue, uint32_t family);
+    Queue(const Queue&) = delete;
+    Queue(Queue&&) noexcept = delete;
+    ~Queue() = default;
+    Queue& operator=(const Queue&) = delete;
+    Queue& operator=(Queue&&) noexcept = delete;
 
     void queue_submit(VkPipelineStageFlags waitStage, std::vector<VkSemaphore> waitSemaphores, std::vector<VkSemaphore> signalSemaphores, std::vector<VkCommandBuffer> cmds, VkFence fence);
     void queue_submit(std::vector<VkSubmitInfo> submitInfo, VkFence fence);
     void queue_wait();
+    VkResult queue_present(VkPresentInfoKHR& presentInfo);
 
 private:
     /** @brief Device queue where command buffers are submitted to */
     VkQueue _queue;
     /** @brief Queue family : present, graphics, compute, transfer */
     uint32_t _queueFamily;
-    /** @brief mutex to handle multithreading */
+    /** @brief non-static mutex to handle multithreading. static mutex doesn't allow use of multiple queues */
     std::mutex _mutex;
 };

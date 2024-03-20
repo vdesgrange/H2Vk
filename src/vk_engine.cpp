@@ -617,7 +617,7 @@ void VulkanEngine::draw() {
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = &(frame._renderSemaphore->_semaphore); // Wait for command buffers to be fully executed.
 
-    result = vkQueuePresentKHR(_device->get_graphics_queue(), &presentInfo);
+    result = _device->_queue->queue_present(presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _window->_framebufferResized) {
         _window->_framebufferResized = false;
         recreate_swap_chain();
