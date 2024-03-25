@@ -512,6 +512,7 @@ void VulkanEngine::render(int imageIndex) {
     }
 
     if (_scene->_ready) {
+        _device->_queue->queue_wait(); // Prevent call to destroy pipelines while in-use by command buffer
         _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
         update_objects_buffer(_scene->_renderables.data(), _scene->_renderables.size());
         _scene->_ready = false;
