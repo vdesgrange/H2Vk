@@ -162,7 +162,7 @@ void VulkanEngine::init_managers() {
     _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass);
 
     _systemManager = std::make_unique<SystemManager>();
-    _materialManager = _systemManager->register_system<MaterialManager>(_device.get(), _pipelineBuilder.get());
+    _materialManager = _systemManager->register_system<MaterialManager>(_device.get());
     _meshManager = _systemManager->register_system<MeshManager>(_device.get(), &_uploadContext);
     _lightingManager = _systemManager->register_system<LightingManager>();
 
@@ -317,7 +317,7 @@ void VulkanEngine::setup_environment_descriptors() {
  */
 void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
-    _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
+    _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox}, *_renderPass);
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
 }
@@ -574,8 +574,7 @@ void VulkanEngine::recreate_swap_chain() {
     init_swapchain();
     init_default_renderpass();
     init_framebuffers(); // framebuffers depend on renderpass for device for creation and destruction
-    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass); // todo: messy, rework
-    _materialManager->_pipelineBuilder = _pipelineBuilder.get();
+    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass);
 
     if ((float)_window->_windowExtent.width > 0.0f && (float)_window->_windowExtent.height > 0.0f) {
         _camera->set_aspect((float)_window->_windowExtent.width / (float)_window->_windowExtent.height);

@@ -1,5 +1,5 @@
 /*
-*  H2Vk - A Vulkan based rendering engine
+*  H2Vk -  Material manager class
 *
 * Copyright (C) 2022-2023 by Viviane Desgrange
 *
@@ -20,9 +20,7 @@ class PipelineBuilder;
 
 class MaterialManager : public System {
 public:
-    class PipelineBuilder* _pipelineBuilder;
-
-    MaterialManager(const Device* _device, PipelineBuilder* pipelineBuilder);
+    MaterialManager(const Device* _device);
     ~MaterialManager();
     MaterialManager(const MaterialManager&) = delete;
     MaterialManager(MaterialManager&&) noexcept = default;
@@ -30,7 +28,6 @@ public:
     MaterialManager& operator=(MaterialManager&&) noexcept = default;
 
     std::shared_ptr<Material> get_material(const std::string &name);
-    std::shared_ptr<Material> create_material(std::string name, std::vector<VkDescriptorSetLayout> setLayouts, std::vector<PushConstant> constants, std::vector<std::pair<ShaderType, const char*>> shaders, std::unordered_map<ShaderType, VkSpecializationInfo> shaderSpecialization = {});
     std::shared_ptr<Material> create_material(PipelineBuilder& pipelineBuilder, std::string name, std::vector<VkDescriptorSetLayout> setLayouts, std::vector<PushConstant> constants, std::vector<std::pair<ShaderType, const char*>> shaders, std::unordered_map<ShaderType, VkSpecializationInfo> shaderSpecialization = {});
 
 private:

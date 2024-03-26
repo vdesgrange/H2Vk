@@ -176,8 +176,7 @@ void CascadedShadow::setup_pipelines(Device& device, MaterialManager &materialMa
         {sizeof(Materials::Factors), ShaderType::FRAGMENT},
     };
 
-    materialManager._pipelineBuilder = &pipelineBuilder;
-    _depthEffect = materialManager.create_material("cascades", setLayouts, constants, modules);
+    _depthEffect = materialManager.create_material(pipelineBuilder, "cascades", setLayouts, constants, modules);
 
     GraphicPipeline debugPipeline = GraphicPipeline(device, renderPass);
     debugPipeline._vertexInputInfo = vkinit::vertex_input_state_create_info();
@@ -192,8 +191,7 @@ void CascadedShadow::setup_pipelines(Device& device, MaterialManager &materialMa
             {sizeof(glm::mat4) + sizeof(int), ShaderType::VERTEX},
     };
 
-    materialManager._pipelineBuilder = &debugPipeline;
-    _debugEffect = materialManager.create_material("debugCascades", setLayouts, debugConst, debugMod);
+    _debugEffect = materialManager.create_material(debugPipeline, "debugCascades", setLayouts, debugConst, debugMod);
 
     _ready = true;
 }
@@ -238,7 +236,6 @@ void CascadedShadow::compute_resources(FrameData& frame, Renderables& renderable
         }
         vkCmdEndRenderPass(cmd);
     }
-
 
 }
 

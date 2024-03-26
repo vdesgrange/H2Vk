@@ -191,8 +191,7 @@ void Atmosphere::create_transmittance_resource(Device& device, UploadContext& up
         {ShaderType::COMPUTE, "../src/shaders/atmosphere/transmittance.comp.spv"},
     };
 
-    _materialManager._pipelineBuilder = &pipelineBuilder;
-    _transmittancePass = _materialManager.create_material("transmittance", {_transmittanceDescriptorLayout}, {}, comp_module);
+    _transmittancePass = _materialManager.create_material(pipelineBuilder, "transmittance", {_transmittanceDescriptorLayout}, {}, comp_module);
 }
 
 /**
@@ -275,8 +274,7 @@ void Atmosphere::create_multiple_scattering_resource(Device& device, UploadConte
             {ShaderType::FRAGMENT, "../src/shaders/atmosphere/multiple_scattering.frag.spv"},
     };
 
-    _materialManager._pipelineBuilder = &pipelineBuilder;
-    _multiScatteringPass = _materialManager.create_material("multiScattering", {_multipleScatteringDescriptorLayout}, {}, transmittance_module);
+    _multiScatteringPass = _materialManager.create_material(pipelineBuilder, "multiScattering", {_multipleScatteringDescriptorLayout}, {}, transmittance_module);
 
 }
 
@@ -379,8 +377,7 @@ void Atmosphere::create_skyview_resource(Device &device, UploadContext &uploadCo
             {ShaderType::FRAGMENT, "../src/shaders/atmosphere/skyview.frag.spv"},
     };
 
-    _materialManager._pipelineBuilder = &pipelineBuilder;
-    _skyviewPass = _materialManager.create_material("skyview", {_skyviewDescriptorLayout}, constants, skyview_module);
+    _skyviewPass = _materialManager.create_material(pipelineBuilder, "skyview", {_skyviewDescriptorLayout}, constants, skyview_module);
 }
 
 /**
@@ -421,11 +418,10 @@ void Atmosphere::create_atmosphere_resource(Device &device, UploadContext &uploa
             {ShaderType::FRAGMENT, "../src/shaders/atmosphere/atmosphere.frag.spv"},
     };
 
-    GraphicPipeline pipeline = GraphicPipeline(_device, renderPass);
-    pipeline._vertexInputInfo =  vkinit::vertex_input_state_create_info();
+    GraphicPipeline pipelineBuilder = GraphicPipeline(_device, renderPass);
+    pipelineBuilder._vertexInputInfo =  vkinit::vertex_input_state_create_info();
 
-    _materialManager._pipelineBuilder = &pipeline;
-    _atmospherePass = _materialManager.create_material("atmosphere", {_atmosphereDescriptorLayout}, constants, module);
+    _atmospherePass = _materialManager.create_material(pipelineBuilder, "atmosphere", {_atmosphereDescriptorLayout}, constants, module);
 }
 
 /**
