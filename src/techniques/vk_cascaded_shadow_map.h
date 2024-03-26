@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <vector>
 #include <array>
+#include <mutex>
 
 #include "glm/mat4x4.hpp"
 #include "core/utilities/vk_resources.h"
@@ -32,13 +33,21 @@ class MaterialManager;
 
 class CascadedShadow final {
 public:
+    /** @brief Display cascade layer with colors */
     bool _debug = false;
+    /** @brief Shadow map width */
     const uint32_t SHADOW_WIDTH = 1024;
+    /** @brief Shadow map height */
     const uint32_t SHADOW_HEIGHT = 1024;
+    /** @brief Number of layers */
     static const uint8_t COUNT = 4;
+    /** @brief Depth format */
     const VkFormat DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
+    /** @brief Split constant */
     float _lb = 0.95f;
+    /** @brief Cascade index */
     int _cascadeIdx = 0;
+    /** @brief Color cascades */
     bool _colorCascades = false;
 
     struct Cascade {
@@ -85,4 +94,6 @@ public:
 private:
     const class Device& _device;
     class UploadContext& _uploadContext;
+    /** @brief Resource synchronizer */
+    bool _ready = false;
 };

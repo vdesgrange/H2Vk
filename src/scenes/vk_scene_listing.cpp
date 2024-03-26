@@ -41,9 +41,6 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     camera.set_speed(10.0f);
 
     // === Add entities ===
-    engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.0f, 0.f),glm::vec4(1.f)));
-
     Materials blank = {{1.0f, 1.0f, 1.0, 1.0f}, 0.0f,  1.0f, 0.0f};
 
     std::shared_ptr<Model> floorModel = ModelPOLY::create_plane(engine->_device.get(), engine->_uploadContext, {-4.0f, 4.0f, -6.0f}, {4.0f, 4.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, blank);
@@ -54,6 +51,8 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
     engine->_meshManager->upload_mesh(*wallModel);
     engine->_meshManager->add_entity("wall", std::static_pointer_cast<Entity>(wallModel));
 
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.0f, 0.0f, 0.0f, 0.f),glm::vec4(1.f)));
 
     // === Init shader materials ===
     std::vector<PushConstant> constants {
@@ -68,16 +67,13 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
 
     floorModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
-    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
-    engine->_materialManager->create_material("pbrMaterial", setLayouts, constants, modules);
+    engine->_materialManager->create_material(*engine->_pipelineBuilder, "pbrMaterial", setLayouts, constants, modules);
 
     wallModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
-    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
-    engine->_materialManager->create_material("pbrMaterial2", setLayouts, constants, modules);
-
+    engine->_materialManager->create_material(*engine->_pipelineBuilder, "pbrMaterial2", setLayouts, constants, modules);
 
     std::vector<VkDescriptorSetLayout> shadowSetLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices};
-    engine->_materialManager->create_material("shadowScene", shadowSetLayouts, constants, modules);
+    engine->_materialManager->create_material(*engine->_pipelineBuilder, "shadowScene", shadowSetLayouts, constants, modules);
 
     RenderObject floor;
     floor.model = engine->_meshManager->get_model("floor");
@@ -100,8 +96,7 @@ Renderables SceneListing::spheres(Camera& camera, VulkanEngine* engine) {
             std::shared_ptr<Model> sphereModel = ModelPOLY::create_uv_sphere(engine->_device.get(), engine->_uploadContext, {0.0f, 0.0f, -5.0f}, 1.0f, 32, 32, {1.0f,1.0f,  1.0f}, gold);
 
             sphereModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
-            engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
-            engine->_materialManager->create_material("spherePbrMaterial_" + std::to_string(7 * x + y), setLayouts, constants, modules);
+            engine->_materialManager->create_material(*engine->_pipelineBuilder, "spherePbrMaterial_" + std::to_string(7 * x + y), setLayouts, constants, modules);
 
             engine->_meshManager->upload_mesh(*sphereModel);
             engine->_meshManager->add_entity(name, std::static_pointer_cast<Entity>(sphereModel));
@@ -130,13 +125,13 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     camera.set_speed(10.0f);
 
     // === Add entities ===
-    engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
-
     std::shared_ptr<ModelGLTF2> helmetModel = std::make_shared<ModelGLTF2>(engine->_device.get());
     helmetModel->load_model(*engine->_device, engine->_uploadContext, "../assets/damaged_helmet/gltf/DamagedHelmet.gltf");
     engine->_meshManager->upload_mesh(*helmetModel);
     engine->_meshManager->add_entity("helmet", std::static_pointer_cast<Entity>(helmetModel));
+
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
     // === Init shader materials ===
     std::vector<PushConstant> constants {
@@ -152,8 +147,7 @@ Renderables SceneListing::damagedHelmet(Camera& camera, VulkanEngine* engine) {
     // VkDescriptorSetLayout textures{}; // todo : stop duplicate with _scene->setup_texture_descriptors
     helmetModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
-    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get(); // todo move pipelineBuilder variable to create_material
-    engine->_materialManager->create_material("pbrTextureMaterial", setLayouts, constants, pbr_modules);
+    engine->_materialManager->create_material(*engine->_pipelineBuilder, "pbrTextureMaterial", setLayouts, constants, pbr_modules);
 
     // == Init scene ==
     RenderObject helmet;
@@ -176,14 +170,14 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     camera.set_speed(10.0f);
 
     // === Add entities ===
-    engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
-
     std::shared_ptr<ModelGLTF2> sponzaModel = std::make_shared<ModelGLTF2>(engine->_device.get());
     sponzaModel->load_model(*engine->_device, engine->_uploadContext, "../assets/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
 
     engine->_meshManager->upload_mesh(*sponzaModel);
     engine->_meshManager->add_entity("sponza", std::static_pointer_cast<Entity>(sponzaModel));
+
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
     // === Init shader materials ===
     std::vector<PushConstant> constants {
@@ -199,8 +193,7 @@ Renderables SceneListing::sponza(Camera& camera, VulkanEngine* engine) {
     VkDescriptorSetLayout textures{};
     sponzaModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, textures);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, textures};
-    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
-    engine->_materialManager->create_material("sponzaMaterial", setLayouts, constants, pbr_modules);
+    engine->_materialManager->create_material(*engine->_pipelineBuilder, "sponzaMaterial", setLayouts, constants, pbr_modules);
 
     // == Init scene ==
     RenderObject sponza;
@@ -223,8 +216,6 @@ Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
     camera.set_speed(10.0f);
 
     // === Add entities ===
-    engine->_lightingManager->clear_entities();
-    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
     std::shared_ptr<ModelGLTF2> treeModel = std::make_shared<ModelGLTF2>(engine->_device.get());
     treeModel->load_model(*engine->_device, engine->_uploadContext, "../assets/field/oaktree.gltf");
@@ -235,6 +226,9 @@ Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
     fieldModel->load_model(*engine->_device, engine->_uploadContext, "../assets/field/terrain_gridlines.gltf");
     engine->_meshManager->upload_mesh(*fieldModel);
     engine->_meshManager->add_entity("field", std::static_pointer_cast<Entity>(fieldModel));
+
+    engine->_lightingManager->clear_entities();
+    engine->_lightingManager->add_entity("sun", std::make_shared<Light>(glm::vec4(0.f, 0.f, 0.f, 0.f),  glm::vec4(1.f)));
 
     // === Init shader materials ===
     std::vector<PushConstant> constants {
@@ -249,12 +243,10 @@ Renderables SceneListing::field(Camera& camera, VulkanEngine* engine) {
 
     treeModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
     std::vector<VkDescriptorSetLayout> setLayouts = {engine->_descriptorSetLayouts.environment, engine->_descriptorSetLayouts.matrices, engine->_descriptorSetLayouts.textures};
-    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
-    engine->_materialManager->create_material("treeMaterial", setLayouts, constants, modules);
+    engine->_materialManager->create_material(*engine->_pipelineBuilder, "treeMaterial", setLayouts, constants, modules);
 
     fieldModel->setup_descriptors(*engine->_layoutCache, *engine->_allocator, engine->_descriptorSetLayouts.textures);
-    engine->_materialManager->_pipelineBuilder = engine->_pipelineBuilder.get();
-    engine->_materialManager->create_material("fieldMaterial", setLayouts, constants, modules);
+    engine->_materialManager->create_material(*engine->_pipelineBuilder, "fieldMaterial", setLayouts, constants, modules);
 
     // == Init scene ==
     RenderObject tree;

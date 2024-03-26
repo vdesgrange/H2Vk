@@ -23,6 +23,8 @@ public:
     int _sceneIndex;
     /** @brief A vector of objects (model + material + transformation) */
     Renderables _renderables;
+    /** @brief Resource synchronizer */
+    bool _ready = false;
 
     explicit Scene(VulkanEngine& engine) : _engine(engine) {};
 
@@ -31,6 +33,7 @@ public:
     static void allocate_buffers(Device& device);
     void setup_transformation_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
     void setup_texture_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
+
 private:
     VulkanEngine& _engine;
 };

@@ -16,6 +16,7 @@
 class Model;
 class Device;
 class Texture;
+class RenderPass;
 class MeshManager;
 class MaterialManager;
 class PipelineBuilder;
@@ -44,7 +45,7 @@ public:
     void load();
     void load_sphere_texture(const char* file, Texture& texture, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB);
     void setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAllocator& allocator, VkDescriptorSetLayout& setLayout);
-    void setup_pipeline(MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts);
+    void setup_pipeline(MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass);
     void draw(VkCommandBuffer& commandBuffer);
     void build_command_buffer(VkCommandBuffer& commandBuffer, VkDescriptorSet* descriptor);
     void destroy();

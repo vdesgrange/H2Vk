@@ -11,6 +11,8 @@
 #include "core/vk_device.h"
 #include "core/vk_buffer.h"
 #include "core/vk_command_buffer.h"
+#include "core/vk_renderpass.h"
+#include "core/vk_pipeline.h"
 #include "core/manager/vk_mesh_manager.h"
 #include "core/manager/vk_material_manager.h"
 #include "components/model/vk_poly.h"
@@ -200,7 +202,7 @@ void Skybox::setup_descriptors(DescriptorLayoutCache& layoutCache, DescriptorAll
     }
 }
 
-void Skybox::setup_pipeline(MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts) {
+void Skybox::setup_pipeline(MaterialManager& materialManager, std::vector<VkDescriptorSetLayout> setLayouts, RenderPass& renderPass) {
     std::unordered_map<Skybox::Type, std::string> shader = {
             {Type::box, "../src/shaders/skybox/skybox"},
             {Type::sphere, "../src/shaders/skybox/skysphere"},
@@ -218,7 +220,8 @@ void Skybox::setup_pipeline(MaterialManager& materialManager, std::vector<VkDesc
             {sizeof(glm::mat4), ShaderType::VERTEX},
     };
 
-    this->_material = materialManager.create_material("skyboxMaterial", setLayouts, constants, modules);
+    GraphicPipeline pipelineBuilder = GraphicPipeline(_device, renderPass);
+    this->_material = materialManager.create_material(pipelineBuilder, "skyboxMaterial", setLayouts, constants, modules);
 }
 
 void Skybox::draw(VkCommandBuffer& commandBuffer) {

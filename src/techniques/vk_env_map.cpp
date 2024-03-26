@@ -136,8 +136,8 @@ Texture EnvMap::cube_map_converter(Device& device, UploadContext& uploadContext,
             {2 * sizeof(glm::mat4), ShaderType::VERTEX},
     };
 
-    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
-    std::shared_ptr<ShaderPass> converterPass = materialManager.create_material("converter", {setLayout}, constants, modules);
+    MaterialManager materialManager(&device);
+    std::shared_ptr<ShaderPass> converterPass = materialManager.create_material(pipelineBuilder, "converter", {setLayout}, constants, modules);
 
     glm::mat4 projection = glm::perspective(glm::radians(90.0f), ENV_WIDTH / static_cast<float>(ENV_HEIGHT),  0.1f, 10.0f);
     std::array<glm::mat4, 6> views = {
@@ -330,8 +330,8 @@ Texture EnvMap::irradiance_cube_mapping(Device& device, UploadContext& uploadCon
             {2 * sizeof(glm::mat4), ShaderType::VERTEX},
     };
 
-    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
-    std::shared_ptr<ShaderPass> irradiancePass = materialManager.create_material("irradiance", {setLayout}, constants, modules);
+    MaterialManager materialManager(&device);
+    std::shared_ptr<ShaderPass> irradiancePass = materialManager.create_material(pipelineBuilder, "irradiance", {setLayout}, constants, modules);
 
     glm::mat4 projection = glm::perspective(glm::radians(90.0f), ENV_WIDTH / static_cast<float>(ENV_HEIGHT),  0.1f, 10.0f);
     std::array<glm::mat4, 6> views = {
@@ -575,8 +575,8 @@ Texture EnvMap::prefilter_cube_mapping(Device& device, UploadContext& uploadCont
                 {sizeof(float), ShaderType::FRAGMENT},
         };
 
-        MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
-        std::shared_ptr<ShaderPass> prefilterPass = materialManager.create_material("prefilter", {setLayout}, constants, modules);
+        MaterialManager materialManager(&device);
+        std::shared_ptr<ShaderPass> prefilterPass = materialManager.create_material(pipelineBuilder, "prefilter", {setLayout}, constants, modules);
 
         // Command pool + command buffer for compute operations
         float roughness = static_cast<float>(mipLevel) / static_cast<float>(PRE_FILTER_MIP_LEVEL);
@@ -718,8 +718,8 @@ Texture EnvMap::brdf_convolution(Device& device, UploadContext& uploadContext) {
     std::vector<std::pair<ShaderType, const char*>> modules = {
             {ShaderType::COMPUTE, "../src/shaders/env_map/brdf.comp.spv"},
     };
-    MaterialManager materialManager = MaterialManager(&device, &pipelineBuilder);
-    std::shared_ptr<ShaderPass> brdfPass = materialManager.create_material("brdf", {setLayout}, {}, modules);
+    MaterialManager materialManager(&device);
+    std::shared_ptr<ShaderPass> brdfPass = materialManager.create_material(pipelineBuilder, "brdf", {setLayout}, {}, modules);
 
     // Command pool + command buffer for compute operations
     {

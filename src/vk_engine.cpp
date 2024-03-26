@@ -162,7 +162,7 @@ void VulkanEngine::init_managers() {
     _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass);
 
     _systemManager = std::make_unique<SystemManager>();
-    _materialManager = _systemManager->register_system<MaterialManager>(_device.get(), _pipelineBuilder.get());
+    _materialManager = _systemManager->register_system<MaterialManager>(_device.get());
     _meshManager = _systemManager->register_system<MeshManager>(_device.get(), &_uploadContext);
     _lightingManager = _systemManager->register_system<LightingManager>();
 
@@ -317,7 +317,7 @@ void VulkanEngine::setup_environment_descriptors() {
  */
 void VulkanEngine::init_materials() {
     // === Skybox === (Build by default to handle if skybox enabled later)
-    _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox});
+    _skybox->setup_pipeline(*_materialManager, {_descriptorSetLayouts.skybox}, *_renderPass);
     _atmosphere->create_resources(*_layoutCache, *_allocator, *_renderPass);
     _atmosphere->precompute_resources();
 }
@@ -492,7 +492,7 @@ void VulkanEngine::compute() {
         _atmosphere->compute_resources(_frameNumber % FRAME_OVERLAP);
     }
 }
- 
+
 /**
  * Perform computation for the next frame to be rendered
  * @brief Render the next frame
@@ -505,13 +505,17 @@ void VulkanEngine::render(int imageIndex) {
     if (_scene->_sceneIndex != _ui->get_settings().scene_index) {
         if (_scene->_mutex.try_lock()) {
             JobManager::execute([&]() {
-                _scene->setup_texture_descriptors(*_layoutCache, *_allocator, _descriptorSetLayouts.textures);
                 _scene->load_scene(_ui->get_settings().scene_index, *_camera);
-                 _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
-                update_objects_buffer(_scene->_renderables.data(), _scene->_renderables.size());
                 _scene->_mutex.unlock();
             });
         }
+    }
+
+    if (_scene->_ready) {
+        _device->_queue->queue_wait(); // Prevent call to destroy pipelines while in-use by command buffer
+        _cascadedShadow->setup_pipelines(*_device, *_materialManager, {_descriptorSetLayouts.cascadedOffscreen, _descriptorSetLayouts.matrices, _descriptorSetLayouts.textures}, *_renderPass);
+        update_objects_buffer(_scene->_renderables.data(), _scene->_renderables.size());
+        _scene->_ready = false;
     }
 
     // === Update resources ===
@@ -570,8 +574,7 @@ void VulkanEngine::recreate_swap_chain() {
     init_swapchain();
     init_default_renderpass();
     init_framebuffers(); // framebuffers depend on renderpass for device for creation and destruction
-    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass); // todo: messy, rework
-    _materialManager->_pipelineBuilder = _pipelineBuilder.get();
+    _pipelineBuilder = std::make_unique<GraphicPipeline>(*_device, *_renderPass);
 
     if ((float)_window->_windowExtent.width > 0.0f && (float)_window->_windowExtent.height > 0.0f) {
         _camera->set_aspect((float)_window->_windowExtent.width / (float)_window->_windowExtent.height);
@@ -614,7 +617,7 @@ void VulkanEngine::draw() {
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = &(frame._renderSemaphore->_semaphore); // Wait for command buffers to be fully executed.
 
-    result = vkQueuePresentKHR(_device->get_graphics_queue(), &presentInfo);
+    result = _device->_queue->queue_present(presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _window->_framebufferResized) {
         _window->_framebufferResized = false;
         recreate_swap_chain();
