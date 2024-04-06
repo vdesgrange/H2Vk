@@ -8,6 +8,19 @@
 #include "../common/tonemaps.glsl"
 #include "../common/debug.glsl"
 
+layout(std140, set = 0, binding = 0) uniform EnabledFeaturesData {
+    bool shadowMapping;
+    bool skybox;
+    bool atmosphere;
+} enabledFeaturesData;
+
+layout(std140, set = 0, binding = 1) uniform  CameraBuffer {
+    mat4 view;
+    mat4 proj;
+    vec3 pos;
+    bool flip;
+} cameraData;
+
 layout(std140, set = 0, binding = 2) uniform LightingData {
     layout(offset = 0) vec2 num_lights;
     layout(offset = 16) vec4 dir_direction[MAX_LIGHT];
@@ -17,19 +30,8 @@ layout(std140, set = 0, binding = 2) uniform LightingData {
     layout(offset = 528) vec4 spot_color[MAX_LIGHT];
 } lightingData;
 
-//layout (std140, set = 0, binding = 2) uniform ShadowData {
-//    layout(offset = 0) vec2  num_lights;
-//    layout(offset = 16) mat4 directional_mvp[MAX_LIGHT];
-//    layout(offset = 528) mat4 spot_mvp[MAX_LIGHT];
-//} depthData;
 
-layout (std140, set = 0, binding = 0) uniform EnabledFeaturesData {
-    bool shadowMapping;
-    bool skybox;
-    bool atmosphere;
-} enabledFeaturesData;
-
-layout (std140, set = 0, binding = 3) uniform ShadowData {
+layout(std140, set = 0, binding = 3) uniform ShadowData {
     layout(offset = 0) mat4 cascadeVP[CASCADE_COUNT];
     layout(offset = 256) vec4 splitDepth;
     layout(offset = 272) bool color_cascades;
@@ -53,31 +55,9 @@ layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec3 inFragPos; // fragment/world position
 layout (location = 4) in vec3 inCameraPos; // camera/view position
 layout (location = 5) in vec3 inViewPos;
-layout (location = 6) in vec4 inTangent;
+layout (location = 6) in vec3 inTangent;
 
 layout (location = 0) out vec4 outFragColor;
-
-//vec3 shadow(vec3 color, int type) {
-//    float layer_offset = 0;
-//    vec4 shadowCoord;
-//
-//    if (type == 1) {
-//        layer_offset = depthData.num_lights[0];
-//    }
-//
-//    for (int i=0; i < depthData.num_lights[type]; i++) {
-//        if (type == 0) {
-//            shadowCoord = biasMat * depthData.spot_mvp[i] * vec4(inFragPos, 1.0);
-//        } else if (type == 1) {
-//            shadowCoord = biasMat * depthData.directional_mvp[i] * vec4(inFragPos, 1.0);
-//        }
-//
-//        float shadowFactor = (enablePCF == 1) ? filterPCF(shadowMap, inNormal, inFragPos, shadowCoord, layer_offset + i) : texture_projection(shadowMap, inNormal, inFragPos, shadowCoord, vec2(0.0), layer_offset + i);
-//        color *= shadowFactor;
-//    }
-//    return color;
-//}
-
 
 vec3 prefiltered_reflection(vec3 R, float roughness) {
     const float MAX_REFLECTION_LOD = 9.0;
@@ -112,13 +92,6 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
     return color;
 }
 
-vec2 sample_spherical_map(vec3 v) {
-    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
-    uv *= vec2(0.1591f, 0.3183f);
-    uv += 0.5;
-    return -1 * uv;
-}
-
 vec3 calculateNormal() {
     vec3 pos_dx = dFdx(inFragPos);
     vec3 pos_dy = dFdy(inFragPos);
@@ -126,14 +99,14 @@ vec3 calculateNormal() {
     vec3 tex_dy = dFdy(vec3(inUV, 0.0));
 
     vec3 N = normalize(inNormal);
-    // vec3 T = normalize(inTangent.xyz);
+    // vec3 T = normalize(inTangent.xyz); // If available
     vec3 T = (tex_dy.t * pos_dx - tex_dx.t * pos_dy) / (tex_dx.s * tex_dy.t - tex_dy.s * tex_dx.t);
-    T = normalize(T - N * dot(N, T));
+    T = normalize(T - dot(N, T) * N);
     vec3 B = normalize(cross(N, T));
     mat3 TBN = mat3(T, B, N);
 
-    vec3 TN = texture(samplerNormalMap, inUV).xyz;
-    TN = normalize(TBN * (2.0 * TN - 1.0));
+    vec3 TN = 2.0f * texture(samplerNormalMap, inUV).xyz - 1.0f;
+    TN = normalize(TBN * TN);
 
     return TN;
 }
@@ -163,6 +136,14 @@ vec3 directional_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, fl
 
 void main()
 {
+    float f = cameraData.flip ? -1.0f : 1.0f;
+
+    vec3 V = normalize(inCameraPos - inFragPos);
+    vec3 N = calculateNormal();
+    vec3 R = -normalize(reflect(V, N));
+	R.y *= f;
+
+
     float alpha = texture(samplerAlbedoMap, inUV).a;
     if (alpha < 0.5) {
         discard;
@@ -175,11 +156,6 @@ void main()
     float ao = texture(samplerAOMap, inUV).r;
     vec3 emissive = texture(samplerEmissiveMap, inUV).rgb;
 
-    vec3 V = normalize(inCameraPos - inFragPos);
-    vec3 N = calculateNormal();
-    vec3 R = reflect(-V, N);
-
-    vec2 uv = sample_spherical_map(N);
 
     vec3 Lo = vec3(0.0);
     // Lo = spot_light(Lo, N, V, albedo, roughness, metallic);
