@@ -76,10 +76,6 @@ glm::mat4 Camera::get_view_matrix() {
 }
 
 glm::vec3 Camera::get_position_vector() {
-    if (this->type == Type::pov) {
-        return glm::vec3(-1.0) * this->position;
-    }
-
     return this->position;
 }
 
@@ -191,10 +187,10 @@ bool Camera::update_camera(float delta) {
 
         glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
-        if (forwardAction) position +=  d * front;
-        if (backwardAction) position -=  d * front;
-        if (rightAction) position +=  d * glm::normalize(glm::cross(front, up));
-        if (leftAction) position -=  d * glm::normalize(glm::cross(front, up));
+        if (forwardAction) position -=  d * front;
+        if (backwardAction) position +=  d * front;
+        if (rightAction) position -=  d * glm::normalize(glm::cross(front, up));
+        if (leftAction) position +=  d * glm::normalize(glm::cross(front, up));
         if (upAction) position +=  d * up;
         if (downAction) position -=  d * up;
 
@@ -222,7 +218,15 @@ void Camera::update_view() {
     if (this->type == Type::look_at) {
         this->view = glm::lookAt(this->position, this->target, glm::vec3(0.0, 1.0, 0.0));
     } else {
-        glm::mat4 transM = glm::translate(glm::mat4(1.f), this->position);
+        // To method, the result should be the same matrix
+        // glm::vec3 front;
+        // front.x = -cos(glm::radians(rotation.x)) * sin(glm::radians(rotation.y));
+        // front.y = sin(glm::radians(rotation.x));
+        // front.z = cos(glm::radians(rotation.x)) * cos(glm::radians(rotation.y));
+        // front = glm::normalize(front);
+        // this->view = glm::lookAt(this->position, this->position + front, glm::vec3(0.0, 1.0, 0.0));
+
+        glm::mat4 transM = glm::translate(glm::mat4(1.f), glm::vec3(-1.0) * this->position);
         glm::mat4 rotM = this->get_rotation_matrix();
         this->view = rotM * transM;  // Rotation around camera's origin. Swap for world origin.
     }
