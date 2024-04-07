@@ -31,12 +31,10 @@ class Camera final {
 public:
     enum Type {
         pov = 0,
-        axis = 1,
-        look_at = 2
+        look_at = 1
     };
     static inline std::unordered_map<Type, const char*> AllType = {
         {pov, "Point of view"},
-        {axis, "Axis"},
         {look_at, "Look at"}
     };
 

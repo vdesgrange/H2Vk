@@ -10,6 +10,14 @@
 #define GLFW_INCLUDE_VULKAN
 #endif
 
+#ifndef GLM_FORCE_RADIANS
+#define GLM_FORCE_RADIANS
+#endif
+
+#ifndef GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#endif
+
 #include "vk_camera.h"
 #include "core/vk_device.h"
 #include "core/utilities/vk_global.h"
@@ -68,6 +76,10 @@ glm::mat4 Camera::get_view_matrix() {
 }
 
 glm::vec3 Camera::get_position_vector() {
+    if (this->type == Type::pov) {
+        return glm::vec3(-1.0) * this->position;
+    }
+
     return this->position;
 }
 
@@ -178,7 +190,6 @@ bool Camera::update_camera(float delta) {
         front = glm::normalize(front);
 
         glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-        glm::vec3 right = glm::vec3(1.0f, 0.0f, 0.0f);
 
         if (forwardAction) position +=  d * front;
         if (backwardAction) position -=  d * front;
@@ -187,24 +198,7 @@ bool Camera::update_camera(float delta) {
         if (upAction) position +=  d * up;
         if (downAction) position -=  d * up;
 
-    } else if (this->type == Type::axis) {
-        glm::vec3 front;
-        front.x = -cos(glm::radians(rotation.x)) * sin(glm::radians(rotation.y));
-        front.y = 0.0f;
-        front.z = cos(glm::radians(rotation.x)) * cos(glm::radians(rotation.y));
-        front = glm::normalize(front);
-
-        glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-        glm::vec3 right = glm::vec3(1.0f, 0.0f, 0.0f);
-
-        if (forwardAction) position +=  d * front;
-        if (backwardAction) position -=  d * front;
-        if (rightAction) position +=  d *  glm::normalize(glm::cross(front, up));
-        if (leftAction) position -=  d *  glm::normalize(glm::cross(front, up));
-        if (upAction) position +=  d * up;
-        if (downAction) position -=  d * up;
-
-    } else if (this->type == Type::look_at) {
+    } else {
         glm::vec3 pos = this->position;
         float radius = sqrt(pow(pos.x, 2) + pow(pos.y, 2) + pow(pos.z, 2));
         float theta = atan2(pos.x, pos.z);
@@ -228,9 +222,9 @@ void Camera::update_view() {
     if (this->type == Type::look_at) {
         this->view = glm::lookAt(this->position, this->target, glm::vec3(0.0, 1.0, 0.0));
     } else {
-        glm::mat4 translation = glm::translate(glm::mat4(1.f), this->position);
-        glm::mat4 rotation = this->get_rotation_matrix();
-        this->view = rotation * translation;  // Rotation around camera's origin. Swap for world origin.
+        glm::mat4 transM = glm::translate(glm::mat4(1.f), this->position);
+        glm::mat4 rotM = this->get_rotation_matrix();
+        this->view = rotM * transM;  // Rotation around camera's origin. Swap for world origin.
     }
 }
 
