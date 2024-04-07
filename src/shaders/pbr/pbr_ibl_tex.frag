@@ -92,6 +92,23 @@ vec3 BRDF(vec3 N, vec3 L, vec3 V, vec3 C, vec3 albedo, float roughness, float me
     return color;
 }
 
+vec3 calculateNormal2() {
+
+    vec3 Q1  = dFdx(inFragPos);
+    vec3 Q2  = dFdy(inFragPos);
+    vec2 st1 = dFdx(inUV);
+    vec2 st2 = dFdy(inUV);
+
+    vec3 N   = normalize(inNormal);
+    vec3 T  = normalize(Q1 * st2.t - Q2 * st1.t);
+    vec3 B  = -normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
+
+    vec3 TN = 2.0 * texture(samplerNormalMap, inUV).xyz - 1.0;
+
+    return normalize(TBN * TN);
+}
+
 vec3 calculateNormal() {
     vec3 pos_dx = dFdx(inFragPos);
     vec3 pos_dy = dFdy(inFragPos);
@@ -124,7 +141,7 @@ vec3 spot_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, float met
 
 vec3 directional_light(vec3 Lo, vec3 N, vec3 V, vec3 albedo, float roughness, float metallic) {
     for (int i = 0; i < lightingData.num_lights[1]; i++) {
-        vec3 L = normalize(lightingData.dir_direction[i].xyz); // to fix : "-1 * L" depending if camera POV or lookAt.
+        vec3 L = normalize(lightingData.dir_direction[i].xyz - inFragPos); // to fix : "-1 * L" depending if camera POV or lookAt.
         vec3 C = lightingData.dir_color[i].rgb / 255.0;
 
         Lo += BRDF(L, V, N, C, albedo, roughness, metallic);

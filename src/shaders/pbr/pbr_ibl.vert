@@ -12,7 +12,7 @@ layout (location = 2) out vec3 outNormal;
 layout (location = 3) out vec3 outFragPos;
 layout (location = 4) out vec3 outCameraPos;
 layout (location = 5) out vec3 outViewPos;
-layout (location = 6) out vec4 outTangent;
+layout (location = 6) out vec3 outTangent;
 
 layout(std140, set = 0, binding = 1) uniform  CameraBuffer
 {
@@ -37,15 +37,16 @@ layout (push_constant) uniform NodeModel {
 void main()
 {
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model * nodeData.model;
-    mat4 transformMatrix = (cameraData.proj * cameraData.view * modelMatrix);
-    vec4 pos = modelMatrix * vec4(inPosition.xyz, 1.0f);
-    gl_Position = transformMatrix * vec4(inPosition , 1.0f);
+    mat4 transformMatrix = (cameraData.view * cameraData.proj * modelMatrix);
+    vec4 pos = modelMatrix * vec4(inPosition, 1.0f);
 
     outColor = inColor;
-    outUV = inUV;
-    outNormal = normalize(modelMatrix * vec4(inNormal, 0.0f)).xyz;
-    outTangent = normalize(modelMatrix * inTangent);
-    outFragPos = pos.xyz;
+    outUV = inUV; // 2.0 * inUV - 1.0;
+    outNormal = normalize(transpose(inverse(mat3(modelMatrix))) * inNormal);     // outNormal = normalize(modelMatrix * vec4(inNormal, 0.0f)).xyz;
+    outTangent = normalize(transpose(inverse(mat3(modelMatrix))) * inTangent.xyz);     // outTangent = normalize(modelMatrix * inTangent);
+    outFragPos = pos.xyz / pos.w;
     outCameraPos = cameraData.pos;
     outViewPos = (cameraData.view * vec4(pos.xyz, 1.0)).xyz;
+
+    gl_Position = cameraData.proj * cameraData.view * vec4(outFragPos, 1.0f);
 }
